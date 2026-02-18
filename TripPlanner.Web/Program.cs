@@ -59,6 +59,7 @@ builder.Services.AddScoped<IWishlistRepository, WishlistRepository>();
 // Register services
 builder.Services.AddScoped<GpxService>();
 builder.Services.AddScoped<RoutingService>();
+builder.Services.AddScoped<UserService>();
 
 builder.Services.AddHttpClient<WeatherApiClient>(client =>
     {

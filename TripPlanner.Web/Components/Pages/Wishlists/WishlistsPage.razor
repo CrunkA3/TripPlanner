@@ -1,0 +1,184 @@
+@page "/wishlists"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using TripPlanner.Web.Models
+@using TripPlanner.Web.Repositories
+@using TripPlanner.Web.Services
+@attribute [Authorize]
+@inject IWishlistRepository WishlistRepository
+@inject UserService UserService
+@inject NavigationManager NavigationManager
+
+<PageTitle>My Wishlists</PageTitle>
+
+<h1>My Wishlists</h1>
+
+<FluentStack Orientation="Orientation.Horizontal" Style="margin-bottom: 20px;">
+    <FluentButton Appearance="Appearance.Accent" OnClick="@ShowCreateDialog">
+        <FluentIcon Value="@(new Icons.Regular.Size20.Add())" /> Create Wishlist
+    </FluentButton>
+</FluentStack>
+
+@if (ownedWishlists == null || sharedWishlists == null)
+{
+    <FluentProgressRing>Loading...</FluentProgressRing>
+}
+else
+{
+    <h2>My Wishlists</h2>
+    @if (!ownedWishlists.Any())
+    {
+        <p>You haven't created any wishlists yet.</p>
+    }
+    else
+    {
+        <FluentDataGrid Items="@ownedWishlists.AsQueryable()" Style="margin-bottom: 30px;">
+            <PropertyColumn Property="@(w => w.Name)" Title="Name" />
+            <PropertyColumn Property="@(w => w.Description)" Title="Description" />
+            <PropertyColumn Property="@(w => w.Places.Count)" Title="Places" />
+            <PropertyColumn Property="@(w => w.SharedWith.Count)" Title="Shared With" />
+            <PropertyColumn Property="@(w => w.CreatedAt)" Title="Created" Format="yyyy-MM-dd" />
+            <TemplateColumn Title="Actions">
+                <FluentButton Appearance="Appearance.Lightweight" OnClick="@(() => ViewWishlist(context.Id))">
+                    View
+                </FluentButton>
+                <FluentButton Appearance="Appearance.Lightweight" OnClick="@(() => ShowShareDialog(context))">
+                    Share
+                </FluentButton>
+                <FluentButton Appearance="Appearance.Lightweight" OnClick="@(() => DeleteWishlist(context.Id))">
+                    Delete
+                </FluentButton>
+            </TemplateColumn>
+        </FluentDataGrid>
+    }
+
+    <h2>Shared With Me</h2>
+    @if (!sharedWishlists.Any())
+    {
+        <p>No wishlists have been shared with you.</p>
+    }
+    else
+    {
+        <FluentDataGrid Items="@sharedWishlists.AsQueryable()">
+            <PropertyColumn Property="@(w => w.Name)" Title="Name" />
+            <PropertyColumn Property="@(w => w.Description)" Title="Description" />
+            <PropertyColumn Property="@(w => w.Places.Count)" Title="Places" />
+            <PropertyColumn Property="@(w => w.Owner!.Email)" Title="Owner" />
+            <TemplateColumn Title="Actions">
+                <FluentButton Appearance="Appearance.Lightweight" OnClick="@(() => ViewWishlist(context.Id))">
+                    View
+                </FluentButton>
+            </TemplateColumn>
+        </FluentDataGrid>
+    }
+}
+
+<FluentDialog @ref="createDialog" Hidden="@(!showCreateDialog)" Modal="true">
+    <h3>Create New Wishlist</h3>
+    <EditForm Model="@newWishlist" OnValidSubmit="@CreateWishlist">
+        <FluentStack Orientation="Orientation.Vertical">
+            <FluentTextField @bind-Value="newWishlist.Name" Label="Name" Required="true" Style="width: 100%;" />
+            <FluentTextArea @bind-Value="newWishlist.Description" Label="Description" Style="width: 100%;" />
+            <FluentStack Orientation="Orientation.Horizontal">
+                <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent">Create</FluentButton>
+                <FluentButton Appearance="Appearance.Neutral" OnClick="@(() => showCreateDialog = false)">Cancel</FluentButton>
+            </FluentStack>
+        </FluentStack>
+    </EditForm>
+</FluentDialog>
+
+<FluentDialog @ref="shareDialog" Hidden="@(!showShareDialog)" Modal="true">
+    <h3>Share Wishlist: @selectedWishlist?.Name</h3>
+    <FluentStack Orientation="Orientation.Vertical">
+        <FluentTextField @bind-Value="shareEmail" Label="Email address to share with" Style="width: 100%;" />
+        <FluentStack Orientation="Orientation.Horizontal">
+            <FluentButton Appearance="Appearance.Accent" OnClick="@ShareWishlist">Share</FluentButton>
+            <FluentButton Appearance="Appearance.Neutral" OnClick="@(() => showShareDialog = false)">Cancel</FluentButton>
+        </FluentStack>
+    </FluentStack>
+</FluentDialog>
+
+@code {
+    private List<Wishlist>? ownedWishlists;
+    private List<Wishlist>? sharedWishlists;
+    private string? currentUserId;
+    
+    private FluentDialog? createDialog;
+    private FluentDialog? shareDialog;
+    private bool showCreateDialog;
+    private bool showShareDialog;
+    private Wishlist newWishlist = new();
+    private Wishlist? selectedWishlist;
+    private string shareEmail = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentUserId = await UserService.GetCurrentUserIdAsync();
+
+        if (currentUserId != null)
+        {
+            await LoadWishlists();
+        }
+    }
+
+    private async Task LoadWishlists()
+    {
+        if (currentUserId != null)
+        {
+            ownedWishlists = await WishlistRepository.GetAllByUserAsync(currentUserId);
+            sharedWishlists = await WishlistRepository.GetSharedWithUserAsync(currentUserId);
+        }
+    }
+
+    private void ShowCreateDialog()
+    {
+        newWishlist = new Wishlist();
+        showCreateDialog = true;
+    }
+
+    private async Task CreateWishlist()
+    {
+        if (currentUserId != null)
+        {
+            newWishlist.OwnerId = currentUserId;
+            await WishlistRepository.AddAsync(newWishlist);
+            await LoadWishlists();
+            showCreateDialog = false;
+        }
+    }
+
+    private void ShowShareDialog(Wishlist wishlist)
+    {
+        selectedWishlist = wishlist;
+        shareEmail = string.Empty;
+        showShareDialog = true;
+    }
+
+    private async Task ShareWishlist()
+    {
+        if (selectedWishlist == null || string.IsNullOrWhiteSpace(shareEmail))
+        {
+            return;
+        }
+
+        var userToShareWith = await UserService.GetUserByEmailAsync(shareEmail);
+        if (userToShareWith != null)
+        {
+            await WishlistRepository.ShareWithUserAsync(selectedWishlist.Id, userToShareWith.Id);
+            await LoadWishlists();
+        }
+        
+        showShareDialog = false;
+    }
+
+    private async Task DeleteWishlist(string id)
+    {
+        await WishlistRepository.DeleteAsync(id);
+        await LoadWishlists();
+    }
+
+    private void ViewWishlist(string id)
+    {
+        NavigationManager.NavigateTo($"/wishlist/{id}");
+    }
+}
