@@ -1,5 +1,7 @@
 using TripPlanner.Web;
 using TripPlanner.Web.Components;
+using TripPlanner.Web.Repositories;
+using TripPlanner.Web.Services;
 using Microsoft.FluentUI.AspNetCore.Components;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -14,6 +16,13 @@ builder.Services.AddRazorComponents()
 builder.Services.AddFluentUIComponents();
 
 builder.Services.AddOutputCache();
+
+// Register TripPlanner services
+builder.Services.AddScoped<IPlaceRepository, LocalStoragePlaceRepository>();
+builder.Services.AddScoped<ITripRepository, LocalStorageTripRepository>();
+builder.Services.AddScoped<IGpxRepository, LocalStorageGpxRepository>();
+builder.Services.AddScoped<GpxService>();
+builder.Services.AddScoped<RoutingService>();
 
 builder.Services.AddHttpClient<WeatherApiClient>(client =>
     {

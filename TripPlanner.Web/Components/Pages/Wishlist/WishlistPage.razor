@@ -1,0 +1,279 @@
+@page "/wishlist"
+@using TripPlanner.Web.Models
+@using TripPlanner.Web.Repositories
+@inject IPlaceRepository PlaceRepository
+@inject IGpxRepository GpxRepository
+@rendermode InteractiveServer
+
+<PageTitle>Wishlist</PageTitle>
+
+<FluentStack Orientation="Orientation.Vertical" Width="100%">
+    <FluentToolbar>
+        <FluentLabel Typo="Typography.H3">
+            <FluentIcon Value="@(new Icons.Regular.Size24.Heart())" Color="Color.Accent" />
+            Place Wishlist
+        </FluentLabel>
+        <FluentSpacer />
+        <FluentButton Appearance="Appearance.Accent" OnClick="@CreateNewPlace">
+            <FluentIcon Value="@(new Icons.Regular.Size20.Add())" Slot="start" />
+            Add Place
+        </FluentButton>
+    </FluentToolbar>
+
+    <FluentCard>
+        <FluentStack Orientation="Orientation.Horizontal" Width="100%" Wrap="true">
+            <FluentSelect TOption="string" @bind-Value="@FilterCategoryString" Label="Category" Style="min-width: 200px;">
+                <FluentOption TOption="string" Value="">All Categories</FluentOption>
+                @foreach (var category in Enum.GetValues<PlaceCategory>())
+                {
+                    <FluentOption TOption="string" Value="@category.ToString()">@category.ToString()</FluentOption>
+                }
+            </FluentSelect>
+            
+            <FluentCheckbox @bind-Value="@FilterHasGpxValue" Label="Has GPX Track" />
+            
+            <FluentButton Appearance="Appearance.Lightweight" OnClick="@ApplyFilters">
+                <FluentIcon Value="@(new Icons.Regular.Size20.Filter())" Slot="start" />
+                Apply Filters
+            </FluentButton>
+            
+            <FluentButton Appearance="Appearance.Lightweight" OnClick="@ClearFilters">
+                Clear
+            </FluentButton>
+        </FluentStack>
+    </FluentCard>
+
+    @if (IsLoading)
+    {
+        <FluentProgressRing />
+    }
+    else if (!Places.Any())
+    {
+        <FluentCard>
+            <FluentStack HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
+                <FluentIcon Value="@(new Icons.Regular.Size48.LocationOff())" Color="Color.Neutral" />
+                <FluentLabel Typo="Typography.Body">No places in your wishlist yet. Add your first place!</FluentLabel>
+            </FluentStack>
+        </FluentCard>
+    }
+    else
+    {
+        <FluentGrid Spacing="3" Justify="JustifyContent.FlexStart">
+            @foreach (var place in Places)
+            {
+                <FluentGridItem xs="12" sm="6" md="4" lg="3">
+                    <FluentCard Style="height: 100%;">
+                        <FluentStack Orientation="Orientation.Vertical">
+                            <FluentStack Orientation="Orientation.Horizontal">
+                                <FluentLabel Typo="Typography.Subject" Weight="FontWeight.Bold">@place.Name</FluentLabel>
+                                <FluentSpacer />
+                                @if (place.HasGpxTrack)
+                                {
+                                    <FluentBadge Appearance="Appearance.Accent">GPX</FluentBadge>
+                                }
+                            </FluentStack>
+                            
+                            <FluentLabel Typo="Typography.Body">@place.Description</FluentLabel>
+                            
+                            <FluentStack Orientation="Orientation.Horizontal" Wrap="true">
+                                <FluentBadge BackgroundColor="var(--neutral-layer-3)">@place.Category</FluentBadge>
+                            </FluentStack>
+                            
+                            @if (place.Tags.Any())
+                            {
+                                <FluentStack Orientation="Orientation.Horizontal" Wrap="true">
+                                    @foreach (var tag in place.Tags)
+                                    {
+                                        <FluentBadge BackgroundColor="var(--accent-fill-rest)">@tag</FluentBadge>
+                                    }
+                                </FluentStack>
+                            }
+                            
+                            <FluentLabel Style="font-size: 0.875em;">
+                                <FluentIcon Value="@(new Icons.Regular.Size16.Location())" />
+                                @place.Latitude.ToString("F4"), @place.Longitude.ToString("F4")
+                            </FluentLabel>
+                            
+                            <FluentDivider />
+                            
+                            <FluentStack Orientation="Orientation.Horizontal">
+                                <FluentButton Appearance="Appearance.Lightweight" OnClick="@(() => EditPlace(place))">
+                                    <FluentIcon Value="@(new Icons.Regular.Size16.Edit())" />
+                                    Edit
+                                </FluentButton>
+                                <FluentSpacer />
+                                <FluentButton Appearance="Appearance.Lightweight" OnClick="@(() => DeletePlace(place))">
+                                    <FluentIcon Value="@(new Icons.Regular.Size16.Delete())" Color="Color.Error" />
+                                    Delete
+                                </FluentButton>
+                            </FluentStack>
+                        </FluentStack>
+                    </FluentCard>
+                </FluentGridItem>
+            }
+        </FluentGrid>
+    }
+</FluentStack>
+
+<FluentDialog @bind-Hidden="@(!ShowAddDialog)" Modal="true" TrapFocus="true">
+    <FluentDialogHeader>
+        <FluentLabel Typo="Typography.H4">@(EditingPlace?.Id != null ? "Edit Place" : "Add New Place")</FluentLabel>
+    </FluentDialogHeader>
+    <FluentDialogBody>
+        @if (EditingPlace != null)
+        {
+            <FluentStack Orientation="Orientation.Vertical">
+                <FluentTextField @bind-Value="@EditingPlace.Name" Label="Name" Required Style="width: 100%;" />
+                <FluentTextArea @bind-Value="@EditingPlace.Description" Label="Description" Rows="3" Style="width: 100%;" />
+                
+                <FluentSelect TOption="string" Value="@_selectedCategoryString" Label="Category" Style="width: 100%;" ValueChanged="@OnCategoryChanged">
+                    @foreach (var category in Enum.GetValues<PlaceCategory>())
+                    {
+                        <FluentOption TOption="string" Value="@category.ToString()">@category.ToString()</FluentOption>
+                    }
+                </FluentSelect>
+                
+                <FluentNumberField @bind-Value="@EditingPlace.Latitude" Label="Latitude" Step="0.0001" Style="width: 100%;" />
+                <FluentNumberField @bind-Value="@EditingPlace.Longitude" Label="Longitude" Step="0.0001" Style="width: 100%;" />
+                
+                <FluentTextField @bind-Value="@NewTag" Label="Add Tags" Placeholder="Type and press Enter" 
+                                @onkeydown="@HandleTagKeyDown" Style="width: 100%;" />
+                
+                <FluentStack Orientation="Orientation.Horizontal" Wrap="true">
+                    @foreach (var tag in EditingPlace.Tags)
+                    {
+                        <FluentBadge BackgroundColor="var(--accent-fill-rest)">
+                            @tag
+                            <FluentButton Appearance="Appearance.Lightweight" OnClick="@(() => RemoveTag(tag))" Style="padding: 0; margin-left: 4px;">
+                                <FluentIcon Value="@(new Icons.Regular.Size12.Dismiss())" />
+                            </FluentButton>
+                        </FluentBadge>
+                    }
+                </FluentStack>
+            </FluentStack>
+        }
+    </FluentDialogBody>
+    <FluentDialogFooter>
+        <FluentButton Appearance="Appearance.Accent" OnClick="@SavePlace">Save</FluentButton>
+        <FluentButton Appearance="Appearance.Neutral" OnClick="@(() => ShowAddDialog = false)">Cancel</FluentButton>
+    </FluentDialogFooter>
+</FluentDialog>
+
+@code {
+    private List<Place> Places { get; set; } = new();
+    private bool IsLoading { get; set; } = true;
+    private bool ShowAddDialog { get; set; }
+    private Place? EditingPlace { get; set; }
+    private PlaceCategory? FilterCategory { get; set; }
+    private string FilterCategoryString { get; set; } = string.Empty;
+    private bool? FilterHasGpx { get; set; }
+    private bool FilterHasGpxValue { get; set; }
+    private string NewTag { get; set; } = string.Empty;
+    private string _selectedCategoryString = string.Empty;
+
+    private void OnCategoryChanged(string value)
+    {
+        _selectedCategoryString = value;
+        if (EditingPlace != null && Enum.TryParse<PlaceCategory>(value, out var category))
+        {
+            EditingPlace.Category = category;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPlaces();
+    }
+
+    private async Task LoadPlaces()
+    {
+        IsLoading = true;
+        Places = await PlaceRepository.GetAllAsync();
+        IsLoading = false;
+    }
+
+    private async Task ApplyFilters()
+    {
+        IsLoading = true;
+        FilterCategory = string.IsNullOrEmpty(FilterCategoryString) ? null : Enum.Parse<PlaceCategory>(FilterCategoryString);
+        FilterHasGpx = FilterHasGpxValue ? true : (bool?)null;
+        Places = await PlaceRepository.FilterAsync(FilterCategory, null, FilterHasGpx);
+        IsLoading = false;
+    }
+
+    private async Task ClearFilters()
+    {
+        FilterCategory = null;
+        FilterCategoryString = string.Empty;
+        FilterHasGpx = null;
+        FilterHasGpxValue = false;
+        await LoadPlaces();
+    }
+
+    private void CreateNewPlace()
+    {
+        EditingPlace = new Place();
+        _selectedCategoryString = EditingPlace.Category.ToString();
+        ShowAddDialog = true;
+    }
+
+    private void EditPlace(Place place)
+    {
+        EditingPlace = new Place
+        {
+            Id = place.Id,
+            Name = place.Name,
+            Description = place.Description,
+            Category = place.Category,
+            Latitude = place.Latitude,
+            Longitude = place.Longitude,
+            Tags = new List<string>(place.Tags),
+            GpxTrackId = place.GpxTrackId,
+            CreatedAt = place.CreatedAt,
+            UpdatedAt = place.UpdatedAt
+        };
+        _selectedCategoryString = EditingPlace.Category.ToString();
+        ShowAddDialog = true;
+    }
+
+    private async Task DeletePlace(Place place)
+    {
+        await PlaceRepository.DeleteAsync(place.Id);
+        await LoadPlaces();
+    }
+
+    private async Task SavePlace()
+    {
+        if (EditingPlace == null) return;
+
+        if (string.IsNullOrEmpty(EditingPlace.Id) || !Places.Any(p => p.Id == EditingPlace.Id))
+        {
+            await PlaceRepository.AddAsync(EditingPlace);
+        }
+        else
+        {
+            await PlaceRepository.UpdateAsync(EditingPlace);
+        }
+
+        ShowAddDialog = false;
+        EditingPlace = null;
+        await LoadPlaces();
+    }
+
+    private void HandleTagKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(NewTag))
+        {
+            if (EditingPlace != null && !EditingPlace.Tags.Contains(NewTag))
+            {
+                EditingPlace.Tags.Add(NewTag);
+                NewTag = string.Empty;
+            }
+        }
+    }
+
+    private void RemoveTag(string tag)
+    {
+        EditingPlace?.Tags.Remove(tag);
+    }
+}
