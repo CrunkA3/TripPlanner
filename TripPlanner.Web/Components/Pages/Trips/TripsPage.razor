@@ -91,7 +91,7 @@
     }
 </FluentStack>
 
-<FluentDialog @bind-Hidden="@(!ShowAddDialog)" Modal="true" TrapFocus="true" Style="width: 600px;">
+<FluentDialog @bind-Hidden="@HideAddDialog" Modal="true" TrapFocus="true" Style="width: 600px;">
     <FluentDialogHeader>
         <FluentLabel Typo="Typography.H4">@(EditingTrip?.Id != null && Trips.Any(t => t.Id == EditingTrip.Id) ? "Edit Trip" : "Create New Trip")</FluentLabel>
     </FluentDialogHeader>
@@ -113,11 +113,11 @@
     </FluentDialogBody>
     <FluentDialogFooter>
         <FluentButton Appearance="Appearance.Accent" OnClick="@SaveTrip">Save</FluentButton>
-        <FluentButton Appearance="Appearance.Neutral" OnClick="@(() => ShowAddDialog = false)">Cancel</FluentButton>
+        <FluentButton Appearance="Appearance.Neutral" OnClick="@(() => HideAddDialog = true)">Cancel</FluentButton>
     </FluentDialogFooter>
 </FluentDialog>
 
-<FluentDialog @bind-Hidden="@(!ShowViewDialog)" Modal="true" TrapFocus="true" Style="width: 90%; max-width: 1200px;">
+<FluentDialog @bind-Hidden="@HideViewDialog" Modal="true" TrapFocus="true" Style="width: 90%; max-width: 1200px;">
     <FluentDialogHeader>
         <FluentLabel Typo="Typography.H4">@ViewingTrip?.Name</FluentLabel>
     </FluentDialogHeader>
@@ -221,7 +221,7 @@
         }
     </FluentDialogBody>
     <FluentDialogFooter>
-        <FluentButton Appearance="Appearance.Neutral" OnClick="@(() => ShowViewDialog = false)">Close</FluentButton>
+        <FluentButton Appearance="Appearance.Neutral" OnClick="@(() => HideViewDialog = true)">Close</FluentButton>
     </FluentDialogFooter>
 </FluentDialog>
 
@@ -229,8 +229,8 @@
     private List<Trip> Trips { get; set; } = new();
     private List<Place> AllPlaces { get; set; } = new();
     private bool IsLoading { get; set; } = true;
-    private bool ShowAddDialog { get; set; }
-    private bool ShowViewDialog { get; set; }
+    private bool HideAddDialog { get; set; } = true;
+    private bool HideViewDialog { get; set; } = true;
     private Trip? EditingTrip { get; set; }
     private Trip? ViewingTrip { get; set; }
     private int NumDays { get; set; } = 1;
@@ -267,7 +267,7 @@
         NumDays = 1;
         _startDateString = string.Empty;
         _endDateString = string.Empty;
-        ShowAddDialog = true;
+        HideAddDialog = false;
     }
 
     private async Task LoadData()
@@ -313,13 +313,13 @@
         NumDays = trip.Days.Count;
         _startDateString = trip.StartDate?.ToString("yyyy-MM-dd") ?? string.Empty;
         _endDateString = trip.EndDate?.ToString("yyyy-MM-dd") ?? string.Empty;
-        ShowAddDialog = true;
+        HideAddDialog = false;
     }
 
     private void ViewTrip(Trip trip)
     {
         ViewingTrip = trip;
-        ShowViewDialog = true;
+        HideViewDialog = false;
     }
 
     private async Task DeleteTrip(Trip trip)
@@ -355,7 +355,7 @@
             await TripRepository.UpdateAsync(EditingTrip);
         }
 
-        ShowAddDialog = false;
+        HideAddDialog = true;
         EditingTrip = null;
         await LoadData();
     }
