@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="TripPlanner.ApiService/TripPlanner.ApiService.csproj" />
+  <Project Path="TripPlanner.AppHost/TripPlanner.AppHost.csproj" />
+  <Project Path="TripPlanner.ServiceDefaults/TripPlanner.ServiceDefaults.csproj" />
+  <Project Path="TripPlanner.Tests/TripPlanner.Tests.csproj" />
+  <Project Path="TripPlanner.Web/TripPlanner.Web.csproj" />
+</Solution>
