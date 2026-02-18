@@ -334,7 +334,7 @@
     </FluentDialogBody>
     <FluentDialogFooter>
         <FluentButton Appearance="Appearance.Accent" OnClick="@SaveTripPlan">Save Plan</FluentButton>
-        <FluentButton Appearance="Appearance.Neutral" OnClick="@(() => ShowPlanDialog = false)">Cancel</FluentButton>
+        <FluentButton Appearance="Appearance.Neutral" OnClick="@(() => HidePlanDialog = true)">Cancel</FluentButton>
     </FluentDialogFooter>
 </FluentDialog>
 
@@ -344,6 +344,7 @@
     private bool IsLoading { get; set; } = true;
     private bool HideAddDialog { get; set; } = true;
     private bool HideViewDialog { get; set; } = true;
+    private bool HidePlanDialog { get; set; } = true;
     private Trip? EditingTrip { get; set; }
     private Trip? ViewingTrip { get; set; }
     private Trip? PlanningTrip { get; set; }
@@ -472,7 +473,7 @@
             UnscheduledPlaces = trip.UnscheduledPlaces.ToList()
         };
 
-        ShowPlanDialog = true;
+        HidePlanDialog = false;
     }
 
     // Drag and drop handlers
@@ -580,7 +581,7 @@
         PlanningTrip.UpdatedAt = DateTime.UtcNow;
         await TripRepository.UpdateAsync(PlanningTrip);
 
-        ShowPlanDialog = false;
+        HidePlanDialog = true;
         PlanningTrip = null;
         await LoadData();
     }
