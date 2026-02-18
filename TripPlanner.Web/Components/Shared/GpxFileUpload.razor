@@ -1,0 +1,148 @@
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
+
+<div class="file-upload-area @(IsDragging ? "drag-over" : "")" 
+     @ondragenter="HandleDragEnter" 
+     @ondragleave="HandleDragLeave" 
+     @ondragover:preventDefault
+     @ondrop:preventDefault
+     @ondrop="HandleDrop">
+    
+    <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center">
+        <FluentIcon Value="@(new Icons.Regular.Size48.DocumentAdd())" Color="Color.Accent" />
+        
+        @if (IsUploading)
+        {
+            <FluentProgressRing />
+            <FluentLabel>Uploading GPX file...</FluentLabel>
+        }
+        else if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            <FluentLabel Typo="Typography.Body" Color="Color.Error">@ErrorMessage</FluentLabel>
+            <FluentButton Appearance="Appearance.Lightweight" OnClick="ResetUpload">Try Again</FluentButton>
+        }
+        else if (!string.IsNullOrEmpty(SuccessMessage))
+        {
+            <FluentLabel Typo="Typography.Body" Color="Color.Success">@SuccessMessage</FluentLabel>
+            <FluentButton Appearance="Appearance.Lightweight" OnClick="ResetUpload">Upload Another</FluentButton>
+        }
+        else
+        {
+            <FluentLabel Typo="Typography.Subject">Drop GPX file here or click to browse</FluentLabel>
+            <FluentLabel Style="font-size: 0.875em;">Accepted formats: .gpx</FluentLabel>
+            <FluentButton Appearance="Appearance.Lightweight" OnClick="OpenFileDialog">
+                <FluentIcon Value="@(new Icons.Regular.Size16.FolderOpen())" Slot="start" />
+                Browse
+            </FluentButton>
+        }
+    </FluentStack>
+
+    <InputFile @ref="fileInput" 
+               id="@fileInputId"
+               OnChange="HandleFileSelected" 
+               accept=".gpx"
+               style="display: none;" />
+</div>
+
+@code {
+    [Parameter]
+    public EventCallback<GpxUploadResult> OnFileUploaded { get; set; }
+
+    private InputFile? fileInput;
+    private string fileInputId = $"file-input-{Guid.NewGuid():N}";
+    private bool IsDragging;
+    private bool IsUploading;
+    private string? ErrorMessage;
+    private string? SuccessMessage;
+
+    private void HandleDragEnter(DragEventArgs e)
+    {
+        IsDragging = true;
+    }
+
+    private void HandleDragLeave(DragEventArgs e)
+    {
+        IsDragging = false;
+    }
+
+    private async Task HandleDrop(DragEventArgs e)
+    {
+        IsDragging = false;
+    }
+
+    private async Task OpenFileDialog()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("eval", $"document.getElementById('{fileInputId}').click()");
+        }
+        catch { }
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        ErrorMessage = null;
+        SuccessMessage = null;
+        IsUploading = true;
+
+        try
+        {
+            var file = e.File;
+
+            // Validate file type
+            if (!file.Name.EndsWith(".gpx", StringComparison.OrdinalIgnoreCase))
+            {
+                ErrorMessage = "Please select a GPX file (.gpx)";
+                IsUploading = false;
+                return;
+            }
+
+            // Validate file size (max 10MB)
+            if (file.Size > 10 * 1024 * 1024)
+            {
+                ErrorMessage = "File is too large. Maximum size is 10MB.";
+                IsUploading = false;
+                return;
+            }
+
+            // Read file content
+            using var reader = new StreamReader(file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024));
+            var content = await reader.ReadToEndAsync();
+
+            // Notify parent component
+            var result = new GpxUploadResult
+            {
+                FileName = file.Name,
+                FileSize = file.Size,
+                Content = content,
+                Success = true
+            };
+
+            await OnFileUploaded.InvokeAsync(result);
+            SuccessMessage = $"Successfully uploaded {file.Name}";
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error uploading file: {ex.Message}";
+        }
+        finally
+        {
+            IsUploading = false;
+        }
+    }
+
+    private async Task ResetUpload()
+    {
+        ErrorMessage = null;
+        SuccessMessage = null;
+        IsUploading = false;
+    }
+
+    public class GpxUploadResult
+    {
+        public string FileName { get; set; } = string.Empty;
+        public long FileSize { get; set; }
+        public string Content { get; set; } = string.Empty;
+        public bool Success { get; set; }
+    }
+}

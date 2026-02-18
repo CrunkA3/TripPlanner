@@ -1,8 +1,12 @@
 @page "/wishlist"
 @using TripPlanner.Web.Models
 @using TripPlanner.Web.Repositories
+@using TripPlanner.Web.Services
+@using TripPlanner.Web.Components.Shared
+@using static TripPlanner.Web.Components.Shared.GpxFileUpload
 @inject IPlaceRepository PlaceRepository
 @inject IGpxRepository GpxRepository
+@inject GpxService GpxService
 @rendermode InteractiveServer
 
 <PageTitle>Wishlist</PageTitle>
@@ -150,6 +154,35 @@
                         </FluentBadge>
                     }
                 </FluentStack>
+
+                <FluentDivider />
+                
+                <FluentLabel Typo="Typography.Subject">GPX Track (Optional)</FluentLabel>
+                @if (!string.IsNullOrEmpty(EditingPlace.GpxTrackId))
+                {
+                    var gpxTrack = GpxTracks.FirstOrDefault(g => g.Id == EditingPlace.GpxTrackId);
+                    @if (gpxTrack != null)
+                    {
+                        <FluentCard>
+                            <FluentStack Orientation="Orientation.Horizontal">
+                                <FluentIcon Value="@(new Icons.Regular.Size20.Location())" Color="Color.Accent" />
+                                <FluentStack Orientation="Orientation.Vertical" Style="flex: 1;">
+                                    <FluentLabel Weight="FontWeight.Bold">@gpxTrack.Name</FluentLabel>
+                                    <FluentLabel Style="font-size: 0.875em;">
+                                        Distance: @gpxTrack.TotalDistance.ToString("F2") km | Points: @gpxTrack.Points.Count
+                                    </FluentLabel>
+                                </FluentStack>
+                                <FluentButton Appearance="Appearance.Lightweight" OnClick="@RemoveGpxTrack">
+                                    <FluentIcon Value="@(new Icons.Regular.Size16.Delete())" Color="Color.Error" />
+                                </FluentButton>
+                            </FluentStack>
+                        </FluentCard>
+                    }
+                }
+                else
+                {
+                    <GpxFileUpload OnFileUploaded="@HandleGpxUploaded" />
+                }
             </FluentStack>
         }
     </FluentDialogBody>
@@ -161,6 +194,7 @@
 
 @code {
     private List<Place> Places { get; set; } = new();
+    private List<GpxTrack> GpxTracks { get; set; } = new();
     private bool IsLoading { get; set; } = true;
     private bool ShowAddDialog { get; set; }
     private bool HideAddDialog { get => !ShowAddDialog; set => ShowAddDialog = !value; }
@@ -184,6 +218,7 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadPlaces();
+        await LoadGpxTracks();
     }
 
     private async Task LoadPlaces()
@@ -191,6 +226,11 @@
         IsLoading = true;
         Places = await PlaceRepository.GetAllAsync();
         IsLoading = false;
+    }
+
+    private async Task LoadGpxTracks()
+    {
+        GpxTracks = await GpxRepository.GetAllAsync();
     }
 
     private async Task ApplyFilters()
@@ -276,5 +316,39 @@
     private void RemoveTag(string tag)
     {
         EditingPlace?.Tags.Remove(tag);
+    }
+
+    private async Task HandleGpxUploaded(GpxUploadResult result)
+    {
+        if (result.Success && EditingPlace != null)
+        {
+            try
+            {
+                // Parse the GPX file
+                var gpxTrack = GpxService.ParseGpxContent(result.Content, result.FileName);
+                gpxTrack.CreatedAt = DateTime.UtcNow;
+
+                // Save the GPX track
+                await GpxRepository.AddAsync(gpxTrack);
+
+                // Link it to the place
+                EditingPlace.GpxTrackId = gpxTrack.Id;
+
+                // Reload GPX tracks
+                await LoadGpxTracks();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error processing GPX file: {ex.Message}");
+            }
+        }
+    }
+
+    private void RemoveGpxTrack()
+    {
+        if (EditingPlace != null)
+        {
+            EditingPlace.GpxTrackId = null;
+        }
     }
 }
