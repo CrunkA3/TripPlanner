@@ -103,8 +103,8 @@
                 <FluentTextArea @bind-Value="@EditingTrip.Description" Label="Description" Rows="3" Style="width: 100%;" />
                 
                 <FluentStack Orientation="Orientation.Horizontal">
-                    <FluentTextField @bind-Value="@StartDateString" Label="Start Date (YYYY-MM-DD)" Style="width: 100%;" />
-                    <FluentTextField @bind-Value="@EndDateString" Label="End Date (YYYY-MM-DD)" Style="width: 100%;" />
+                    <FluentTextField Value="@_startDateString" Label="Start Date (YYYY-MM-DD)" Style="width: 100%;" ValueChanged="@OnStartDateChanged" />
+                    <FluentTextField Value="@_endDateString" Label="End Date (YYYY-MM-DD)" Style="width: 100%;" ValueChanged="@OnEndDateChanged" />
                 </FluentStack>
                 
                 <FluentNumberField @bind-Value="@NumDays" Label="Number of Days" Min="1" Max="30" Style="width: 100%;" />
@@ -236,30 +236,23 @@
     private int NumDays { get; set; } = 1;
     
     private string _startDateString = string.Empty;
-    private string StartDateString
+    private string _endDateString = string.Empty;
+    
+    private void OnStartDateChanged(string value)
     {
-        get => _startDateString;
-        set
+        _startDateString = value;
+        if (EditingTrip != null && DateTime.TryParse(value, out var date))
         {
-            _startDateString = value;
-            if (EditingTrip != null && DateTime.TryParse(value, out var date))
-            {
-                EditingTrip.StartDate = date;
-            }
+            EditingTrip.StartDate = date;
         }
     }
     
-    private string _endDateString = string.Empty;
-    private string EndDateString
+    private void OnEndDateChanged(string value)
     {
-        get => _endDateString;
-        set
+        _endDateString = value;
+        if (EditingTrip != null && DateTime.TryParse(value, out var date))
         {
-            _endDateString = value;
-            if (EditingTrip != null && DateTime.TryParse(value, out var date))
-            {
-                EditingTrip.EndDate = date;
-            }
+            EditingTrip.EndDate = date;
         }
     }
 

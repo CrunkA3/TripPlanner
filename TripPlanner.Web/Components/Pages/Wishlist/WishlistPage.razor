@@ -126,7 +126,7 @@
                 <FluentTextField @bind-Value="@EditingPlace.Name" Label="Name" Required Style="width: 100%;" />
                 <FluentTextArea @bind-Value="@EditingPlace.Description" Label="Description" Rows="3" Style="width: 100%;" />
                 
-                <FluentSelect TOption="string" @bind-Value="@SelectedCategoryString" Label="Category" Style="width: 100%;">
+                <FluentSelect TOption="string" Value="@_selectedCategoryString" Label="Category" Style="width: 100%;" ValueChanged="@OnCategoryChanged">
                     @foreach (var category in Enum.GetValues<PlaceCategory>())
                     {
                         <FluentOption TOption="string" Value="@category.ToString()">@category.ToString()</FluentOption>
@@ -170,16 +170,13 @@
     private bool FilterHasGpxValue { get; set; }
     private string NewTag { get; set; } = string.Empty;
     private string _selectedCategoryString = string.Empty;
-    private string SelectedCategoryString
+
+    private void OnCategoryChanged(string value)
     {
-        get => _selectedCategoryString;
-        set
+        _selectedCategoryString = value;
+        if (EditingPlace != null && Enum.TryParse<PlaceCategory>(value, out var category))
         {
-            _selectedCategoryString = value;
-            if (EditingPlace != null && Enum.TryParse<PlaceCategory>(value, out var category))
-            {
-                EditingPlace.Category = category;
-            }
+            EditingPlace.Category = category;
         }
     }
 
