@@ -7,8 +7,17 @@ public class Trip
     public string Description { get; set; } = string.Empty;
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
+    
+    // Owner
+    public string OwnerId { get; set; } = string.Empty;
+    public User? Owner { get; set; }
+    
     public List<TripDay> Days { get; set; } = new();
     public List<TripPlace> UnscheduledPlaces { get; set; } = new();
+    
+    // Sharing
+    public List<SharedTrip> SharedWith { get; set; } = new();
+    
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
 }

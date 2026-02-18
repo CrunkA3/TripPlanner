@@ -10,4 +10,5 @@ public interface IPlaceRepository
     Task<Place> UpdateAsync(Place place);
     Task DeleteAsync(string id);
     Task<List<Place>> FilterAsync(PlaceCategory? category = null, List<string>? tags = null, bool? hasGpxTrack = null);
+    Task<List<Place>> GetByWishlistIdAsync(string wishlistId);
 }

@@ -1,0 +1,198 @@
+@page "/wishlist/{WishlistId}"
+@using Microsoft.AspNetCore.Authorization
+@using TripPlanner.Web.Models
+@using TripPlanner.Web.Repositories
+@using TripPlanner.Web.Services
+@attribute [Authorize]
+@inject IWishlistRepository WishlistRepository
+@inject IPlaceRepository PlaceRepository
+@inject UserService UserService
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<PageTitle>@wishlist?.Name ?? "Wishlist"</PageTitle>
+
+@if (wishlist == null)
+{
+    <FluentProgressRing>Loading wishlist...</FluentProgressRing>
+}
+else if (!canAccess)
+{
+    <FluentMessageBar Intent="MessageIntent.Error">
+        You do not have permission to view this wishlist.
+    </FluentMessageBar>
+}
+else
+{
+    <FluentStack Orientation="Orientation.Vertical" Width="100%">
+        <FluentToolbar>
+            <FluentButton Appearance="Appearance.Lightweight" OnClick="@(() => NavigationManager.NavigateTo("/wishlists"))">
+                <FluentIcon Value="@(new Icons.Regular.Size20.ArrowLeft())" Slot="start" />
+                Back to Wishlists
+            </FluentButton>
+            <FluentSpacer />
+            <FluentLabel Typo="Typography.H3">
+                <FluentIcon Value="@(new Icons.Regular.Size24.Heart())" Color="Color.Accent" />
+                @wishlist.Name
+            </FluentLabel>
+            <FluentSpacer />
+            <FluentButton Appearance="Appearance.Accent" OnClick="@ShowAddPlaceDialog">
+                <FluentIcon Value="@(new Icons.Regular.Size20.Add())" Slot="start" />
+                Add Place
+            </FluentButton>
+        </FluentToolbar>
+
+        @if (!string.IsNullOrEmpty(wishlist.Description))
+        {
+            <FluentCard>
+                <p>@wishlist.Description</p>
+            </FluentCard>
+        }
+
+        @if (places == null)
+        {
+            <FluentProgressRing>Loading places...</FluentProgressRing>
+        }
+        else if (!places.Any())
+        {
+            <FluentCard>
+                <p>This wishlist doesn't have any places yet. Click "Add Place" to start adding places.</p>
+            </FluentCard>
+        }
+        else
+        {
+            <FluentStack Orientation="Orientation.Horizontal" Wrap="true" Width="100%">
+                @foreach (var place in places)
+                {
+                    <FluentCard Style="width: 300px; margin: 10px;">
+                        <FluentStack Orientation="Orientation.Vertical">
+                            <FluentLabel Typo="Typography.H5">@place.Name</FluentLabel>
+                            <FluentBadge Appearance="Appearance.Accent">@place.Category</FluentBadge>
+                            <p>@place.Description</p>
+                            <FluentStack Orientation="Orientation.Horizontal">
+                                <FluentIcon Value="@(new Icons.Regular.Size16.Location())" />
+                                <span>@place.Latitude.ToString("F4"), @place.Longitude.ToString("F4")</span>
+                            </FluentStack>
+                            @if (place.Tags.Any())
+                            {
+                                <FluentStack Orientation="Orientation.Horizontal" Wrap="true">
+                                    @foreach (var tag in place.Tags)
+                                    {
+                                        <FluentBadge>@tag</FluentBadge>
+                                    }
+                                </FluentStack>
+                            }
+                            <FluentStack Orientation="Orientation.Horizontal">
+                                <FluentButton Appearance="Appearance.Lightweight" OnClick="@(() => EditPlace(place))">
+                                    Edit
+                                </FluentButton>
+                                <FluentButton Appearance="Appearance.Lightweight" OnClick="@(() => DeletePlace(place.Id))">
+                                    Delete
+                                </FluentButton>
+                            </FluentStack>
+                        </FluentStack>
+                    </FluentCard>
+                }
+            </FluentStack>
+        }
+    </FluentStack>
+
+    <FluentDialog @ref="addPlaceDialog" Hidden="@(!showAddPlaceDialog)" Modal="true">
+        <h3>Add Place to @wishlist.Name</h3>
+        <EditForm Model="@newPlace" OnValidSubmit="@AddPlace">
+            <FluentStack Orientation="Orientation.Vertical">
+                <FluentTextField @bind-Value="newPlace.Name" Label="Name" Required="true" Style="width: 100%;" />
+                <FluentTextArea @bind-Value="newPlace.Description" Label="Description" Style="width: 100%;" />
+                <FluentSelect TOption="string" Value="@newPlace.Category.ToString()" ValueChanged="@((string value) => newPlace.Category = Enum.Parse<PlaceCategory>(value))" Label="Category" Style="width: 100%;">
+                    @foreach (var category in Enum.GetValues<PlaceCategory>())
+                    {
+                        <FluentOption Value="@category.ToString()">@category.ToString()</FluentOption>
+                    }
+                </FluentSelect>
+                <FluentNumberField @bind-Value="newPlace.Latitude" Label="Latitude" Step="0.0001" Style="width: 100%;" />
+                <FluentNumberField @bind-Value="newPlace.Longitude" Label="Longitude" Step="0.0001" Style="width: 100%;" />
+                <FluentTextField @bind-Value="newPlaceTags" Label="Tags (comma-separated)" Style="width: 100%;" />
+                <FluentStack Orientation="Orientation.Horizontal">
+                    <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent">Add</FluentButton>
+                    <FluentButton Appearance="Appearance.Neutral" OnClick="@(() => showAddPlaceDialog = false)">Cancel</FluentButton>
+                </FluentStack>
+            </FluentStack>
+        </EditForm>
+    </FluentDialog>
+}
+
+@code {
+    [Parameter]
+    public string WishlistId { get; set; } = string.Empty;
+
+    private Wishlist? wishlist;
+    private List<Place>? places;
+    private bool canAccess;
+    private string? currentUserId;
+
+    private FluentDialog? addPlaceDialog;
+    private bool showAddPlaceDialog;
+    private Place newPlace = new();
+    private string newPlaceTags = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentUserId = await UserService.GetCurrentUserIdAsync();
+        if (currentUserId != null)
+        {
+            await LoadWishlist();
+        }
+    }
+
+    private async Task LoadWishlist()
+    {
+        if (currentUserId == null) return;
+
+        wishlist = await WishlistRepository.GetByIdAsync(WishlistId);
+        if (wishlist != null)
+        {
+            canAccess = await WishlistRepository.CanUserAccessAsync(WishlistId, currentUserId);
+            if (canAccess)
+            {
+                await LoadPlaces();
+            }
+        }
+    }
+
+    private async Task LoadPlaces()
+    {
+        places = await PlaceRepository.GetByWishlistIdAsync(WishlistId);
+    }
+
+    private void ShowAddPlaceDialog()
+    {
+        newPlace = new Place { WishlistId = WishlistId };
+        newPlaceTags = string.Empty;
+        showAddPlaceDialog = true;
+    }
+
+    private async Task AddPlace()
+    {
+        if (!string.IsNullOrWhiteSpace(newPlaceTags))
+        {
+            newPlace.Tags = newPlaceTags.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(t => t.Trim())
+                .ToList();
+        }
+
+        await PlaceRepository.AddAsync(newPlace);
+        await LoadPlaces();
+        showAddPlaceDialog = false;
+    }
+
+    private void EditPlace(Place place)
+    {
+        // TODO: Implement edit functionality
+    }
+
+    private async Task DeletePlace(string placeId)
+    {
+        await PlaceRepository.DeleteAsync(placeId);
+        await LoadPlaces();
+    }
+}

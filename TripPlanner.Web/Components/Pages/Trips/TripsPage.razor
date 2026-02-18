@@ -1,10 +1,13 @@
 @page "/trips"
+@using Microsoft.AspNetCore.Authorization
 @using TripPlanner.Web.Models
 @using TripPlanner.Web.Repositories
 @using TripPlanner.Web.Services
+@attribute [Authorize]
 @inject ITripRepository TripRepository
 @inject IPlaceRepository PlaceRepository
 @inject RoutingService RoutingService
+@inject UserService UserService
 @rendermode InteractiveServer
 
 <PageTitle>Trips</PageTitle>
@@ -382,9 +385,10 @@
         await LoadData();
     }
 
-    private void CreateNewTrip()
+    private async Task CreateNewTrip()
     {
-        EditingTrip = new Trip();
+        var currentUserId = await UserService.GetCurrentUserIdAsync();
+        EditingTrip = new Trip { OwnerId = currentUserId ?? string.Empty };
         NumDays = 1;
         _startDateString = string.Empty;
         _endDateString = string.Empty;
@@ -394,7 +398,19 @@
     private async Task LoadData()
     {
         IsLoading = true;
-        Trips = await TripRepository.GetAllAsync();
+        
+        var currentUserId = await UserService.GetCurrentUserIdAsync();
+        if (currentUserId != null)
+        {
+            var ownedTrips = await TripRepository.GetByOwnerAsync(currentUserId);
+            var sharedTrips = await TripRepository.GetSharedWithUserAsync(currentUserId);
+            Trips = ownedTrips.Concat(sharedTrips).ToList();
+        }
+        else
+        {
+            Trips = new List<Trip>();
+        }
+        
         AllPlaces = await PlaceRepository.GetAllAsync();
         
         // Load place details for all trips
