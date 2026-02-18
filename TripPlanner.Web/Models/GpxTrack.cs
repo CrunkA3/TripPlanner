@@ -14,8 +14,11 @@ public class GpxTrack
 
 public class GpxPoint
 {
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string GpxTrackId { get; set; } = string.Empty;
     public double Latitude { get; set; }
     public double Longitude { get; set; }
     public double? Elevation { get; set; }
     public DateTime? Time { get; set; }
+    public int Order { get; set; }
 }
