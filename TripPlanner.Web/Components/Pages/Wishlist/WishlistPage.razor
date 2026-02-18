@@ -115,7 +115,7 @@
     }
 </FluentStack>
 
-<FluentDialog @bind-Hidden="@(!ShowAddDialog)" Modal="true" TrapFocus="true">
+<FluentDialog @bind-Hidden="@HideAddDialog" Modal="true" TrapFocus="true">
     <FluentDialogHeader>
         <FluentLabel Typo="Typography.H4">@(EditingPlace?.Id != null ? "Edit Place" : "Add New Place")</FluentLabel>
     </FluentDialogHeader>
@@ -163,6 +163,7 @@
     private List<Place> Places { get; set; } = new();
     private bool IsLoading { get; set; } = true;
     private bool ShowAddDialog { get; set; }
+    private bool HideAddDialog { get => !ShowAddDialog; set => ShowAddDialog = !value; }
     private Place? EditingPlace { get; set; }
     private PlaceCategory? FilterCategory { get; set; }
     private string FilterCategoryString { get; set; } = string.Empty;
