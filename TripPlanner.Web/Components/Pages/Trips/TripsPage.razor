@@ -385,7 +385,7 @@
         await LoadData();
     }
 
-    private async void CreateNewTrip()
+    private async Task CreateNewTrip()
     {
         var currentUserId = await UserService.GetCurrentUserIdAsync();
         EditingTrip = new Trip { OwnerId = currentUserId ?? string.Empty };
