@@ -2,7 +2,7 @@
 
 window.dragDropInterop = {
     // Enable drag and drop on an element
-    enableDragDrop: function (elementId, dotNetHelper) {
+    enableDragDrop: function (elementId) {
         try {
             const element = document.getElementById(elementId);
             if (!element) {

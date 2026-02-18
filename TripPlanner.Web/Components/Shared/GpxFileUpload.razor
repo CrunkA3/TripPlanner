@@ -4,9 +4,7 @@
 <div class="file-upload-area @(IsDragging ? "drag-over" : "")" 
      @ondragenter="HandleDragEnter" 
      @ondragleave="HandleDragLeave" 
-     @ondragover:preventDefault
-     @ondrop:preventDefault
-     @ondrop="HandleDrop">
+     @ondragover:preventDefault>
     
     <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center">
         <FluentIcon Value="@(new Icons.Regular.Size48.DocumentAdd())" Color="Color.Accent" />
@@ -28,12 +26,14 @@
         }
         else
         {
-            <FluentLabel Typo="Typography.Subject">Drop GPX file here or click to browse</FluentLabel>
+            <FluentLabel Typo="Typography.Subject">Click to browse for GPX file</FluentLabel>
             <FluentLabel Style="font-size: 0.875em;">Accepted formats: .gpx</FluentLabel>
-            <FluentButton Appearance="Appearance.Lightweight" OnClick="OpenFileDialog">
-                <FluentIcon Value="@(new Icons.Regular.Size16.FolderOpen())" Slot="start" />
-                Browse
-            </FluentButton>
+            <label for="@fileInputId">
+                <FluentButton Appearance="Appearance.Lightweight">
+                    <FluentIcon Value="@(new Icons.Regular.Size16.FolderOpen())" Slot="start" />
+                    Browse
+                </FluentButton>
+            </label>
         }
     </FluentStack>
 
@@ -63,20 +63,6 @@
     private void HandleDragLeave(DragEventArgs e)
     {
         IsDragging = false;
-    }
-
-    private async Task HandleDrop(DragEventArgs e)
-    {
-        IsDragging = false;
-    }
-
-    private async Task OpenFileDialog()
-    {
-        try
-        {
-            await JSRuntime.InvokeVoidAsync("eval", $"document.getElementById('{fileInputId}').click()");
-        }
-        catch { }
     }
 
     private async Task HandleFileSelected(InputFileChangeEventArgs e)
