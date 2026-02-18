@@ -140,8 +140,8 @@
                 <FluentNumberField @bind-Value="@EditingPlace.Latitude" Label="Latitude" Step="0.0001" Style="width: 100%;" />
                 <FluentNumberField @bind-Value="@EditingPlace.Longitude" Label="Longitude" Step="0.0001" Style="width: 100%;" />
                 
-                <FluentTextField @bind-Value="@NewTag" Label="Add Tags" Placeholder="Type and press Enter" 
-                                @onkeydown="@HandleTagKeyDown" Style="width: 100%;" />
+                <FluentTextField @bind-Value="@NewTag" Label="Add Tags" Placeholder="Type and press Enter"
+                                 @onkeydown="@HandleTagKeyDown" Style="width: 100%;" />
                 
                 <FluentStack Orientation="Orientation.Horizontal" Wrap="true">
                     @foreach (var tag in EditingPlace.Tags)
@@ -188,7 +188,7 @@
     </FluentDialogBody>
     <FluentDialogFooter>
         <FluentButton Appearance="Appearance.Accent" OnClick="@SavePlace">Save</FluentButton>
-        <FluentButton Appearance="Appearance.Neutral" OnClick="@(() => ShowAddDialog = false)">Cancel</FluentButton>
+        <FluentButton Appearance="Appearance.Neutral" OnClick="@(() => HideAddDialog = true)">Cancel</FluentButton>
     </FluentDialogFooter>
 </FluentDialog>
 
@@ -196,8 +196,7 @@
     private List<Place> Places { get; set; } = new();
     private List<GpxTrack> GpxTracks { get; set; } = new();
     private bool IsLoading { get; set; } = true;
-    private bool ShowAddDialog { get; set; }
-    private bool HideAddDialog { get => !ShowAddDialog; set => ShowAddDialog = !value; }
+    private bool HideAddDialog { get; set; } = true;
     private Place? EditingPlace { get; set; }
     private PlaceCategory? FilterCategory { get; set; }
     private string FilterCategoryString { get; set; } = string.Empty;
@@ -255,7 +254,7 @@
     {
         EditingPlace = new Place();
         _selectedCategoryString = EditingPlace.Category.ToString();
-        ShowAddDialog = true;
+        HideAddDialog = false;
     }
 
     private void EditPlace(Place place)
@@ -274,7 +273,7 @@
             UpdatedAt = place.UpdatedAt
         };
         _selectedCategoryString = EditingPlace.Category.ToString();
-        ShowAddDialog = true;
+        HideAddDialog = false;
     }
 
     private async Task DeletePlace(Place place)
@@ -296,7 +295,7 @@
             await PlaceRepository.UpdateAsync(EditingPlace);
         }
 
-        ShowAddDialog = false;
+        HideAddDialog = true;
         EditingPlace = null;
         await LoadPlaces();
     }
