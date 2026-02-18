@@ -2,6 +2,100 @@
 
 <PageTitle>Home</PageTitle>
 
-<h1>Hello, world!</h1>
+<FluentStack Orientation="Orientation.Vertical" Width="100%">
+    <FluentLabel Typo="Typography.H2">
+        <FluentIcon Value="@(new Icons.Regular.Size32.Globe())" Color="Color.Accent" />
+        Welcome to TripPlanner
+    </FluentLabel>
+    
+    <FluentLabel Typo="Typography.Body">
+        Your personal travel and trip planning companion. Plan your dream destinations, organize trips, and visualize your journeys on interactive maps.
+    </FluentLabel>
 
-Welcome to your new Fluent app.
+    <FluentGrid Spacing="3" Justify="JustifyContent.FlexStart" Style="margin-top: 24px;">
+        <FluentGridItem xs="12" sm="6" md="4">
+            <FluentCard Style="height: 100%;">
+                <FluentStack Orientation="Orientation.Vertical">
+                    <FluentIcon Value="@(new Icons.Regular.Size48.Heart())" Color="Color.Accent" />
+                    <FluentLabel Typo="Typography.Subject" Weight="FontWeight.Bold">Wishlist</FluentLabel>
+                    <FluentLabel Typo="Typography.Body">
+                        Save places you want to visit someday. Add details, coordinates, categories, and even GPX tracks.
+                    </FluentLabel>
+                    <FluentButton Appearance="Appearance.Accent" Href="/wishlist" Style="margin-top: auto;">
+                        Go to Wishlist
+                    </FluentButton>
+                </FluentStack>
+            </FluentCard>
+        </FluentGridItem>
+
+        <FluentGridItem xs="12" sm="6" md="4">
+            <FluentCard Style="height: 100%;">
+                <FluentStack Orientation="Orientation.Vertical">
+                    <FluentIcon Value="@(new Icons.Regular.Size48.VehicleCar())" Color="Color.Accent" />
+                    <FluentLabel Typo="Typography.Subject" Weight="FontWeight.Bold">Trip Planning</FluentLabel>
+                    <FluentLabel Typo="Typography.Body">
+                        Plan your trips with multiple days, schedule places with times, and get travel time estimates.
+                    </FluentLabel>
+                    <FluentButton Appearance="Appearance.Accent" Href="/trips" Style="margin-top: auto;">
+                        Plan a Trip
+                    </FluentButton>
+                </FluentStack>
+            </FluentCard>
+        </FluentGridItem>
+
+        <FluentGridItem xs="12" sm="6" md="4">
+            <FluentCard Style="height: 100%;">
+                <FluentStack Orientation="Orientation.Vertical">
+                    <FluentIcon Value="@(new Icons.Regular.Size48.Location())" Color="Color.Accent" />
+                    <FluentLabel Typo="Typography.Subject" Weight="FontWeight.Bold">Map View</FluentLabel>
+                    <FluentLabel Typo="Typography.Body">
+                        Visualize all your places and trips on an interactive map with routes and GPX tracks.
+                    </FluentLabel>
+                    <FluentButton Appearance="Appearance.Accent" Href="/map" Style="margin-top: auto;">
+                        View Map
+                    </FluentButton>
+                </FluentStack>
+            </FluentCard>
+        </FluentGridItem>
+    </FluentGrid>
+
+    <FluentCard Style="margin-top: 24px;">
+        <FluentStack Orientation="Orientation.Vertical">
+            <FluentLabel Typo="Typography.H5">Key Features</FluentLabel>
+            <FluentStack Orientation="Orientation.Horizontal" Wrap="true">
+                <FluentStack Orientation="Orientation.Horizontal" Style="min-width: 250px;">
+                    <FluentIcon Value="@(new Icons.Regular.Size20.CheckmarkCircle())" Color="Color.Success" />
+                    <FluentLabel>Save wishlist places with details</FluentLabel>
+                </FluentStack>
+                <FluentStack Orientation="Orientation.Horizontal" Style="min-width: 250px;">
+                    <FluentIcon Value="@(new Icons.Regular.Size20.CheckmarkCircle())" Color="Color.Success" />
+                    <FluentLabel>Filter by category, tags, and GPX</FluentLabel>
+                </FluentStack>
+                <FluentStack Orientation="Orientation.Horizontal" Style="min-width: 250px;">
+                    <FluentIcon Value="@(new Icons.Regular.Size20.CheckmarkCircle())" Color="Color.Success" />
+                    <FluentLabel>Plan multi-day trips</FluentLabel>
+                </FluentStack>
+                <FluentStack Orientation="Orientation.Horizontal" Style="min-width: 250px;">
+                    <FluentIcon Value="@(new Icons.Regular.Size20.CheckmarkCircle())" Color="Color.Success" />
+                    <FluentLabel>Schedule places with times</FluentLabel>
+                </FluentStack>
+                <FluentStack Orientation="Orientation.Horizontal" Style="min-width: 250px;">
+                    <FluentIcon Value="@(new Icons.Regular.Size20.CheckmarkCircle())" Color="Color.Success" />
+                    <FluentLabel>Automatic travel time calculation</FluentLabel>
+                </FluentStack>
+                <FluentStack Orientation="Orientation.Horizontal" Style="min-width: 250px;">
+                    <FluentIcon Value="@(new Icons.Regular.Size20.CheckmarkCircle())" Color="Color.Success" />
+                    <FluentLabel>Map visualization</FluentLabel>
+                </FluentStack>
+                <FluentStack Orientation="Orientation.Horizontal" Style="min-width: 250px;">
+                    <FluentIcon Value="@(new Icons.Regular.Size20.CheckmarkCircle())" Color="Color.Success" />
+                    <FluentLabel>GPX track support</FluentLabel>
+                </FluentStack>
+                <FluentStack Orientation="Orientation.Horizontal" Style="min-width: 250px;">
+                    <FluentIcon Value="@(new Icons.Regular.Size20.CheckmarkCircle())" Color="Color.Success" />
+                    <FluentLabel>Local storage (no login required)</FluentLabel>
+                </FluentStack>
+            </FluentStack>
+        </FluentStack>
+    </FluentCard>
+</FluentStack>

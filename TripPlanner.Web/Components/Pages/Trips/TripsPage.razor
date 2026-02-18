@@ -1,0 +1,369 @@
+@page "/trips"
+@using TripPlanner.Web.Models
+@using TripPlanner.Web.Repositories
+@using TripPlanner.Web.Services
+@inject ITripRepository TripRepository
+@inject IPlaceRepository PlaceRepository
+@inject RoutingService RoutingService
+@rendermode InteractiveServer
+
+<PageTitle>Trips</PageTitle>
+
+<FluentStack Orientation="Orientation.Vertical" Width="100%">
+    <FluentToolbar>
+        <FluentLabel Typo="Typography.H3">
+            <FluentIcon Value="@(new Icons.Regular.Size24.VehicleCar())" Color="Color.Accent" />
+            My Trips
+        </FluentLabel>
+        <FluentSpacer />
+        <FluentButton Appearance="Appearance.Accent" OnClick="@CreateNewTrip">
+            <FluentIcon Value="@(new Icons.Regular.Size20.Add())" Slot="start" />
+            Create Trip
+        </FluentButton>
+    </FluentToolbar>
+
+    @if (IsLoading)
+    {
+        <FluentProgressRing />
+    }
+    else if (!Trips.Any())
+    {
+        <FluentCard>
+            <FluentStack HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
+                <FluentIcon Value="@(new Icons.Regular.Size48.CalendarEmpty())" Color="Color.Neutral" />
+                <FluentLabel Typo="Typography.Body">No trips planned yet. Create your first trip!</FluentLabel>
+            </FluentStack>
+        </FluentCard>
+    }
+    else
+    {
+        <FluentGrid Spacing="3" Justify="JustifyContent.FlexStart">
+            @foreach (var trip in Trips)
+            {
+                <FluentGridItem xs="12" md="6" lg="4">
+                    <FluentCard Style="height: 100%;">
+                        <FluentStack Orientation="Orientation.Vertical">
+                            <FluentLabel Typo="Typography.Subject" Weight="FontWeight.Bold">@trip.Name</FluentLabel>
+                            <FluentLabel Typo="Typography.Body">@trip.Description</FluentLabel>
+                            
+                            @if (trip.StartDate.HasValue || trip.EndDate.HasValue)
+                            {
+                                <FluentLabel Style="font-size: 0.875em;">
+                                    <FluentIcon Value="@(new Icons.Regular.Size16.Calendar())" />
+                                    @if (trip.StartDate.HasValue)
+                                    {
+                                        @trip.StartDate.Value.ToString("MMM dd, yyyy")
+                                    }
+                                    @if (trip.EndDate.HasValue)
+                                    {
+                                        <text> - @trip.EndDate.Value.ToString("MMM dd, yyyy")</text>
+                                    }
+                                </FluentLabel>
+                            }
+                            
+                            <FluentLabel Style="font-size: 0.875em;">
+                                <FluentIcon Value="@(new Icons.Regular.Size16.List())" />
+                                @trip.Days.Count days, @trip.Days.Sum(d => d.Places.Count) places
+                            </FluentLabel>
+                            
+                            <FluentDivider />
+                            
+                            <FluentStack Orientation="Orientation.Horizontal">
+                                <FluentButton Appearance="Appearance.Lightweight" OnClick="@(() => ViewTrip(trip))">
+                                    <FluentIcon Value="@(new Icons.Regular.Size16.Eye())" />
+                                    View
+                                </FluentButton>
+                                <FluentButton Appearance="Appearance.Lightweight" OnClick="@(() => EditTrip(trip))">
+                                    <FluentIcon Value="@(new Icons.Regular.Size16.Edit())" />
+                                    Edit
+                                </FluentButton>
+                                <FluentSpacer />
+                                <FluentButton Appearance="Appearance.Lightweight" OnClick="@(() => DeleteTrip(trip))">
+                                    <FluentIcon Value="@(new Icons.Regular.Size16.Delete())" Color="Color.Error" />
+                                    Delete
+                                </FluentButton>
+                            </FluentStack>
+                        </FluentStack>
+                    </FluentCard>
+                </FluentGridItem>
+            }
+        </FluentGrid>
+    }
+</FluentStack>
+
+<FluentDialog @bind-Hidden="@(!ShowAddDialog)" Modal="true" TrapFocus="true" Style="width: 600px;">
+    <FluentDialogHeader>
+        <FluentLabel Typo="Typography.H4">@(EditingTrip?.Id != null && Trips.Any(t => t.Id == EditingTrip.Id) ? "Edit Trip" : "Create New Trip")</FluentLabel>
+    </FluentDialogHeader>
+    <FluentDialogBody>
+        @if (EditingTrip != null)
+        {
+            <FluentStack Orientation="Orientation.Vertical">
+                <FluentTextField @bind-Value="@EditingTrip.Name" Label="Trip Name" Required Style="width: 100%;" />
+                <FluentTextArea @bind-Value="@EditingTrip.Description" Label="Description" Rows="3" Style="width: 100%;" />
+                
+                <FluentStack Orientation="Orientation.Horizontal">
+                    <FluentTextField @bind-Value="@StartDateString" Label="Start Date (YYYY-MM-DD)" Style="width: 100%;" />
+                    <FluentTextField @bind-Value="@EndDateString" Label="End Date (YYYY-MM-DD)" Style="width: 100%;" />
+                </FluentStack>
+                
+                <FluentNumberField @bind-Value="@NumDays" Label="Number of Days" Min="1" Max="30" Style="width: 100%;" />
+            </FluentStack>
+        }
+    </FluentDialogBody>
+    <FluentDialogFooter>
+        <FluentButton Appearance="Appearance.Accent" OnClick="@SaveTrip">Save</FluentButton>
+        <FluentButton Appearance="Appearance.Neutral" OnClick="@(() => ShowAddDialog = false)">Cancel</FluentButton>
+    </FluentDialogFooter>
+</FluentDialog>
+
+<FluentDialog @bind-Hidden="@(!ShowViewDialog)" Modal="true" TrapFocus="true" Style="width: 90%; max-width: 1200px;">
+    <FluentDialogHeader>
+        <FluentLabel Typo="Typography.H4">@ViewingTrip?.Name</FluentLabel>
+    </FluentDialogHeader>
+    <FluentDialogBody>
+        @if (ViewingTrip != null)
+        {
+            <FluentStack Orientation="Orientation.Vertical">
+                <FluentLabel Typo="Typography.Body">@ViewingTrip.Description</FluentLabel>
+                
+                <FluentTabs>
+                    @foreach (var day in ViewingTrip.Days.OrderBy(d => d.DayNumber))
+                    {
+                        <FluentTab Label="@($"Day {day.DayNumber}")">
+                            <FluentCard>
+                                <FluentStack Orientation="Orientation.Vertical">
+                                    @if (day.Date.HasValue)
+                                    {
+                                        <FluentLabel Typo="Typography.Subject">
+                                            <FluentIcon Value="@(new Icons.Regular.Size16.Calendar())" />
+                                            @day.Date.Value.ToString("MMMM dd, yyyy")
+                                        </FluentLabel>
+                                    }
+                                    
+                                    @if (!day.Places.Any())
+                                    {
+                                        <FluentLabel Style="font-size: 0.875em;">No places scheduled for this day</FluentLabel>
+                                    }
+                                    else
+                                    {
+                                        var analysis = RoutingService.AnalyzeTripDay(day, AllPlaces);
+                                        
+                                        <FluentStack Orientation="Orientation.Horizontal" Wrap="true">
+                                            <FluentBadge BackgroundColor="var(--neutral-layer-3)">
+                                                Places: @day.Places.Count
+                                            </FluentBadge>
+                                            <FluentBadge BackgroundColor="var(--neutral-layer-3)">
+                                                Total Time: @TimeSpan.FromMinutes(analysis.TotalMinutes).ToString(@"hh\:mm")
+                                            </FluentBadge>
+                                            <FluentBadge BackgroundColor="var(--neutral-layer-3)">
+                                                Travel: @TimeSpan.FromMinutes(analysis.TotalTravelMinutes).ToString(@"hh\:mm")
+                                            </FluentBadge>
+                                        </FluentStack>
+                                        
+                                        @if (analysis.Warnings.Any())
+                                        {
+                                            <FluentMessageBar Intent="MessageIntent.Warning">
+                                                @foreach (var warning in analysis.Warnings)
+                                                {
+                                                    <div>@warning</div>
+                                                }
+                                            </FluentMessageBar>
+                                        }
+                                        
+                                        <FluentStack Orientation="Orientation.Vertical">
+                                            @foreach (var tripPlace in day.Places.OrderBy(p => p.Order))
+                                            {
+                                                <FluentCard>
+                                                    <FluentStack Orientation="Orientation.Horizontal">
+                                                        <FluentLabel Weight="FontWeight.Bold">#@tripPlace.Order</FluentLabel>
+                                                        <FluentLabel>@(tripPlace.Place?.Name ?? "Unknown")</FluentLabel>
+                                                        @if (tripPlace.ScheduledTime.HasValue)
+                                                        {
+                                                            <FluentLabel>@tripPlace.ScheduledTime.Value.ToString("HH:mm")</FluentLabel>
+                                                        }
+                                                        @if (tripPlace.DurationMinutes.HasValue)
+                                                        {
+                                                            <FluentLabel>(@tripPlace.DurationMinutes min)</FluentLabel>
+                                                        }
+                                                    </FluentStack>
+                                                    @if (!string.IsNullOrEmpty(tripPlace.Notes))
+                                                    {
+                                                        <FluentLabel Style="font-size: 0.875em;">Notes: @tripPlace.Notes</FluentLabel>
+                                                    }
+                                                </FluentCard>
+                                            }
+                                        </FluentStack>
+                                    }
+                                </FluentStack>
+                            </FluentCard>
+                        </FluentTab>
+                    }
+                    
+                    @if (ViewingTrip.UnscheduledPlaces.Any())
+                    {
+                        <FluentTab Label="Unscheduled">
+                            <FluentCard>
+                                <FluentLabel Typo="Typography.Subject">Places to Schedule</FluentLabel>
+                                <FluentStack Orientation="Orientation.Vertical">
+                                    @foreach (var place in ViewingTrip.UnscheduledPlaces)
+                                    {
+                                        <FluentCard>
+                                            <FluentLabel>@place.Place?.Name</FluentLabel>
+                                        </FluentCard>
+                                    }
+                                </FluentStack>
+                            </FluentCard>
+                        </FluentTab>
+                    }
+                </FluentTabs>
+            </FluentStack>
+        }
+    </FluentDialogBody>
+    <FluentDialogFooter>
+        <FluentButton Appearance="Appearance.Neutral" OnClick="@(() => ShowViewDialog = false)">Close</FluentButton>
+    </FluentDialogFooter>
+</FluentDialog>
+
+@code {
+    private List<Trip> Trips { get; set; } = new();
+    private List<Place> AllPlaces { get; set; } = new();
+    private bool IsLoading { get; set; } = true;
+    private bool ShowAddDialog { get; set; }
+    private bool ShowViewDialog { get; set; }
+    private Trip? EditingTrip { get; set; }
+    private Trip? ViewingTrip { get; set; }
+    private int NumDays { get; set; } = 1;
+    
+    private string _startDateString = string.Empty;
+    private string StartDateString
+    {
+        get => _startDateString;
+        set
+        {
+            _startDateString = value;
+            if (EditingTrip != null && DateTime.TryParse(value, out var date))
+            {
+                EditingTrip.StartDate = date;
+            }
+        }
+    }
+    
+    private string _endDateString = string.Empty;
+    private string EndDateString
+    {
+        get => _endDateString;
+        set
+        {
+            _endDateString = value;
+            if (EditingTrip != null && DateTime.TryParse(value, out var date))
+            {
+                EditingTrip.EndDate = date;
+            }
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private void CreateNewTrip()
+    {
+        EditingTrip = new Trip();
+        NumDays = 1;
+        _startDateString = string.Empty;
+        _endDateString = string.Empty;
+        ShowAddDialog = true;
+    }
+
+    private async Task LoadData()
+    {
+        IsLoading = true;
+        Trips = await TripRepository.GetAllAsync();
+        AllPlaces = await PlaceRepository.GetAllAsync();
+        
+        // Load place details for all trips
+        foreach (var trip in Trips)
+        {
+            foreach (var day in trip.Days)
+            {
+                foreach (var tripPlace in day.Places)
+                {
+                    tripPlace.Place = AllPlaces.FirstOrDefault(p => p.Id == tripPlace.PlaceId);
+                }
+            }
+            
+            foreach (var tripPlace in trip.UnscheduledPlaces)
+            {
+                tripPlace.Place = AllPlaces.FirstOrDefault(p => p.Id == tripPlace.PlaceId);
+            }
+        }
+        
+        IsLoading = false;
+    }
+
+    private void EditTrip(Trip trip)
+    {
+        EditingTrip = new Trip
+        {
+            Id = trip.Id,
+            Name = trip.Name,
+            Description = trip.Description,
+            StartDate = trip.StartDate,
+            EndDate = trip.EndDate,
+            Days = trip.Days,
+            UnscheduledPlaces = trip.UnscheduledPlaces,
+            CreatedAt = trip.CreatedAt,
+            UpdatedAt = trip.UpdatedAt
+        };
+        NumDays = trip.Days.Count;
+        _startDateString = trip.StartDate?.ToString("yyyy-MM-dd") ?? string.Empty;
+        _endDateString = trip.EndDate?.ToString("yyyy-MM-dd") ?? string.Empty;
+        ShowAddDialog = true;
+    }
+
+    private void ViewTrip(Trip trip)
+    {
+        ViewingTrip = trip;
+        ShowViewDialog = true;
+    }
+
+    private async Task DeleteTrip(Trip trip)
+    {
+        await TripRepository.DeleteAsync(trip.Id);
+        await LoadData();
+    }
+
+    private async Task SaveTrip()
+    {
+        if (EditingTrip == null) return;
+
+        // Create days if needed
+        if (EditingTrip.Days.Count == 0 || EditingTrip.Days.Count != NumDays)
+        {
+            EditingTrip.Days.Clear();
+            for (int i = 1; i <= NumDays; i++)
+            {
+                EditingTrip.Days.Add(new TripDay
+                {
+                    DayNumber = i,
+                    Date = EditingTrip.StartDate?.AddDays(i - 1)
+                });
+            }
+        }
+
+        if (string.IsNullOrEmpty(EditingTrip.Id) || !Trips.Any(t => t.Id == EditingTrip.Id))
+        {
+            await TripRepository.AddAsync(EditingTrip);
+        }
+        else
+        {
+            await TripRepository.UpdateAsync(EditingTrip);
+        }
+
+        ShowAddDialog = false;
+        EditingTrip = null;
+        await LoadData();
+    }
+}

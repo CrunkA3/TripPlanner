@@ -1,0 +1,174 @@
+@page "/map"
+@using TripPlanner.Web.Models
+@using TripPlanner.Web.Repositories
+@inject IPlaceRepository PlaceRepository
+@inject ITripRepository TripRepository
+@rendermode InteractiveServer
+
+<PageTitle>Map View</PageTitle>
+
+<FluentStack Orientation="Orientation.Vertical" Width="100%" Style="height: calc(100vh - 200px);">
+    <FluentToolbar>
+        <FluentLabel Typo="Typography.H3">
+            <FluentIcon Value="@(new Icons.Regular.Size24.Map())" Color="Color.Accent" />
+            Map View
+        </FluentLabel>
+        <FluentSpacer />
+        <FluentSelect TOption="string" @bind-Value="@SelectedTripId" Label="Select Trip" Style="min-width: 200px;">
+            <FluentOption TOption="string" Value="@string.Empty">All Places</FluentOption>
+            @foreach (var trip in Trips)
+            {
+                <FluentOption TOption="string" Value="@trip.Id">@trip.Name</FluentOption>
+            }
+        </FluentSelect>
+        <FluentButton Appearance="Appearance.Lightweight" OnClick="@LoadMapData">
+            <FluentIcon Value="@(new Icons.Regular.Size20.ArrowSync())" />
+            Refresh
+        </FluentButton>
+    </FluentToolbar>
+
+    <FluentCard Style="flex: 1; display: flex; flex-direction: column;">
+        <FluentStack Orientation="Orientation.Horizontal" Style="height: 100%;">
+            <!-- Map Container -->
+            <div id="map-container" style="flex: 1; min-height: 500px; background: var(--neutral-layer-2); display: flex; align-items: center; justify-content: center; border-radius: 4px;">
+                <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center">
+                    <FluentIcon Value="@(new Icons.Regular.Size48.Location())" Color="Color.Neutral" />
+                    <FluentLabel Typo="Typography.H5">Interactive Map</FluentLabel>
+                    <FluentLabel Typo="Typography.Body">
+                        Map integration with Leaflet.js would be displayed here
+                    </FluentLabel>
+                    <FluentLabel Style="font-size: 0.875em;">
+                        Places: @Places.Count | Selected Trip Places: @SelectedTripPlaces.Count
+                    </FluentLabel>
+                </FluentStack>
+            </div>
+
+            <!-- Side Panel -->
+            <FluentStack Orientation="Orientation.Vertical" Style="width: 300px; max-height: 100%; overflow-y: auto; padding-left: 16px;">
+                <FluentLabel Typo="Typography.Subject" Weight="FontWeight.Bold">Places on Map</FluentLabel>
+                
+                @if (IsLoading)
+                {
+                    <FluentProgressRing />
+                }
+                else if (!Places.Any() && !SelectedTripPlaces.Any())
+                {
+                    <FluentLabel Style="font-size: 0.875em;">No places to display</FluentLabel>
+                }
+                else
+                {
+                    <FluentAccordion>
+                        @if (Places.Any())
+                        {
+                            <FluentAccordionItem Heading="Wishlist Places" Expanded="true">
+                                <FluentStack Orientation="Orientation.Vertical">
+                                    @foreach (var place in Places)
+                                    {
+                                        <FluentCard>
+                                            <FluentStack Orientation="Orientation.Vertical">
+                                                <FluentLabel Weight="FontWeight.Bold">@place.Name</FluentLabel>
+                                                <FluentBadge BackgroundColor="var(--neutral-layer-3)">@place.Category</FluentBadge>
+                                                <FluentLabel Style="font-size: 0.875em;">
+                                                    @place.Latitude.ToString("F4"), @place.Longitude.ToString("F4")
+                                                </FluentLabel>
+                                            </FluentStack>
+                                        </FluentCard>
+                                    }
+                                </FluentStack>
+                            </FluentAccordionItem>
+                        }
+                        
+                        @if (SelectedTripPlaces.Any())
+                        {
+                            <FluentAccordionItem Heading="Trip Places" Expanded="true">
+                                <FluentStack Orientation="Orientation.Vertical">
+                                    @foreach (var tripPlace in SelectedTripPlaces)
+                                    {
+                                        @if (tripPlace.Place != null)
+                                        {
+                                            <FluentCard>
+                                                <FluentStack Orientation="Orientation.Vertical">
+                                                    <FluentLabel Weight="FontWeight.Bold">@tripPlace.Place.Name</FluentLabel>
+                                                    @if (tripPlace.ScheduledTime.HasValue)
+                                                    {
+                                                        <FluentLabel Style="font-size: 0.875em;">
+                                                            <FluentIcon Value="@(new Icons.Regular.Size12.Clock())" />
+                                                            @tripPlace.ScheduledTime.Value.ToString("HH:mm")
+                                                        </FluentLabel>
+                                                    }
+                                                    <FluentLabel Style="font-size: 0.875em;">
+                                                        @tripPlace.Place.Latitude.ToString("F4"), @tripPlace.Place.Longitude.ToString("F4")
+                                                    </FluentLabel>
+                                                </FluentStack>
+                                            </FluentCard>
+                                        }
+                                    }
+                                </FluentStack>
+                            </FluentAccordionItem>
+                        }
+                    </FluentAccordion>
+                }
+                
+                <FluentDivider />
+                
+                <FluentLabel Typo="Typography.Subject" Weight="FontWeight.Bold">Map Features</FluentLabel>
+                <FluentStack Orientation="Orientation.Vertical">
+                    <FluentCheckbox Label="Show Wishlist Places" @bind-Value="@ShowWishlist" />
+                    <FluentCheckbox Label="Show Trip Routes" @bind-Value="@ShowRoutes" />
+                    <FluentCheckbox Label="Show GPX Tracks" @bind-Value="@ShowGpxTracks" />
+                </FluentStack>
+                
+                <FluentLabel Style="font-size: 0.875em; margin-top: 16px;">
+                    To enable full map functionality, integrate Leaflet.js or MapLibre GL JS library.
+                </FluentLabel>
+            </FluentStack>
+        </FluentStack>
+    </FluentCard>
+</FluentStack>
+
+@code {
+    private List<Place> Places { get; set; } = new();
+    private List<Trip> Trips { get; set; } = new();
+    private List<TripPlace> SelectedTripPlaces { get; set; } = new();
+    private string SelectedTripId { get; set; } = string.Empty;
+    private bool IsLoading { get; set; } = true;
+    private bool ShowWishlist { get; set; } = true;
+    private bool ShowRoutes { get; set; } = true;
+    private bool ShowGpxTracks { get; set; } = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMapData();
+    }
+
+    private async Task LoadMapData()
+    {
+        IsLoading = true;
+        
+        Places = await PlaceRepository.GetAllAsync();
+        Trips = await TripRepository.GetAllAsync();
+        
+        if (!string.IsNullOrEmpty(SelectedTripId))
+        {
+            var selectedTrip = Trips.FirstOrDefault(t => t.Id == SelectedTripId);
+            if (selectedTrip != null)
+            {
+                SelectedTripPlaces = selectedTrip.Days
+                    .SelectMany(d => d.Places)
+                    .ToList();
+                
+                // Load place details
+                foreach (var tripPlace in SelectedTripPlaces)
+                {
+                    tripPlace.Place = Places.FirstOrDefault(p => p.Id == tripPlace.PlaceId);
+                }
+            }
+        }
+        else
+        {
+            SelectedTripPlaces.Clear();
+        }
+        
+        IsLoading = false;
+    }
+}
