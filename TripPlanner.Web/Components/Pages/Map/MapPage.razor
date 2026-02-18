@@ -1,8 +1,12 @@
 @page "/map"
 @using TripPlanner.Web.Models
 @using TripPlanner.Web.Repositories
+@using Microsoft.JSInterop
 @inject IPlaceRepository PlaceRepository
 @inject ITripRepository TripRepository
+@inject IGpxRepository GpxRepository
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
 @rendermode InteractiveServer
 
 <PageTitle>Map View</PageTitle>
@@ -30,17 +34,8 @@
     <FluentCard Style="flex: 1; display: flex; flex-direction: column;">
         <FluentStack Orientation="Orientation.Horizontal" Style="height: 100%;">
             <!-- Map Container -->
-            <div id="map-container" style="flex: 1; min-height: 500px; background: var(--neutral-layer-2); display: flex; align-items: center; justify-content: center; border-radius: 4px;">
-                <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center">
-                    <FluentIcon Value="@(new Icons.Regular.Size48.Location())" Color="Color.Neutral" />
-                    <FluentLabel Typo="Typography.H5">Interactive Map</FluentLabel>
-                    <FluentLabel Typo="Typography.Body">
-                        Map integration with Leaflet.js would be displayed here
-                    </FluentLabel>
-                    <FluentLabel Style="font-size: 0.875em;">
-                        Places: @Places.Count | Selected Trip Places: @SelectedTripPlaces.Count
-                    </FluentLabel>
-                </FluentStack>
+            <div id="map-container" style="flex: 1; min-height: 500px; background: var(--neutral-layer-2); border-radius: 4px;">
+                <div id="map" style="width: 100%; height: 100%; min-height: 500px;"></div>
             </div>
 
             <!-- Side Panel -->
@@ -119,7 +114,7 @@
                 </FluentStack>
                 
                 <FluentLabel Style="font-size: 0.875em; margin-top: 16px;">
-                    To enable full map functionality, integrate Leaflet.js or MapLibre GL JS library.
+                    Interactive map powered by Leaflet.js and OpenStreetMap.
                 </FluentLabel>
             </FluentStack>
         </FluentStack>
@@ -129,16 +124,41 @@
 @code {
     private List<Place> Places { get; set; } = new();
     private List<Trip> Trips { get; set; } = new();
+    private List<GpxTrack> GpxTracks { get; set; } = new();
     private List<TripPlace> SelectedTripPlaces { get; set; } = new();
     private string SelectedTripId { get; set; } = string.Empty;
     private bool IsLoading { get; set; } = true;
     private bool ShowWishlist { get; set; } = true;
     private bool ShowRoutes { get; set; } = true;
     private bool ShowGpxTracks { get; set; } = true;
+    private bool MapInitialized { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
         await LoadMapData();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await InitializeMap();
+            await UpdateMapContent();
+        }
+    }
+
+    private async Task InitializeMap()
+    {
+        try
+        {
+            // Initialize map centered on Europe (can be changed to user's location)
+            await JSRuntime.InvokeVoidAsync("mapInterop.initializeMap", "map", 48.8566, 2.3522, 6);
+            MapInitialized = true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error initializing map: {ex.Message}");
+        }
     }
 
     private async Task LoadMapData()
@@ -147,6 +167,7 @@
         
         Places = await PlaceRepository.GetAllAsync();
         Trips = await TripRepository.GetAllAsync();
+        GpxTracks = await GpxRepository.GetAllAsync();
         
         if (!string.IsNullOrEmpty(SelectedTripId))
         {
@@ -170,5 +191,108 @@
         }
         
         IsLoading = false;
+
+        if (MapInitialized)
+        {
+            await UpdateMapContent();
+        }
+    }
+
+    private async Task UpdateMapContent()
+    {
+        if (!MapInitialized) return;
+
+        try
+        {
+            // Clear existing map content
+            await JSRuntime.InvokeVoidAsync("mapInterop.clearMarkers");
+            await JSRuntime.InvokeVoidAsync("mapInterop.clearRoutes");
+            await JSRuntime.InvokeVoidAsync("mapInterop.clearGpxTracks");
+
+            // Add markers for wishlist places
+            if (ShowWishlist)
+            {
+                foreach (var place in Places)
+                {
+                    var color = GetCategoryColor(place.Category);
+                    await JSRuntime.InvokeVoidAsync("mapInterop.addMarker", 
+                        place.Id, place.Latitude, place.Longitude, 
+                        place.Name, place.Category.ToString(), color);
+                }
+            }
+
+            // Add routes and markers for selected trip
+            if (!string.IsNullOrEmpty(SelectedTripId) && ShowRoutes)
+            {
+                var selectedTrip = Trips.FirstOrDefault(t => t.Id == SelectedTripId);
+                if (selectedTrip != null)
+                {
+                    foreach (var day in selectedTrip.Days.OrderBy(d => d.DayNumber))
+                    {
+                        var dayPlaces = day.Places.OrderBy(p => p.Order).ToList();
+                        if (dayPlaces.Count > 1)
+                        {
+                            var coordinates = dayPlaces
+                                .Where(tp => tp.Place != null)
+                                .Select(tp => new { latitude = tp.Place!.Latitude, longitude = tp.Place.Longitude })
+                                .ToList();
+                            
+                            if (coordinates.Any())
+                            {
+                                await JSRuntime.InvokeVoidAsync("mapInterop.addRoute", coordinates, "#FF5722", 3);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Add GPX tracks
+            if (ShowGpxTracks)
+            {
+                foreach (var gpxTrack in GpxTracks)
+                {
+                    if (gpxTrack.Points.Any())
+                    {
+                        var points = gpxTrack.Points.Select(p => new { latitude = p.Latitude, longitude = p.Longitude }).ToList();
+                        await JSRuntime.InvokeVoidAsync("mapInterop.addGpxTrack", points, "#9C27B0");
+                    }
+                }
+            }
+
+            // Fit map to show all content
+            await JSRuntime.InvokeVoidAsync("mapInterop.fitBounds");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error updating map content: {ex.Message}");
+        }
+    }
+
+    private string GetCategoryColor(PlaceCategory category)
+    {
+        return category switch
+        {
+            PlaceCategory.Viewpoint => "#4285F4",
+            PlaceCategory.Museum => "#EA4335",
+            PlaceCategory.Restaurant => "#FBBC04",
+            PlaceCategory.Nature => "#34A853",
+            PlaceCategory.Activity => "#00ACC1",
+            PlaceCategory.Accommodation => "#9C27B0",
+            PlaceCategory.Shopping => "#FF6F00",
+            PlaceCategory.Entertainment => "#E91E63",
+            _ => "#757575"
+        };
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (MapInitialized)
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("mapInterop.destroyMap");
+            }
+            catch { }
+        }
     }
 }
