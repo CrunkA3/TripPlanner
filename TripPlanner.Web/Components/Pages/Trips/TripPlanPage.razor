@@ -96,10 +96,14 @@
                                                 @ondragstart="@((e) => HandleDragStart(tripPlace.PlaceId, day.Id, tripPlace.Order))"
                                                 @ondragend="@HandleDragEnd"
                                                 Style="cursor: move; padding: 8px;">
-                                        <FluentStack Orientation="Orientation.Horizontal">
+                                        <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
                                             <FluentIcon Value="@(new Icons.Regular.Size16.Navigation())" />
                                             <FluentLabel Weight="FontWeight.Bold">@(tripPlace.Place?.Name ?? "Unknown")</FluentLabel>
                                             <FluentSpacer />
+                                            <input type="time"
+                                                   value="@(tripPlace.ScheduledTime.HasValue ? tripPlace.ScheduledTime.Value.ToString("HH:mm") : "")"
+                                                   @onchange="@((e) => UpdateScheduledTime(tripPlace, e.Value?.ToString(), day.Date))"
+                                                   style="border: 1px solid var(--neutral-stroke-rest); border-radius: 4px; padding: 2px 4px; font-size: 0.875em; background: transparent;" />
                                             <FluentButton Appearance="Appearance.Lightweight"
                                                           OnClick="@(() => RemovePlaceFromDay(day.Id, tripPlace.PlaceId))"
                                                           Style="padding: 4px;">
@@ -321,6 +325,19 @@
         DraggedFromOrder = -1;
 
         StateHasChanged();
+    }
+
+    private void UpdateScheduledTime(TripPlace tripPlace, string? timeString, DateTime? dayDate)
+    {
+        if (string.IsNullOrEmpty(timeString))
+        {
+            tripPlace.ScheduledTime = null;
+        }
+        else if (TimeOnly.TryParse(timeString, out var time))
+        {
+            var baseDate = dayDate?.Date ?? DateTime.Today;
+            tripPlace.ScheduledTime = baseDate.Add(time.ToTimeSpan());
+        }
     }
 
     private void OpenAddPlaceDialog()
