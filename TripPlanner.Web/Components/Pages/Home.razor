@@ -1,7 +1,73 @@
 ﻿@page "/"
 
-<PageTitle>Home</PageTitle>
+@using Microsoft.AspNetCore.Components.Authorization
 
-<h1>Hello, world!</h1>
+<PageTitle>TripPlanner – Plan Your Perfect Trip</PageTitle>
 
-Welcome to your new Fluent Blazor app.
+<div class="home-hero">
+    <div class="home-hero-content">
+        <FluentIcon Value="@(new Icons.Regular.Size24.Map())" Color="Color.Fill" Style="--fill-color: white; width: 3rem; height: 3rem;" />
+        <h1 class="home-hero-title">Plan Your Perfect Trip</h1>
+        <p class="home-hero-subtitle">Organize destinations, build wishlists and map out every detail of your next adventure.</p>
+        <div class="home-hero-actions">
+            <AuthorizeView>
+                <Authorized>
+                    <FluentAnchor Href="/trips" Appearance="Appearance.Accent">My Trips</FluentAnchor>
+                    <FluentAnchor Href="/wishlists" Appearance="Appearance.Lightweight" Style="color: white;">My Wishlists</FluentAnchor>
+                </Authorized>
+                <NotAuthorized>
+                    <FluentAnchor Href="/Account/Register" Appearance="Appearance.Accent">Get Started</FluentAnchor>
+                    <FluentAnchor Href="/Account/Login" Appearance="Appearance.Lightweight" Style="color: white;">Sign In</FluentAnchor>
+                </NotAuthorized>
+            </AuthorizeView>
+        </div>
+    </div>
+</div>
+
+<div class="home-features">
+    <FluentGrid Spacing="3" Justify="JustifyContent.FlexStart">
+        <FluentGridItem xs="12">
+            <h2 class="home-features-heading">Everything you need for your journey</h2>
+        </FluentGridItem>
+
+        <FluentGridItem xs="12" sm="6" lg="3">
+            <FluentCard Class="home-feature-card">
+                <div class="home-feature-icon">
+                    <FluentIcon Value="@(new Icons.Regular.Size24.Heart())" Color="Color.Accent" />
+                </div>
+                <h3 class="home-feature-title">Wishlists</h3>
+                <p class="home-feature-text">Save the places you dream of visiting. Share your lists with friends and family.</p>
+            </FluentCard>
+        </FluentGridItem>
+
+        <FluentGridItem xs="12" sm="6" lg="3">
+            <FluentCard Class="home-feature-card">
+                <div class="home-feature-icon">
+                    <FluentIcon Value="@(new Icons.Regular.Size24.Location())" Color="Color.Accent" />
+                </div>
+                <h3 class="home-feature-title">Places</h3>
+                <p class="home-feature-text">Discover and manage all your favourite spots, from hidden gems to must-see landmarks.</p>
+            </FluentCard>
+        </FluentGridItem>
+
+        <FluentGridItem xs="12" sm="6" lg="3">
+            <FluentCard Class="home-feature-card">
+                <div class="home-feature-icon">
+                    <FluentIcon Value="@(new Icons.Regular.Size24.VehicleCar())" Color="Color.Accent" />
+                </div>
+                <h3 class="home-feature-title">Trips</h3>
+                <p class="home-feature-text">Create day-by-day itineraries, schedule places and keep everything in one place.</p>
+            </FluentCard>
+        </FluentGridItem>
+
+        <FluentGridItem xs="12" sm="6" lg="3">
+            <FluentCard Class="home-feature-card">
+                <div class="home-feature-icon">
+                    <FluentIcon Value="@(new Icons.Regular.Size24.Map())" Color="Color.Accent" />
+                </div>
+                <h3 class="home-feature-title">Map View</h3>
+                <p class="home-feature-text">Visualise your route on an interactive map so you can travel smarter, not harder.</p>
+            </FluentCard>
+        </FluentGridItem>
+    </FluentGrid>
+</div>
