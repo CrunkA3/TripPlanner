@@ -10,6 +10,9 @@
 @inject ITripRepository TripRepository
 @inject IPlaceRepository PlaceRepository
 @inject UserService UserService
+@inject IJSRuntime JSRuntime
+
+@implements IAsyncDisposable
 
 @rendermode InteractiveServer
 
@@ -66,7 +69,7 @@
                                             @ondragover:preventDefault
                                             @ondragenter="@((e) => HandleDragEnter(day.Id))"
                                             @ondragleave="@((e) => HandleDragLeave())"
-                                            @ondrop="@((e) => HandleDrop(day.Id))"
+                                            @ondrop="@(async (e) => await HandleDrop(day.Id))"
                                             Style="@(CurrentDropTarget == day.Id ? "background-color: var(--neutral-layer-2); border: 2px dashed var(--accent-fill-rest);" : "")">
                                     <FluentStack Orientation="Orientation.Vertical">
                                         <FluentStack Orientation="Orientation.Horizontal">
@@ -112,7 +115,7 @@
                                                                    @onchange="@((e) => UpdateScheduledTime(tripPlace, e.Value?.ToString(), day.Date))"
                                                                    style="border: 1px solid var(--neutral-stroke-rest); border-radius: 4px; padding: 2px 4px; font-size: 0.875em; background: transparent;" />
                                                             <FluentButton Appearance="Appearance.Lightweight"
-                                                                          OnClick="@(() => RemovePlaceFromDay(day.Id, tripPlace.PlaceId))"
+                                                                          OnClick="@(async () => await RemovePlaceFromDay(day.Id, tripPlace.PlaceId))"
                                                                           Style="padding: 4px;">
                                                                 <FluentIcon Value="@(new Icons.Regular.Size12.Dismiss())" />
                                                             </FluentButton>
@@ -131,6 +134,7 @@
         </FluentGridItem>
         <FluentGridItem xs="12" lg="6" xl="9">
             <!-- Map -->
+            <div id="trip-map" style="width: 100%; height: 600px; border-radius: 4px;"></div>
         </FluentGridItem>
     </FluentGrid>
 }
@@ -164,6 +168,7 @@
 
 @code {
     private bool IsLoading { get; set; } = true;
+    private bool MapInitialized { get; set; }
 
     [Parameter]
     public string TripId { get; set; } = string.Empty;
@@ -193,6 +198,98 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadData();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await InitializeMap();
+            await UpdateMapContent();
+        }
+    }
+
+    private async Task InitializeMap()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("mapInterop.initializeMap", "trip-map", 48.8566, 2.3522, 4);
+            MapInitialized = true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error initializing map: {ex.Message}");
+        }
+    }
+
+    private async Task UpdateMapContent()
+    {
+        if (!MapInitialized || PlanningTrip == null) return;
+
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("mapInterop.clearMarkers");
+            await JSRuntime.InvokeVoidAsync("mapInterop.clearRoutes");
+
+            // Collect all scheduled places in chronological order
+            var orderedPlaces = PlanningTrip.Days
+                .OrderBy(d => d.DayNumber)
+                .SelectMany(d => d.Places.OrderBy(p => p.Order))
+                .Where(tp => tp.Place != null)
+                .ToList();
+
+            // Add markers for scheduled places
+            foreach (var tp in orderedPlaces)
+            {
+                var color = GetCategoryColor(tp.Place!.Category);
+                await JSRuntime.InvokeVoidAsync("mapInterop.addMarker",
+                    tp.PlaceId, tp.Place.Latitude, tp.Place.Longitude,
+                    tp.Place.Name, tp.Place.Category.ToString(), color);
+            }
+
+            // Add markers for unscheduled places (grey)
+            foreach (var place in AllPlaces)
+            {
+                bool isScheduled = PlanningTrip.Days.Any(d => d.Places.Any(p => p.PlaceId == place.Id));
+                if (!isScheduled)
+                {
+                    await JSRuntime.InvokeVoidAsync("mapInterop.addMarker",
+                        place.Id, place.Latitude, place.Longitude,
+                        place.Name, place.Category.ToString(), "#9E9E9E");
+                }
+            }
+
+            // Draw a line connecting all scheduled places chronologically
+            if (orderedPlaces.Count > 1)
+            {
+                var coordinates = orderedPlaces
+                    .Select(tp => new { latitude = tp.Place!.Latitude, longitude = tp.Place.Longitude })
+                    .ToList();
+                await JSRuntime.InvokeVoidAsync("mapInterop.addRoute", coordinates, "#FF5722", 3);
+            }
+
+            await JSRuntime.InvokeVoidAsync("mapInterop.fitBounds");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error updating map content: {ex.Message}");
+        }
+    }
+
+    private string GetCategoryColor(PlaceCategory category)
+    {
+        return category switch
+        {
+            PlaceCategory.Viewpoint => "#4285F4",
+            PlaceCategory.Museum => "#EA4335",
+            PlaceCategory.Restaurant => "#FBBC04",
+            PlaceCategory.Nature => "#34A853",
+            PlaceCategory.Activity => "#00ACC1",
+            PlaceCategory.Accommodation => "#9C27B0",
+            PlaceCategory.Shopping => "#FF6F00",
+            PlaceCategory.Entertainment => "#E91E63",
+            _ => "#757575"
+        };
     }
 
     private async Task LoadData()
@@ -228,7 +325,7 @@
 
 
     
-    private void RemovePlaceFromDay(string dayId, string placeId)
+    private async Task RemovePlaceFromDay(string dayId, string placeId)
     {
         if (PlanningTrip == null)
             return;
@@ -248,6 +345,7 @@
                 }
             }
         }
+        await UpdateMapContent();
     }
 
     private async Task SaveTripPlan()
@@ -260,6 +358,7 @@
 
         PlanningTrip = null;
         await LoadData();
+        await UpdateMapContent();
     }
 
 
@@ -287,7 +386,7 @@
         CurrentDropTarget = null;
     }
 
-    private void HandleDrop(string toDayId)
+    private async Task HandleDrop(string toDayId)
     {
         CurrentDropTarget = null;
 
@@ -337,6 +436,7 @@
         DraggedFromOrder = -1;
 
         StateHasChanged();
+        await UpdateMapContent();
     }
 
     private void UpdateScheduledTime(TripPlace tripPlace, string? timeString, DateTime? dayDate)
@@ -378,6 +478,19 @@
         HideAddPlaceDialog = true;
         NewPlace = null;
         StateHasChanged();
+        await UpdateMapContent();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (MapInitialized)
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("mapInterop.destroyMap");
+            }
+            catch { }
+        }
     }
 
 }
