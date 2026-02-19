@@ -17,8 +17,8 @@
 <FluentStack Orientation="Orientation.Vertical" Width="100%">
     <FluentToolbar>
         <FluentLabel Typo="Typography.H3">
-@*             <FluentIcon Value="@(new Icons.Regular.Size24.Heart())" Color="Color.Accent" />
- *@            Place Wishlist
+            <FluentIcon Icon="Icons.Regular.Size24.Heart" Color="Color.Accent" />
+            Place Wishlist
         </FluentLabel>
         <FluentSpacer />
         <FluentButton Appearance="Appearance.Accent" OnClick="@CreateNewPlace" IconStart="@(new Icons.Regular.Size20.Add())">
@@ -56,8 +56,8 @@
     {
         <FluentCard>
             <FluentStack HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
-@*                 <FluentIcon Value="@(new Icons.Regular.Size48.LocationOff())" Color="Color.Neutral" />
- *@                <FluentLabel Typo="Typography.Body">No places in your wishlist yet. Add your first place!</FluentLabel>
+                <FluentIcon Icon="Icons.Regular.Size48.LocationOff" Color="Color.Neutral" />
+                <FluentLabel Typo="Typography.Body">No places in your wishlist yet. Add your first place!</FluentLabel>
             </FluentStack>
         </FluentCard>
     }
@@ -95,8 +95,8 @@
                             }
                             
                             <FluentLabel Style="font-size: 0.875em;">
-@*                                 <FluentIcon Value="@(new Icons.Regular.Size16.Location())" />
- *@                                @place.Latitude.ToString("F4"), @place.Longitude.ToString("F4")
+                                <FluentIcon Icon="Icons.Regular.Size16.Location" />
+                                @place.Latitude.ToString("F4"), @place.Longitude.ToString("F4")
                             </FluentLabel>
                             
                             <FluentDivider />
@@ -162,8 +162,8 @@
                     {
                         <FluentCard>
                             <FluentStack Orientation="Orientation.Horizontal">
-@*                                 <FluentIcon Value="@(new Icons.Regular.Size20.Location())" Color="Color.Accent" />
- *@                                <FluentStack Orientation="Orientation.Vertical" Style="flex: 1;">
+                                <FluentIcon Icon="Icons.Regular.Size20.Location" Color="Color.Accent" />
+                                <FluentStack Orientation="Orientation.Vertical" Style="flex: 1;">
                                     <FluentLabel Weight="FontWeight.Bold">@gpxTrack.Name</FluentLabel>
                                     <FluentLabel Style="font-size: 0.875em;">
                                         Distance: @gpxTrack.TotalDistance.ToString("F2") km | Points: @gpxTrack.Points.Count
