@@ -2,12 +2,11 @@ using Microsoft.AspNetCore.Identity;
 
 namespace TripPlanner.Web.Models;
 
-public class User : IdentityUser
+// Add profile data for application users by adding properties to the ApplicationUser class
+public class ApplicationUser : IdentityUser
 {
-    public string? FirstName { get; set; }
-    public string? LastName { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    
+
+
     // Navigation properties
     public List<Wishlist> Wishlists { get; set; } = new();
     public List<UserWishlist> SharedWishlists { get; set; } = new();

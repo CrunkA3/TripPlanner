@@ -1,12 +1,15 @@
 @page "/wishlist"
+
 @using TripPlanner.Web.Models
 @using TripPlanner.Web.Repositories
 @using TripPlanner.Web.Services
 @using TripPlanner.Web.Components.Shared
 @using static TripPlanner.Web.Components.Shared.GpxFileUpload
+
 @inject IPlaceRepository PlaceRepository
 @inject IGpxRepository GpxRepository
 @inject GpxService GpxService
+
 @rendermode InteractiveServer
 
 <PageTitle>Wishlist</PageTitle>
@@ -14,12 +17,11 @@
 <FluentStack Orientation="Orientation.Vertical" Width="100%">
     <FluentToolbar>
         <FluentLabel Typo="Typography.H3">
-            <FluentIcon Value="@(new Icons.Regular.Size24.Heart())" Color="Color.Accent" />
-            Place Wishlist
+@*             <FluentIcon Value="@(new Icons.Regular.Size24.Heart())" Color="Color.Accent" />
+ *@            Place Wishlist
         </FluentLabel>
         <FluentSpacer />
-        <FluentButton Appearance="Appearance.Accent" OnClick="@CreateNewPlace">
-            <FluentIcon Value="@(new Icons.Regular.Size20.Add())" Slot="start" />
+        <FluentButton Appearance="Appearance.Accent" OnClick="@CreateNewPlace" IconStart="@(new Icons.Regular.Size20.Add())">
             Add Place
         </FluentButton>
     </FluentToolbar>
@@ -36,12 +38,11 @@
             
             <FluentCheckbox @bind-Value="@FilterHasGpxValue" Label="Has GPX Track" />
             
-            <FluentButton Appearance="Appearance.Lightweight" OnClick="@ApplyFilters">
-                <FluentIcon Value="@(new Icons.Regular.Size20.Filter())" Slot="start" />
+            <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size20.Filter())" OnClick="@ApplyFilters">
                 Apply Filters
             </FluentButton>
             
-            <FluentButton Appearance="Appearance.Lightweight" OnClick="@ClearFilters">
+            <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size20.Eraser())" OnClick="@ClearFilters">
                 Clear
             </FluentButton>
         </FluentStack>
@@ -55,8 +56,8 @@
     {
         <FluentCard>
             <FluentStack HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
-                <FluentIcon Value="@(new Icons.Regular.Size48.LocationOff())" Color="Color.Neutral" />
-                <FluentLabel Typo="Typography.Body">No places in your wishlist yet. Add your first place!</FluentLabel>
+@*                 <FluentIcon Value="@(new Icons.Regular.Size48.LocationOff())" Color="Color.Neutral" />
+ *@                <FluentLabel Typo="Typography.Body">No places in your wishlist yet. Add your first place!</FluentLabel>
             </FluentStack>
         </FluentCard>
     }
@@ -94,20 +95,18 @@
                             }
                             
                             <FluentLabel Style="font-size: 0.875em;">
-                                <FluentIcon Value="@(new Icons.Regular.Size16.Location())" />
-                                @place.Latitude.ToString("F4"), @place.Longitude.ToString("F4")
+@*                                 <FluentIcon Value="@(new Icons.Regular.Size16.Location())" />
+ *@                                @place.Latitude.ToString("F4"), @place.Longitude.ToString("F4")
                             </FluentLabel>
                             
                             <FluentDivider />
                             
                             <FluentStack Orientation="Orientation.Horizontal">
-                                <FluentButton Appearance="Appearance.Lightweight" OnClick="@(() => EditPlace(place))">
-                                    <FluentIcon Value="@(new Icons.Regular.Size16.Edit())" />
+                                <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size16.Edit())" OnClick="@(() => EditPlace(place))">
                                     Edit
                                 </FluentButton>
                                 <FluentSpacer />
-                                <FluentButton Appearance="Appearance.Lightweight" OnClick="@(() => DeletePlace(place))">
-                                    <FluentIcon Value="@(new Icons.Regular.Size16.Delete())" Color="Color.Error" />
+                                <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size16.Delete())" OnClick="@(() => DeletePlace(place))">
                                     Delete
                                 </FluentButton>
                             </FluentStack>
@@ -148,9 +147,7 @@
                     {
                         <FluentBadge BackgroundColor="var(--accent-fill-rest)">
                             @tag
-                            <FluentButton Appearance="Appearance.Lightweight" OnClick="@(() => RemoveTag(tag))" Style="padding: 0; margin-left: 4px;">
-                                <FluentIcon Value="@(new Icons.Regular.Size12.Dismiss())" />
-                            </FluentButton>
+                            <FluentButton Appearance="Appearance.Lightweight" IconEnd="@(new Icons.Regular.Size12.Dismiss())" OnClick="@(() => RemoveTag(tag))" Style="padding: 0; margin-left: 4px;"></FluentButton>
                         </FluentBadge>
                     }
                 </FluentStack>
@@ -165,15 +162,14 @@
                     {
                         <FluentCard>
                             <FluentStack Orientation="Orientation.Horizontal">
-                                <FluentIcon Value="@(new Icons.Regular.Size20.Location())" Color="Color.Accent" />
-                                <FluentStack Orientation="Orientation.Vertical" Style="flex: 1;">
+@*                                 <FluentIcon Value="@(new Icons.Regular.Size20.Location())" Color="Color.Accent" />
+ *@                                <FluentStack Orientation="Orientation.Vertical" Style="flex: 1;">
                                     <FluentLabel Weight="FontWeight.Bold">@gpxTrack.Name</FluentLabel>
                                     <FluentLabel Style="font-size: 0.875em;">
                                         Distance: @gpxTrack.TotalDistance.ToString("F2") km | Points: @gpxTrack.Points.Count
                                     </FluentLabel>
                                 </FluentStack>
-                                <FluentButton Appearance="Appearance.Lightweight" OnClick="@RemoveGpxTrack">
-                                    <FluentIcon Value="@(new Icons.Regular.Size16.Delete())" Color="Color.Error" />
+                                <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size16.Delete())" OnClick="@RemoveGpxTrack">
                                 </FluentButton>
                             </FluentStack>
                         </FluentCard>

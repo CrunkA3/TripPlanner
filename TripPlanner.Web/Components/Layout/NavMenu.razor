@@ -1,6 +1,8 @@
-@using Microsoft.AspNetCore.Components.Authorization
-@using TripPlanner.Web.Models
-@inject AuthenticationStateProvider AuthenticationStateProvider
+﻿@rendermode InteractiveServer
+
+@implements IDisposable
+
+@inject NavigationManager NavigationManager
 
 <div class="navmenu">
     <input type="checkbox" title="Menu expand/collapse toggle" id="navmenu-toggle" class="navmenu-icon" />
@@ -8,31 +10,24 @@
     <nav class="sitenav" aria-labelledby="main-menu">
         <FluentNavMenu Id="main-menu" Collapsible="true" Width="250" Title="Navigation menu" @bind-Expanded="expanded" CustomToggle="true">
             <FluentNavLink Href="/" Match="NavLinkMatch.All" Icon="@(new Icons.Regular.Size20.Home())" IconColor="Color.Accent">Home</FluentNavLink>
-            
+            <FluentNavLink Href="auth" Icon="@(new Icons.Regular.Size20.LockClosedKey())" IconColor="Color.Accent">Auth Required</FluentNavLink>
             <AuthorizeView>
                 <Authorized>
                     <FluentNavLink Href="wishlists" Icon="@(new Icons.Regular.Size20.Heart())" IconColor="Color.Accent">Wishlists</FluentNavLink>
                     <FluentNavLink Href="wishlist" Icon="@(new Icons.Regular.Size20.Heart())" IconColor="Color.Accent">Places</FluentNavLink>
                     <FluentNavLink Href="trips" Icon="@(new Icons.Regular.Size20.VehicleCar())" IconColor="Color.Accent">Trips</FluentNavLink>
                     <FluentNavLink Href="map" Icon="@(new Icons.Regular.Size20.Map())" IconColor="Color.Accent">Map</FluentNavLink>
-                </Authorized>
-            </AuthorizeView>
-            
-            <FluentNavLink Href="counter" Icon="@(new Icons.Regular.Size20.NumberSymbolSquare())" IconColor="Color.Accent">Counter</FluentNavLink>
-            <FluentNavLink Href="weather" Icon="@(new Icons.Regular.Size20.WeatherPartlyCloudyDay())" IconColor="Color.Accent">Weather</FluentNavLink>
-            
-            <FluentDivider Style="margin: 10px 0;" />
-            
-            <AuthorizeView>
-                <Authorized>
-                    <div style="padding: 10px 16px; color: var(--accent-fill-rest);">
-                        <FluentIcon Value="@(new Icons.Regular.Size20.Person())" /> @context.User.Identity?.Name
-                    </div>
-                    <FluentNavLink Href="Account/Logout" Icon="@(new Icons.Regular.Size20.SignOut())" IconColor="Color.Accent">Logout</FluentNavLink>
+
+                    <FluentNavLink Href="Account/Manage">@context.User.Identity?.Name</FluentNavLink>
+                    <form action="Account/Logout" method="post">
+                        <AntiforgeryToken />
+                        <input type="hidden" name="ReturnUrl" value="@currentUrl" />
+                        <FluentButton Type="ButtonType.Submit" Style="width: 100%;">Logout</FluentButton>
+                    </form>
                 </Authorized>
                 <NotAuthorized>
-                    <FluentNavLink Href="Account/Login" Icon="@(new Icons.Regular.Size20.PersonKey())" IconColor="Color.Accent">Login</FluentNavLink>
-                    <FluentNavLink Href="Account/Register" Icon="@(new Icons.Regular.Size20.PersonAdd())" IconColor="Color.Accent">Register</FluentNavLink>
+                    <FluentNavLink Href="Account/Register">Register</FluentNavLink>
+                    <FluentNavLink Href="Account/Login">Login</FluentNavLink>
                 </NotAuthorized>
             </AuthorizeView>
         </FluentNavMenu>
@@ -41,4 +36,22 @@
 
 @code {
     private bool expanded = true;
+    private string? currentUrl;
+
+    protected override void OnInitialized()
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        NavigationManager.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
+    }
 }

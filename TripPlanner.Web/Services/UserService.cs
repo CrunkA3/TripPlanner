@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
+using TripPlanner.Web.Data;
 using TripPlanner.Web.Models;
 
 namespace TripPlanner.Web.Services;
@@ -7,11 +8,11 @@ namespace TripPlanner.Web.Services;
 public class UserService
 {
     private readonly AuthenticationStateProvider _authenticationStateProvider;
-    private readonly UserManager<User> _userManager;
+    private readonly UserManager<ApplicationUser> _userManager;
 
     public UserService(
         AuthenticationStateProvider authenticationStateProvider,
-        UserManager<User> userManager)
+        UserManager<ApplicationUser> userManager)
     {
         _authenticationStateProvider = authenticationStateProvider;
         _userManager = userManager;
@@ -31,7 +32,7 @@ public class UserService
         return null;
     }
 
-    public async Task<User?> GetCurrentUserAsync()
+    public async Task<ApplicationUser?> GetCurrentUserAsync()
     {
         var userId = await GetCurrentUserIdAsync();
         if (userId == null) return null;
@@ -39,7 +40,7 @@ public class UserService
         return await _userManager.FindByIdAsync(userId);
     }
 
-    public async Task<User?> GetUserByEmailAsync(string email)
+    public async Task<ApplicationUser?> GetUserByEmailAsync(string email)
     {
         return await _userManager.FindByEmailAsync(email);
     }

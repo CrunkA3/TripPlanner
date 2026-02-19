@@ -1,22 +1,27 @@
 @page "/wishlists"
+
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
 @using TripPlanner.Web.Models
 @using TripPlanner.Web.Repositories
 @using TripPlanner.Web.Services
+
 @attribute [Authorize]
+
 @inject IWishlistRepository WishlistRepository
 @inject UserService UserService
 @inject NavigationManager NavigationManager
+
+@rendermode InteractiveServer
 
 <PageTitle>My Wishlists</PageTitle>
 
 <h1>My Wishlists</h1>
 
 <FluentStack Orientation="Orientation.Horizontal" Style="margin-bottom: 20px;">
-    <FluentButton Appearance="Appearance.Accent" OnClick="@ShowCreateDialog">
-        <FluentIcon Value="@(new Icons.Regular.Size20.Add())" /> Create Wishlist
-    </FluentButton>
+    <FluentButton Appearance="Appearance.Accent" IconStart="@(new Icons.Regular.Size20.Add())" OnClick="@ShowCreateDialog">
+        Create Wishlist
+        </FluentButton>
 </FluentStack>
 
 @if (ownedWishlists == null || sharedWishlists == null)
@@ -73,7 +78,7 @@ else
     }
 }
 
-<FluentDialog @ref="createDialog" Hidden="@(!showCreateDialog)" Modal="true">
+<FluentDialog @ref="createDialog" Hidden="@hideCreateDialog" Modal="true">
     <h3>Create New Wishlist</h3>
     <EditForm Model="@newWishlist" OnValidSubmit="@CreateWishlist">
         <FluentStack Orientation="Orientation.Vertical">
@@ -81,7 +86,7 @@ else
             <FluentTextArea @bind-Value="newWishlist.Description" Label="Description" Style="width: 100%;" />
             <FluentStack Orientation="Orientation.Horizontal">
                 <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent">Create</FluentButton>
-                <FluentButton Appearance="Appearance.Neutral" OnClick="@(() => showCreateDialog = false)">Cancel</FluentButton>
+                <FluentButton Appearance="Appearance.Neutral" OnClick="@(() => hideCreateDialog = true)">Cancel</FluentButton>
             </FluentStack>
         </FluentStack>
     </EditForm>
@@ -93,7 +98,7 @@ else
         <FluentTextField @bind-Value="shareEmail" Label="Email address to share with" Style="width: 100%;" />
         <FluentStack Orientation="Orientation.Horizontal">
             <FluentButton Appearance="Appearance.Accent" OnClick="@ShareWishlist">Share</FluentButton>
-            <FluentButton Appearance="Appearance.Neutral" OnClick="@(() => showShareDialog = false)">Cancel</FluentButton>
+            <FluentButton Appearance="Appearance.Neutral" OnClick="@(() => hideCreateDialog = true)">Cancel</FluentButton>
         </FluentStack>
     </FluentStack>
 </FluentDialog>
@@ -105,7 +110,7 @@ else
     
     private FluentDialog? createDialog;
     private FluentDialog? shareDialog;
-    private bool showCreateDialog;
+    private bool hideCreateDialog = true;
     private bool showShareDialog;
     private Wishlist newWishlist = new();
     private Wishlist? selectedWishlist;
@@ -133,7 +138,7 @@ else
     private void ShowCreateDialog()
     {
         newWishlist = new Wishlist();
-        showCreateDialog = true;
+        hideCreateDialog = false;
     }
 
     private async Task CreateWishlist()
@@ -143,7 +148,7 @@ else
             newWishlist.OwnerId = currentUserId;
             await WishlistRepository.AddAsync(newWishlist);
             await LoadWishlists();
-            showCreateDialog = false;
+            hideCreateDialog = true;
         }
     }
 
