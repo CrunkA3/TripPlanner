@@ -1,0 +1,285 @@
+﻿@page "/trips/{tripId}"
+
+@using Microsoft.AspNetCore.Authorization
+@using TripPlanner.Web.Models
+@using TripPlanner.Web.Repositories
+@using TripPlanner.Web.Services
+
+@attribute [Authorize]
+
+@inject ITripRepository TripRepository
+@inject IPlaceRepository PlaceRepository
+@inject UserService UserService
+
+@rendermode InteractiveServer
+
+@if (PlanningTrip != null)
+{
+    <FluentStack Orientation="Orientation.Horizontal" Style="height: 100%; gap: 16px;">
+        <!-- Unscheduled Places -->
+        <FluentCard Style="flex: 0 0 300px; min-height: 500px;">
+            <FluentLabel Typo="Typography.Subject" Weight="FontWeight.Bold">Available Places</FluentLabel>
+            <FluentLabel Style="font-size: 0.875em; margin-bottom: 8px;">Drag places to days to schedule them</FluentLabel>
+                    
+            <FluentStack Orientation="Orientation.Vertical" Style="gap: 8px;">
+                @foreach (var place in AllPlaces)
+                {
+                    var isScheduled = PlanningTrip.Days.Any(d => d.Places.Any(p => p.PlaceId == place.Id));
+                    @if (!isScheduled)
+                    {
+                        <FluentCard class="draggable"
+                                    draggable="true"
+                                    @ondragstart="@((e) => HandleDragStart(place.Id, null, -1))"
+                                    @ondragend="@HandleDragEnd"
+                                    Style="cursor: move; padding: 12px;">
+                            <FluentStack Orientation="Orientation.Vertical">
+                                <FluentLabel Weight="FontWeight.Bold">@place.Name</FluentLabel>
+                                <FluentBadge BackgroundColor="var(--neutral-layer-3)">@place.Category</FluentBadge>
+                                <FluentLabel Style="font-size: 0.875em;">
+                                    @place.Latitude.ToString("F2"), @place.Longitude.ToString("F2")
+                                </FluentLabel>
+                            </FluentStack>
+                        </FluentCard>
+                    }
+                }
+            </FluentStack>
+        </FluentCard>
+
+        <!-- Days -->
+        <FluentStack Orientation="Orientation.Vertical" Style="flex: 1; gap: 16px;">
+            @foreach (var day in PlanningTrip.Days.OrderBy(d => d.DayNumber))
+            {
+                <FluentCard class="drop-zone"
+                            @ondragover:preventDefault
+                            @ondragenter="@((e) => HandleDragEnter(day.Id))"
+                            @ondragleave="@((e) => HandleDragLeave())"
+                            @ondrop="@((e) => HandleDrop(day.Id))"
+                            Style="@(CurrentDropTarget == day.Id ? "background-color: var(--neutral-layer-2); border: 2px dashed var(--accent-fill-rest);" : "")">
+                    <FluentStack Orientation="Orientation.Vertical">
+                        <FluentStack Orientation="Orientation.Horizontal">
+                            <FluentLabel Typo="Typography.Subject" Weight="FontWeight.Bold">
+                                Day @day.DayNumber
+                            </FluentLabel>
+                            @if (day.Date.HasValue)
+                            {
+                                <FluentLabel Style="font-size: 0.875em;">
+                                    - @day.Date.Value.ToString("MMM dd, yyyy")
+                                </FluentLabel>
+                            }
+                            <FluentSpacer />
+                            <FluentLabel Style="font-size: 0.875em;">
+                                @day.Places.Count places
+                            </FluentLabel>
+                        </FluentStack>
+
+                        <FluentDivider />
+
+                        @if (!day.Places.Any())
+                        {
+                            <FluentLabel Style="font-size: 0.875em; text-align: center; padding: 24px; color: var(--neutral-foreground-hint);">
+                                Drop places here to schedule
+                            </FluentLabel>
+                        }
+                        else
+                        {
+                            <FluentStack Orientation="Orientation.Vertical" Style="gap: 8px;">
+                                @foreach (var tripPlace in day.Places.OrderBy(p => p.Order))
+                                {
+                                    <FluentCard class="draggable"
+                                                draggable="true"
+                                                @ondragstart="@((e) => HandleDragStart(tripPlace.PlaceId, day.Id, tripPlace.Order))"
+                                                @ondragend="@HandleDragEnd"
+                                                Style="cursor: move; padding: 8px;">
+                                        <FluentStack Orientation="Orientation.Horizontal">
+                                            <FluentIcon Value="@(new Icons.Regular.Size16.Navigation())" />
+                                            <FluentLabel Weight="FontWeight.Bold">@(tripPlace.Place?.Name ?? "Unknown")</FluentLabel>
+                                            <FluentSpacer />
+                                            <FluentButton Appearance="Appearance.Lightweight"
+                                                          OnClick="@(() => RemovePlaceFromDay(day.Id, tripPlace.PlaceId))"
+                                                          Style="padding: 4px;">
+                                                <FluentIcon Value="@(new Icons.Regular.Size12.Dismiss())" />
+                                            </FluentButton>
+                                        </FluentStack>
+                                    </FluentCard>
+                                }
+                            </FluentStack>
+                        }
+                    </FluentStack>
+                </FluentCard>
+            }
+        </FluentStack>
+
+        <FluentButton Appearance="Appearance.Accent" OnClick="@SaveTripPlan">Save Plan</FluentButton>
+    </FluentStack>
+}
+
+@code {
+    private bool IsLoading { get; set; } = true;
+
+    [Parameter]
+    public string TripId { get; set; } = string.Empty;
+
+    private List<Place> AllPlaces { get; set; } = new();
+
+    private Trip? PlanningTrip;
+
+
+
+
+    // Drag and drop state
+    private string? DraggedPlaceId { get; set; }
+    private string? DraggedFromDayId { get; set; }
+    private int DraggedFromOrder { get; set; }
+    private string? CurrentDropTarget { get; set; }
+    
+
+
+    
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        IsLoading = true;
+        
+        var currentUserId = await UserService.GetCurrentUserIdAsync();
+
+        PlanningTrip = await TripRepository.GetByIdAsync(TripId);
+        
+        AllPlaces = await PlaceRepository.GetAllAsync();
+        
+        // Load place details for all trips
+        foreach (var day in PlanningTrip.Days)
+        {
+            foreach (var tripPlace in day.Places)
+            {
+                tripPlace.Place = AllPlaces.FirstOrDefault(p => p.Id == tripPlace.PlaceId);
+            }
+        }
+            
+        foreach (var tripPlace in PlanningTrip.UnscheduledPlaces)
+        {
+            tripPlace.Place = AllPlaces.FirstOrDefault(p => p.Id == tripPlace.PlaceId);
+        }
+        
+        IsLoading = false;
+    }
+
+
+
+    
+    private void RemovePlaceFromDay(string dayId, string placeId)
+    {
+        if (PlanningTrip == null)
+            return;
+
+        var day = PlanningTrip.Days.FirstOrDefault(d => d.Id == dayId);
+        if (day != null)
+        {
+            var placeToRemove = day.Places.FirstOrDefault(p => p.PlaceId == placeId);
+            if (placeToRemove != null)
+            {
+                day.Places.Remove(placeToRemove);
+                // Reorder remaining places
+                var order = 1;
+                foreach (var p in day.Places.OrderBy(p => p.Order))
+                {
+                    p.Order = order++;
+                }
+            }
+        }
+    }
+
+    private async Task SaveTripPlan()
+    {
+        if (PlanningTrip == null)
+            return;
+
+        PlanningTrip.UpdatedAt = DateTime.UtcNow;
+        await TripRepository.UpdateAsync(PlanningTrip);
+
+        PlanningTrip = null;
+        await LoadData();
+    }
+
+
+    
+    // Drag and drop handlers
+    private void HandleDragStart(string placeId, string? fromDayId, int fromOrder)
+    {
+        DraggedPlaceId = placeId;
+        DraggedFromDayId = fromDayId;
+        DraggedFromOrder = fromOrder;
+    }
+
+    private void HandleDragEnd()
+    {
+        // Keep the state until drop completes
+    }
+
+    private void HandleDragEnter(string dayId)
+    {
+        CurrentDropTarget = dayId;
+    }
+
+    private void HandleDragLeave()
+    {
+        CurrentDropTarget = null;
+    }
+
+    private void HandleDrop(string toDayId)
+    {
+        CurrentDropTarget = null;
+
+        if (PlanningTrip == null || string.IsNullOrEmpty(DraggedPlaceId))
+            return;
+
+        var toDay = PlanningTrip.Days.FirstOrDefault(d => d.Id == toDayId);
+        if (toDay == null)
+            return;
+
+        // Remove from source if it was in a day
+        if (!string.IsNullOrEmpty(DraggedFromDayId))
+        {
+            var fromDay = PlanningTrip.Days.FirstOrDefault(d => d.Id == DraggedFromDayId);
+            if (fromDay != null)
+            {
+                var placeToMove = fromDay.Places.FirstOrDefault(p => p.PlaceId == DraggedPlaceId);
+                if (placeToMove != null)
+                {
+                    fromDay.Places.Remove(placeToMove);
+                    // Reorder remaining places
+                    var order = 1;
+                    foreach (var p in fromDay.Places.OrderBy(p => p.Order))
+                    {
+                        p.Order = order++;
+                    }
+                }
+            }
+        }
+
+        // Add to target day
+        var place = AllPlaces.FirstOrDefault(p => p.Id == DraggedPlaceId);
+        if (place != null)
+        {
+            var newOrder = toDay.Places.Any() ? toDay.Places.Max(p => p.Order) + 1 : 1;
+            toDay.Places.Add(new TripPlace
+            {
+                PlaceId = place.Id,
+                Order = newOrder,
+                Place = place
+            });
+        }
+
+        // Clear drag state
+        DraggedPlaceId = null;
+        DraggedFromDayId = null;
+        DraggedFromOrder = -1;
+
+        StateHasChanged();
+    }
+
+}
