@@ -1,13 +1,17 @@
 @page "/wishlist/{WishlistId}"
+
 @using Microsoft.AspNetCore.Authorization
 @using TripPlanner.Web.Models
 @using TripPlanner.Web.Repositories
 @using TripPlanner.Web.Services
+
 @attribute [Authorize]
+
 @inject IWishlistRepository WishlistRepository
 @inject IPlaceRepository PlaceRepository
 @inject UserService UserService
 @inject NavigationManager NavigationManager
+
 @rendermode InteractiveServer
 
 <PageTitle>@wishlist?.Name ?? "Wishlist"</PageTitle>

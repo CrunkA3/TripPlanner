@@ -1,12 +1,16 @@
 @page "/map"
+
 @using TripPlanner.Web.Models
 @using TripPlanner.Web.Repositories
 @using Microsoft.JSInterop
+
 @inject IPlaceRepository PlaceRepository
 @inject ITripRepository TripRepository
 @inject IGpxRepository GpxRepository
 @inject IJSRuntime JSRuntime
+
 @implements IAsyncDisposable
+
 @rendermode InteractiveServer
 
 <PageTitle>Map View</PageTitle>

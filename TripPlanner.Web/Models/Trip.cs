@@ -1,3 +1,5 @@
+using TripPlanner.Web.Data;
+
 namespace TripPlanner.Web.Models;
 
 public class Trip
@@ -10,7 +12,7 @@ public class Trip
     
     // Owner
     public string OwnerId { get; set; } = string.Empty;
-    public User? Owner { get; set; }
+    public ApplicationUser? Owner { get; set; }
     
     public List<TripDay> Days { get; set; } = new();
     public List<TripPlace> UnscheduledPlaces { get; set; } = new();

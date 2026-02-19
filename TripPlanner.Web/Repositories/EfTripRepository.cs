@@ -47,7 +47,7 @@ public class EfTripRepository : ITripRepository
     public async Task<Trip> UpdateAsync(Trip trip)
     {
         trip.UpdatedAt = DateTime.UtcNow;
-        _context.Trips.Update(trip);
+        _context.Entry(trip).CurrentValues.SetValues(trip);
         await _context.SaveChangesAsync();
         return trip;
     }

@@ -1,3 +1,5 @@
+using TripPlanner.Web.Data;
+
 namespace TripPlanner.Web.Models;
 
 public class Wishlist
@@ -8,7 +10,7 @@ public class Wishlist
     
     // Owner
     public string OwnerId { get; set; } = string.Empty;
-    public User? Owner { get; set; }
+    public ApplicationUser? Owner { get; set; }
     
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
@@ -21,7 +23,7 @@ public class Wishlist
 public class UserWishlist
 {
     public string UserId { get; set; } = string.Empty;
-    public User? User { get; set; }
+    public ApplicationUser? User { get; set; }
     
     public string WishlistId { get; set; } = string.Empty;
     public Wishlist? Wishlist { get; set; }

@@ -1,9 +1,11 @@
+using TripPlanner.Web.Data;
+
 namespace TripPlanner.Web.Models;
 
 public class SharedTrip
 {
     public string UserId { get; set; } = string.Empty;
-    public User? User { get; set; }
+    public ApplicationUser? User { get; set; }
     
     public string TripId { get; set; } = string.Empty;
     public Trip? Trip { get; set; }

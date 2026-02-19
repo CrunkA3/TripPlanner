@@ -4,12 +4,9 @@ using TripPlanner.Web.Models;
 
 namespace TripPlanner.Web.Data;
 
-public class ApplicationDbContext : IdentityDbContext<User>
+public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : IdentityDbContext<ApplicationUser>(options)
 {
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-        : base(options)
-    {
-    }
+
 
     public DbSet<Wishlist> Wishlists { get; set; }
     public DbSet<Place> Places { get; set; }
@@ -20,6 +17,8 @@ public class ApplicationDbContext : IdentityDbContext<User>
     public DbSet<GpxPoint> GpxPoints { get; set; }
     public DbSet<UserWishlist> UserWishlists { get; set; }
     public DbSet<SharedTrip> SharedTrips { get; set; }
+
+
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
