@@ -37,7 +37,7 @@ public class EfPlaceRepository : IPlaceRepository
     public async Task<Place> UpdateAsync(Place place)
     {
         place.UpdatedAt = DateTime.UtcNow;
-        _context.Places.Update(place);
+        _context.Entry(place).CurrentValues.SetValues(place);
         await _context.SaveChangesAsync();
         return place;
     }
