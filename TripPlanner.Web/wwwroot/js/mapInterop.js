@@ -5,84 +5,125 @@ window.mapInterop = {
     gpxTracks: [],
 
     initializeMap: function (containerId, lat, lng, zoom) {
-        if (this.map) {
-            this.map.remove();
-            this.map = null;
-        }
-        this.markers = [];
-        this.routes = [];
-        this.gpxTracks = [];
+        var self = this;
+        return new Promise(function (resolve) {
+            if (self.map) {
+                self.map.remove();
+                self.map = null;
+            }
+            self.markers = [];
+            self.routes = [];
+            self.gpxTracks = [];
 
-        this.map = L.map(containerId).setView([lat, lng], zoom);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-            maxZoom: 19
-        }).addTo(this.map);
+            self.map = new maplibregl.Map({
+                container: containerId,
+                style: {
+                    version: 8,
+                    sources: {
+                        'osm': {
+                            type: 'raster',
+                            tiles: [
+                                'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png'
+                            ],
+                            tileSize: 256,
+                            attribution: '\u00a9 <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                        }
+                    },
+                    layers: [{ id: 'osm', type: 'raster', source: 'osm' }]
+                },
+                center: [lng, lat],
+                zoom: zoom
+            });
+            self.map.on('load', function () { resolve(); });
+        });
     },
 
     addMarker: function (id, lat, lng, name, category, color) {
         if (!this.map) return;
-        var marker = L.circleMarker([lat, lng], {
-            radius: 8,
-            fillColor: color,
-            color: '#fff',
-            weight: 2,
-            opacity: 1,
-            fillOpacity: 0.9
-        }).addTo(this.map);
-        marker.bindPopup('<b>' + name + '</b><br>' + category);
-        this.markers.push({ id: id, marker: marker });
+        var el = document.createElement('div');
+        el.style.width = '16px';
+        el.style.height = '16px';
+        el.style.borderRadius = '50%';
+        el.style.backgroundColor = color;
+        el.style.border = '2px solid white';
+        el.style.boxShadow = '0 0 4px rgba(0,0,0,0.4)';
+        el.style.cursor = 'pointer';
+
+        var popup = new maplibregl.Popup({ offset: 10 })
+            .setHTML('<b>' + name + '</b><br>' + category);
+
+        var marker = new maplibregl.Marker({ element: el })
+            .setLngLat([lng, lat])
+            .setPopup(popup)
+            .addTo(this.map);
+
+        this.markers.push({ id: id, marker: marker, lngLat: [lng, lat] });
     },
 
     clearMarkers: function () {
-        var self = this;
-        this.markers.forEach(function (m) {
-            if (self.map) self.map.removeLayer(m.marker);
-        });
+        this.markers.forEach(function (m) { m.marker.remove(); });
         this.markers = [];
     },
 
     addRoute: function (coordinates, color, weight) {
         if (!this.map) return;
-        var latLngs = coordinates.map(function (c) { return [c.latitude, c.longitude]; });
-        var route = L.polyline(latLngs, { color: color, weight: weight }).addTo(this.map);
-        this.routes.push(route);
+        var routeId = 'route-' + this.routes.length;
+        var coords = coordinates.map(function (c) { return [c.longitude, c.latitude]; });
+        this.map.addSource(routeId, {
+            type: 'geojson',
+            data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: coords } }
+        });
+        this.map.addLayer({
+            id: routeId, type: 'line', source: routeId,
+            paint: { 'line-color': color, 'line-width': weight }
+        });
+        this.routes.push({ id: routeId, coords: coords });
     },
 
     clearRoutes: function () {
         var self = this;
         this.routes.forEach(function (r) {
-            if (self.map) self.map.removeLayer(r);
+            if (self.map && self.map.getLayer(r.id)) self.map.removeLayer(r.id);
+            if (self.map && self.map.getSource(r.id)) self.map.removeSource(r.id);
         });
         this.routes = [];
     },
 
     addGpxTrack: function (points, color) {
         if (!this.map) return;
-        var latLngs = points.map(function (p) { return [p.latitude, p.longitude]; });
-        var track = L.polyline(latLngs, { color: color, weight: 3 }).addTo(this.map);
-        this.gpxTracks.push(track);
+        var trackId = 'gpx-' + this.gpxTracks.length;
+        var coords = points.map(function (p) { return [p.longitude, p.latitude]; });
+        this.map.addSource(trackId, {
+            type: 'geojson',
+            data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: coords } }
+        });
+        this.map.addLayer({
+            id: trackId, type: 'line', source: trackId,
+            paint: { 'line-color': color, 'line-width': 3 }
+        });
+        this.gpxTracks.push({ id: trackId, coords: coords });
     },
 
     clearGpxTracks: function () {
         var self = this;
         this.gpxTracks.forEach(function (t) {
-            if (self.map) self.map.removeLayer(t);
+            if (self.map && self.map.getLayer(t.id)) self.map.removeLayer(t.id);
+            if (self.map && self.map.getSource(t.id)) self.map.removeSource(t.id);
         });
         this.gpxTracks = [];
     },
 
     fitBounds: function () {
         if (!this.map) return;
-        var allLayers = this.markers.map(function (m) { return m.marker; })
-            .concat(this.routes)
-            .concat(this.gpxTracks);
-        if (allLayers.length > 0) {
-            var group = L.featureGroup(allLayers);
-            var bounds = group.getBounds();
-            if (bounds.isValid()) {
-                this.map.fitBounds(bounds.pad(0.1));
-            }
+        if (this.markers.length === 0 && this.routes.length === 0 && this.gpxTracks.length === 0) return;
+        var bounds = new maplibregl.LngLatBounds();
+        this.markers.forEach(function (m) { bounds.extend(m.lngLat); });
+        this.routes.forEach(function (r) { r.coords.forEach(function (c) { bounds.extend(c); }); });
+        this.gpxTracks.forEach(function (t) { t.coords.forEach(function (c) { bounds.extend(c); }); });
+        if (!bounds.isEmpty()) {
+            this.map.fitBounds(bounds, { padding: 50 });
         }
     },
 
