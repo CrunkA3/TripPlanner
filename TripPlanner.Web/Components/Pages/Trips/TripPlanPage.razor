@@ -190,17 +190,20 @@
         AllPlaces = await PlaceRepository.GetAllAsync();
         
         // Load place details for all trips
-        foreach (var day in PlanningTrip.Days)
+        if (PlanningTrip != null)
         {
-            foreach (var tripPlace in day.Places)
+            foreach (var day in PlanningTrip.Days)
+            {
+                foreach (var tripPlace in day.Places)
+                {
+                    tripPlace.Place = AllPlaces.FirstOrDefault(p => p.Id == tripPlace.PlaceId);
+                }
+            }
+                
+            foreach (var tripPlace in PlanningTrip.UnscheduledPlaces)
             {
                 tripPlace.Place = AllPlaces.FirstOrDefault(p => p.Id == tripPlace.PlaceId);
             }
-        }
-            
-        foreach (var tripPlace in PlanningTrip.UnscheduledPlaces)
-        {
-            tripPlace.Place = AllPlaces.FirstOrDefault(p => p.Id == tripPlace.PlaceId);
         }
         
         IsLoading = false;
