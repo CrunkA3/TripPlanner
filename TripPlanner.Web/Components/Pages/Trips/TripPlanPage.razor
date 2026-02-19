@@ -18,7 +18,13 @@
     <FluentStack Orientation="Orientation.Horizontal" Style="height: 100%; gap: 16px;">
         <!-- Unscheduled Places -->
         <FluentCard Style="flex: 0 0 300px; min-height: 500px;">
-            <FluentLabel Typo="Typography.Subject" Weight="FontWeight.Bold">Available Places</FluentLabel>
+            <FluentStack Orientation="Orientation.Horizontal" Style="margin-bottom: 4px;">
+                <FluentLabel Typo="Typography.Subject" Weight="FontWeight.Bold">Available Places</FluentLabel>
+                <FluentSpacer />
+                <FluentButton Appearance="Appearance.Accent" IconStart="@(new Icons.Regular.Size20.Add())" OnClick="@OpenAddPlaceDialog" Style="padding: 4px 8px; font-size: 0.8em;">
+                    New
+                </FluentButton>
+            </FluentStack>
             <FluentLabel Style="font-size: 0.875em; margin-bottom: 8px;">Drag places to days to schedule them</FluentLabel>
                     
             <FluentStack Orientation="Orientation.Vertical" Style="gap: 8px;">
@@ -113,6 +119,33 @@
     </FluentStack>
 }
 
+<FluentDialog @bind-Hidden="@HideAddPlaceDialog" Modal="true" TrapFocus="true">
+    <FluentDialogHeader>
+        <FluentLabel Typo="Typography.H4">Add New Place</FluentLabel>
+    </FluentDialogHeader>
+    <FluentDialogBody>
+        @if (NewPlace != null)
+        {
+            <FluentStack Orientation="Orientation.Vertical">
+                <FluentTextField @bind-Value="@NewPlace.Name" Label="Name" Required Style="width: 100%;" />
+                <FluentTextArea @bind-Value="@NewPlace.Description" Label="Description" Rows="3" Style="width: 100%;" />
+                <FluentSelect TOption="string" Value="@_newPlaceCategoryString" Label="Category" Style="width: 100%;" ValueChanged="@OnNewPlaceCategoryChanged">
+                    @foreach (var category in Enum.GetValues<PlaceCategory>())
+                    {
+                        <FluentOption TOption="string" Value="@category.ToString()">@category.ToString()</FluentOption>
+                    }
+                </FluentSelect>
+                <FluentNumberField @bind-Value="@NewPlace.Latitude" Label="Latitude" Step="0.0001" Style="width: 100%;" />
+                <FluentNumberField @bind-Value="@NewPlace.Longitude" Label="Longitude" Step="0.0001" Style="width: 100%;" />
+            </FluentStack>
+        }
+    </FluentDialogBody>
+    <FluentDialogFooter>
+        <FluentButton Appearance="Appearance.Accent" OnClick="@SaveNewPlace">Save</FluentButton>
+        <FluentButton Appearance="Appearance.Neutral" OnClick="@(() => HideAddPlaceDialog = true)">Cancel</FluentButton>
+    </FluentDialogFooter>
+</FluentDialog>
+
 @code {
     private bool IsLoading { get; set; } = true;
 
@@ -131,6 +164,11 @@
     private string? DraggedFromDayId { get; set; }
     private int DraggedFromOrder { get; set; }
     private string? CurrentDropTarget { get; set; }
+    
+    // Add new place state
+    private bool HideAddPlaceDialog { get; set; } = true;
+    private Place? NewPlace { get; set; }
+    private string _newPlaceCategoryString = string.Empty;
     
 
 
@@ -279,6 +317,34 @@
         DraggedFromDayId = null;
         DraggedFromOrder = -1;
 
+        StateHasChanged();
+    }
+
+    private void OpenAddPlaceDialog()
+    {
+        NewPlace = new Place();
+        _newPlaceCategoryString = NewPlace.Category.ToString();
+        HideAddPlaceDialog = false;
+    }
+
+    private void OnNewPlaceCategoryChanged(string value)
+    {
+        _newPlaceCategoryString = value;
+        if (NewPlace != null && Enum.TryParse<PlaceCategory>(value, out var category))
+        {
+            NewPlace.Category = category;
+        }
+    }
+
+    private async Task SaveNewPlace()
+    {
+        if (NewPlace == null || string.IsNullOrWhiteSpace(NewPlace.Name))
+            return;
+
+        await PlaceRepository.AddAsync(NewPlace);
+        AllPlaces.Add(NewPlace);
+        HideAddPlaceDialog = true;
+        NewPlace = null;
         StateHasChanged();
     }
 
