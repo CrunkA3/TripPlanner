@@ -26,7 +26,7 @@
         </FluentButton>
     </FluentToolbar>
 
-    <FluentCard>
+    <FluentCard AreaRestricted="false">
         <FluentStack Orientation="Orientation.Horizontal" Width="100%" Wrap="true">
             <FluentSelect TOption="string" @bind-Value="@FilterCategoryString" Label="Category" Style="min-width: 200px;">
                 <FluentOption TOption="string" Value="">All Categories</FluentOption>
@@ -71,17 +71,22 @@
                         <FluentStack Orientation="Orientation.Vertical">
                             <FluentStack Orientation="Orientation.Horizontal">
                                 <FluentLabel Typo="Typography.Subject" Weight="FontWeight.Bold">@place.Name</FluentLabel>
-                                <FluentSpacer />
                                 @if (place.HasGpxTrack)
                                 {
+                                    <FluentSpacer />
                                     <FluentBadge Appearance="Appearance.Accent">GPX</FluentBadge>
                                 }
                             </FluentStack>
+                            <FluentDivider Style="width: 100%;" Role="DividerRole.Presentation" />
                             
                             <FluentLabel Typo="Typography.Body">@place.Description</FluentLabel>
                             
                             <FluentStack Orientation="Orientation.Horizontal" Wrap="true">
                                 <FluentBadge BackgroundColor="var(--neutral-layer-3)">@place.Category</FluentBadge>
+                                @if (place.Wishlist is not null)
+                                {
+                                    <FluentBadge BackgroundColor="var(--neutral-layer-3)">@place.Wishlist.Name</FluentBadge>
+                                }
                             </FluentStack>
                             
                             @if (place.Tags.Any())
