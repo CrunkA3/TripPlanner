@@ -5,7 +5,9 @@ namespace TripPlanner.Web.Models;
 // Add profile data for application users by adding properties to the ApplicationUser class
 public class ApplicationUser : IdentityUser
 {
-
+    public double? HomeLatitude { get; set; }
+    public double? HomeLongitude { get; set; }
+    public string? HomeLocationName { get; set; }
 
     // Navigation properties
     public List<Wishlist> Wishlists { get; set; } = new();

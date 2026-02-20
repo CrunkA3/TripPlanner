@@ -2,12 +2,14 @@
 
 @using TripPlanner.Web.Models
 @using TripPlanner.Web.Repositories
+@using TripPlanner.Web.Services
 @using Microsoft.JSInterop
 
 @inject IPlaceRepository PlaceRepository
 @inject ITripRepository TripRepository
 @inject IGpxRepository GpxRepository
 @inject IJSRuntime JSRuntime
+@inject UserService UserService
 
 @implements IAsyncDisposable
 
@@ -45,6 +47,21 @@
             <!-- Side Panel -->
             <FluentStack Orientation="Orientation.Vertical" Style="width: 300px; max-height: 100%; overflow-y: auto; padding-left: 16px;">
                 <FluentLabel Typo="Typography.Subject" Weight="FontWeight.Bold">Places on Map</FluentLabel>
+
+                @if (CurrentUser?.HomeLatitude.HasValue == true && CurrentUser?.HomeLongitude.HasValue == true)
+                {
+                    <FluentCard Style="border-left: 4px solid #1A73E8;">
+                        <FluentStack Orientation="Orientation.Vertical">
+                            <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                                <FluentIcon Value="@(new Icons.Regular.Size16.Home())" Color="Color.Accent" />
+                                <FluentLabel Weight="FontWeight.Bold">@(CurrentUser.HomeLocationName ?? "Home")</FluentLabel>
+                            </FluentStack>
+                            <FluentLabel Style="font-size: 0.875em;">
+                                @CurrentUser.HomeLatitude.Value.ToString("F4"), @CurrentUser.HomeLongitude.Value.ToString("F4")
+                            </FluentLabel>
+                        </FluentStack>
+                    </FluentCard>
+                }
                 
                 @if (IsLoading)
                 {
@@ -136,9 +153,11 @@
     private bool ShowRoutes { get; set; } = true;
     private bool ShowGpxTracks { get; set; } = true;
     private bool MapInitialized { get; set; }
+    private ApplicationUser? CurrentUser { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
+        CurrentUser = await UserService.GetCurrentUserAsync();
         await LoadMapData();
     }
 
@@ -155,8 +174,15 @@
     {
         try
         {
-            // Initialize map centered on Europe (can be changed to user's location)
-            await JSRuntime.InvokeVoidAsync("mapInterop.initializeMap", "map", 48.8566, 2.3522, 6);
+            double centerLat = 48.8566, centerLng = 2.3522;
+            int zoom = 6;
+            if (CurrentUser?.HomeLatitude.HasValue == true && CurrentUser?.HomeLongitude.HasValue == true)
+            {
+                centerLat = CurrentUser.HomeLatitude.Value;
+                centerLng = CurrentUser.HomeLongitude.Value;
+                zoom = 10;
+            }
+            await JSRuntime.InvokeVoidAsync("mapInterop.initializeMap", "map", centerLat, centerLng, zoom);
             MapInitialized = true;
         }
         catch (Exception ex)
@@ -169,6 +195,7 @@
     {
         IsLoading = true;
         
+        CurrentUser = await UserService.GetCurrentUserAsync();
         Places = await PlaceRepository.GetAllAsync();
         Trips = await TripRepository.GetAllAsync();
         GpxTracks = await GpxRepository.GetAllAsync();
@@ -212,6 +239,14 @@
             await JSRuntime.InvokeVoidAsync("mapInterop.clearMarkers");
             await JSRuntime.InvokeVoidAsync("mapInterop.clearRoutes");
             await JSRuntime.InvokeVoidAsync("mapInterop.clearGpxTracks");
+
+            // Add home location marker
+            if (CurrentUser?.HomeLatitude.HasValue == true && CurrentUser?.HomeLongitude.HasValue == true)
+            {
+                await JSRuntime.InvokeVoidAsync("mapInterop.addHomeMarker",
+                    CurrentUser.HomeLatitude.Value, CurrentUser.HomeLongitude.Value,
+                    CurrentUser.HomeLocationName ?? "Home");
+            }
 
             // Add markers for wishlist places
             if (ShowWishlist)

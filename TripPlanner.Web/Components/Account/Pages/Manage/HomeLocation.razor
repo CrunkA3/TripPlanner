@@ -1,0 +1,234 @@
+@page "/Account/Manage/HomeLocation"
+
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.JSInterop
+@using TripPlanner.Web.Models
+@using TripPlanner.Web.Services
+
+@inject UserService UserService
+@inject UserManager<ApplicationUser> UserManager
+@inject IJSRuntime JSRuntime
+
+@implements IAsyncDisposable
+
+@rendermode InteractiveServer
+
+<PageTitle>Home Location</PageTitle>
+
+<h3>Home Location</h3>
+
+@if (!string.IsNullOrEmpty(statusMessage))
+{
+    <div class="@(statusMessage.StartsWith("Error") ? "alert alert-danger" : "alert alert-success")" role="alert">
+        @statusMessage
+    </div>
+}
+
+<p>Set your home location. It will always be shown on the map.</p>
+
+<FluentStack Orientation="Orientation.Vertical">
+    <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+        <FluentTextField @bind-Value="@HomeLocationName" Label="Location name" Placeholder="e.g. Home" Style="width: 250px;" />
+        <FluentTextField @bind-Value="@LatitudeText" Label="Latitude" Placeholder="e.g. 48.1374" Style="width: 140px;" />
+        <FluentTextField @bind-Value="@LongitudeText" Label="Longitude" Placeholder="e.g. 11.5755" Style="width: 140px;" />
+    </FluentStack>
+
+    <FluentStack Orientation="Orientation.Horizontal">
+        <FluentButton Appearance="Appearance.Accent" OnClick="@SaveHomeLocation">
+            <FluentIcon Value="@(new Icons.Regular.Size16.Save())" />
+            Save
+        </FluentButton>
+        <FluentButton Appearance="Appearance.Outline" OnClick="@UseCurrentLocation">
+            <FluentIcon Value="@(new Icons.Regular.Size16.MyLocation())" />
+            Use current location
+        </FluentButton>
+        @if (HasHomeLocation)
+        {
+            <FluentButton Appearance="Appearance.Outline" OnClick="@ClearHomeLocation">
+                <FluentIcon Value="@(new Icons.Regular.Size16.Delete())" />
+                Remove home location
+            </FluentButton>
+        }
+    </FluentStack>
+
+    <p style="font-size: 0.875em; color: var(--neutral-foreground-hint);">
+        Click on the map to set the home location, or use the "Use current location" button.
+    </p>
+
+    <div id="home-location-map" style="width: 100%; height: 400px; border-radius: 4px; border: 1px solid var(--neutral-stroke-rest);"></div>
+</FluentStack>
+
+@code {
+    private ApplicationUser? user;
+    private string HomeLocationName { get; set; } = string.Empty;
+    private string LatitudeText { get; set; } = string.Empty;
+    private string LongitudeText { get; set; } = string.Empty;
+    private string statusMessage = string.Empty;
+    private bool MapInitialized { get; set; }
+    private DotNetObjectReference<HomeLocation>? dotNetRef;
+
+    private bool HasHomeLocation =>
+        double.TryParse(LatitudeText, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out _) &&
+        double.TryParse(LongitudeText, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out _);
+
+    private string DisplayLocationName => HomeLocationName.Length > 0 ? HomeLocationName : "Home";
+
+    protected override async Task OnInitializedAsync()
+    {
+        user = await UserService.GetCurrentUserAsync();
+        if (user != null)
+        {
+            HomeLocationName = user.HomeLocationName ?? string.Empty;
+            if (user.HomeLatitude.HasValue)
+                LatitudeText = user.HomeLatitude.Value.ToString("F6", System.Globalization.CultureInfo.InvariantCulture);
+            if (user.HomeLongitude.HasValue)
+                LongitudeText = user.HomeLongitude.Value.ToString("F6", System.Globalization.CultureInfo.InvariantCulture);
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            dotNetRef = DotNetObjectReference.Create(this);
+            double centerLat = 48.8566, centerLng = 2.3522;
+            int zoom = 4;
+            if (user?.HomeLatitude.HasValue == true && user?.HomeLongitude.HasValue == true)
+            {
+                centerLat = user.HomeLatitude.Value;
+                centerLng = user.HomeLongitude.Value;
+                zoom = 12;
+            }
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("mapInterop.initializeMap", "home-location-map", centerLat, centerLng, zoom);
+                MapInitialized = true;
+
+                if (user?.HomeLatitude.HasValue == true && user?.HomeLongitude.HasValue == true)
+                {
+                    await JSRuntime.InvokeVoidAsync("mapInterop.addHomeMarker",
+                        user.HomeLatitude.Value, user.HomeLongitude.Value,
+                        user.HomeLocationName ?? "Home");
+                }
+
+                await JSRuntime.InvokeVoidAsync("mapInterop.setMapClickHandler", dotNetRef, nameof(OnMapClick));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error initializing map: {ex.Message}");
+            }
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnMapClick(double lat, double lng)
+    {
+        LatitudeText = lat.ToString("F6", System.Globalization.CultureInfo.InvariantCulture);
+        LongitudeText = lng.ToString("F6", System.Globalization.CultureInfo.InvariantCulture);
+
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("mapInterop.addHomeMarker", lat, lng, DisplayLocationName);
+        }
+        catch { }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task UseCurrentLocation()
+    {
+        try
+        {
+            var coords = await JSRuntime.InvokeAsync<double[]>("mapInterop.getCurrentLocation");
+            if (coords != null && coords.Length == 2)
+            {
+                await OnMapClick(coords[0], coords[1]);
+                await JSRuntime.InvokeVoidAsync("mapInterop.initializeMap", "home-location-map", coords[0], coords[1], 13);
+                MapInitialized = true;
+                await JSRuntime.InvokeVoidAsync("mapInterop.addHomeMarker", coords[0], coords[1], DisplayLocationName);
+                await JSRuntime.InvokeVoidAsync("mapInterop.setMapClickHandler", dotNetRef, nameof(OnMapClick));
+            }
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Error: Could not get current location. {ex.Message}";
+        }
+    }
+
+    private async Task SaveHomeLocation()
+    {
+        if (user == null) return;
+
+        if (!double.TryParse(LatitudeText, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double lat) ||
+            !double.TryParse(LongitudeText, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double lng))
+        {
+            statusMessage = "Error: Please enter valid latitude and longitude values.";
+            return;
+        }
+
+        user.HomeLatitude = lat;
+        user.HomeLongitude = lng;
+        user.HomeLocationName = HomeLocationName.Length > 0 ? HomeLocationName : null;
+
+        var result = await UserManager.UpdateAsync(user);
+        if (result.Succeeded)
+        {
+            statusMessage = "Home location saved successfully.";
+            if (MapInitialized)
+            {
+                try
+                {
+                    await JSRuntime.InvokeVoidAsync("mapInterop.addHomeMarker", lat, lng, user.HomeLocationName ?? "Home");                }
+                catch { }
+            }
+        }
+        else
+        {
+            statusMessage = "Error: " + string.Join(", ", result.Errors.Select(e => e.Description));
+        }
+    }
+
+    private async Task ClearHomeLocation()
+    {
+        if (user == null) return;
+
+        user.HomeLatitude = null;
+        user.HomeLongitude = null;
+        user.HomeLocationName = null;
+
+        var result = await UserManager.UpdateAsync(user);
+        if (result.Succeeded)
+        {
+            HomeLocationName = string.Empty;
+            LatitudeText = string.Empty;
+            LongitudeText = string.Empty;
+            statusMessage = "Home location removed.";
+            if (MapInitialized)
+            {
+                try
+                {
+                    await JSRuntime.InvokeVoidAsync("mapInterop.removeHomeMarker");
+                }
+                catch { }
+            }
+        }
+        else
+        {
+            statusMessage = "Error: " + string.Join(", ", result.Errors.Select(e => e.Description));
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (MapInitialized)
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("mapInterop.removeMapClickHandler");
+                await JSRuntime.InvokeVoidAsync("mapInterop.destroyMap");
+            }
+            catch { }
+        }
+        dotNetRef?.Dispose();
+    }
+}

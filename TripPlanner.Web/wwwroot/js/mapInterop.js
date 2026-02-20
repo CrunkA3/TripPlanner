@@ -3,6 +3,8 @@ window.mapInterop = {
     markers: [],
     routes: [],
     gpxTracks: [],
+    homeMarker: null,
+    mapClickHandler: null,
 
     initializeMap: function (containerId, lat, lng, zoom) {
         var self = this;
@@ -14,6 +16,15 @@ window.mapInterop = {
             self.markers = [];
             self.routes = [];
             self.gpxTracks = [];
+
+            if (self.homeMarker) {
+                self.homeMarker.remove();
+                self.homeMarker = null;
+            }
+            if (self.mapClickHandler) {
+                self.map.off('click', self.mapClickHandler);
+                self.mapClickHandler = null;
+            }
 
             self.map = new maplibregl.Map({
                 container: containerId,
@@ -127,8 +138,81 @@ window.mapInterop = {
         }
     },
 
+    getCurrentLocation: function () {
+        return new Promise(function (resolve, reject) {
+            if (!navigator.geolocation) {
+                reject(new Error('Geolocation is not supported by this browser.'));
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(
+                function (position) { resolve([position.coords.latitude, position.coords.longitude]); },
+                function (error) { reject(error); }
+            );
+        });
+    },
+
+    addHomeMarker: function (lat, lng, name) {
+        if (!this.map) return;
+        if (this.homeMarker) {
+            this.homeMarker.remove();
+            this.homeMarker = null;
+        }
+        var el = document.createElement('div');
+        el.style.width = '24px';
+        el.style.height = '24px';
+        el.style.borderRadius = '4px';
+        el.style.backgroundColor = '#1A73E8';
+        el.style.border = '3px solid white';
+        el.style.boxShadow = '0 0 6px rgba(0,0,0,0.5)';
+        el.style.cursor = 'pointer';
+        el.title = name || 'Home';
+        el.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="white" style="width:18px;height:18px;margin:0px;"><path d="M10 2L2 9h2v9h5v-5h2v5h5V9h2L10 2z"/></svg>';
+
+        var popup = new maplibregl.Popup({ offset: 12 })
+            .setHTML('<b>' + (name || 'Home') + '</b>');
+
+        this.homeMarker = new maplibregl.Marker({ element: el })
+            .setLngLat([lng, lat])
+            .setPopup(popup)
+            .addTo(this.map);
+    },
+
+    removeHomeMarker: function () {
+        if (this.homeMarker) {
+            this.homeMarker.remove();
+            this.homeMarker = null;
+        }
+    },
+
+    setMapClickHandler: function (dotNetRef, methodName) {
+        if (!this.map) return;
+        var self = this;
+        if (self.mapClickHandler) {
+            self.map.off('click', self.mapClickHandler);
+        }
+        self.mapClickHandler = function (e) {
+            dotNetRef.invokeMethodAsync(methodName, e.lngLat.lat, e.lngLat.lng);
+        };
+        self.map.on('click', self.mapClickHandler);
+    },
+
+    removeMapClickHandler: function () {
+        if (this.map && this.mapClickHandler) {
+            this.map.off('click', this.mapClickHandler);
+            this.mapClickHandler = null;
+        }
+    },
+
     destroyMap: function () {
         if (this.map) {
+            if (this.mapClickHandler) {
+                this.map.off('click', this.mapClickHandler);
+                this.mapClickHandler = null;
+            }
+            if (this.homeMarker) {
+                this.homeMarker.remove();
+                this.homeMarker = null;
+            }
             this.map.remove();
             this.map = null;
         }
