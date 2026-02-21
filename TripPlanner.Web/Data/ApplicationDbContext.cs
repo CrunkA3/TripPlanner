@@ -13,6 +13,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Trip> Trips { get; set; }
     public DbSet<TripDay> TripDays { get; set; }
     public DbSet<TripPlace> TripPlaces { get; set; }
+    public DbSet<Accommodation> Accommodations { get; set; }
     public DbSet<GpxTrack> GpxTracks { get; set; }
     public DbSet<GpxPoint> GpxPoints { get; set; }
     public DbSet<UserWishlist> UserWishlists { get; set; }
@@ -81,6 +82,13 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         modelBuilder.Entity<TripDay>()
             .HasOne<Trip>()
             .WithMany(t => t.Days)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Configure Accommodation
+        modelBuilder.Entity<Accommodation>()
+            .HasOne(a => a.Trip)
+            .WithMany(t => t.Accommodations)
+            .HasForeignKey(a => a.TripId)
             .OnDelete(DeleteBehavior.Cascade);
 
         // Configure GpxPoint
