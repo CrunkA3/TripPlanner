@@ -51,6 +51,39 @@ window.mapInterop = {
         });
     },
 
+    addAccommodationMarker: function (id, lat, lng, name, checkIn, checkOut) {
+        if (!this.map) return;
+        var el = document.createElement('div');
+        el.style.width = '22px';
+        el.style.height = '22px';
+        el.style.borderRadius = '4px';
+        el.style.backgroundColor = '#9C27B0';
+        el.style.border = '2px solid white';
+        el.style.boxShadow = '0 0 4px rgba(0,0,0,0.4)';
+        el.style.cursor = 'pointer';
+        el.style.display = 'flex';
+        el.style.alignItems = 'center';
+        el.style.justifyContent = 'center';
+        el.style.color = 'white';
+        el.style.fontSize = '12px';
+        el.style.fontWeight = 'bold';
+        el.innerText = 'H';
+
+        var popupHtml = '<b>' + name + '</b>';
+        if (checkIn) popupHtml += '<br>\uD83D\uDCC5 Check-in: ' + checkIn;
+        if (checkOut) popupHtml += '<br>\uD83D\uDCC5 Check-out: ' + checkOut;
+
+        var popup = new maplibregl.Popup({ offset: 12 })
+            .setHTML(popupHtml);
+
+        var marker = new maplibregl.Marker({ element: el })
+            .setLngLat([lng, lat])
+            .setPopup(popup)
+            .addTo(this.map);
+
+        this.markers.push({ id: id, marker: marker, lngLat: [lng, lat] });
+    },
+
     addMarker: function (id, lat, lng, name, category, color) {
         if (!this.map) return;
         var el = document.createElement('div');

@@ -130,6 +130,64 @@
                         </FluentStack>
                     </FluentStack>
                 </FluentGridItem>
+                <!-- Accommodations -->
+                <FluentGridItem xs="12">
+                    <FluentCard Style="min-height: 100px;">
+                        <FluentStack Orientation="Orientation.Horizontal" Style="margin-bottom: 8px;">
+                            <FluentLabel Typo="Typography.Subject" Weight="FontWeight.Bold">Accommodations</FluentLabel>
+                            <FluentSpacer />
+                            <FluentButton Appearance="Appearance.Accent" IconStart="@(new Icons.Regular.Size20.Add())" OnClick="@OpenAddAccommodationDialog" Style="padding: 4px 8px; font-size: 0.8em;">
+                                New
+                            </FluentButton>
+                        </FluentStack>
+                        @if (PlanningTrip?.Accommodations.Count == 0)
+                        {
+                            <FluentLabel Style="font-size: 0.875em; color: var(--neutral-foreground-hint);">No accommodations added yet.</FluentLabel>
+                        }
+                        else
+                        {
+                            <FluentStack Orientation="Orientation.Vertical" Style="gap: 8px;">
+                                @foreach (var acc in PlanningTrip!.Accommodations.OrderBy(a => a.PlannedCheckIn))
+                                {
+                                    <FluentCard Style="padding: 10px;">
+                                        <FluentStack Orientation="Orientation.Vertical">
+                                            <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                                                <FluentLabel Weight="FontWeight.Bold">@acc.Name</FluentLabel>
+                                                <FluentSpacer />
+                                                <FluentButton Appearance="Appearance.Lightweight" OnClick="@(() => OpenEditAccommodationDialog(acc))" Style="padding: 4px;" title="Edit">
+                                                    <FluentIcon Value="@(new Icons.Regular.Size16.Edit())" />
+                                                </FluentButton>
+                                                <FluentButton Appearance="Appearance.Lightweight" OnClick="@(async () => await DeleteAccommodation(acc.Id))" Style="padding: 4px;" title="Delete">
+                                                    <FluentIcon Value="@(new Icons.Regular.Size16.Delete())" />
+                                                </FluentButton>
+                                            </FluentStack>
+                                            @if (!string.IsNullOrEmpty(acc.Address))
+                                            {
+                                                <FluentLabel Style="font-size: 0.8em;">📍 @acc.Address</FluentLabel>
+                                            }
+                                            @if (acc.PlannedCheckIn.HasValue)
+                                            {
+                                                <FluentLabel Style="font-size: 0.8em;">🏨 Check-in: @acc.PlannedCheckIn.Value.ToString("dd.MM.yyyy HH:mm")</FluentLabel>
+                                            }
+                                            @if (acc.PlannedCheckOut.HasValue)
+                                            {
+                                                <FluentLabel Style="font-size: 0.8em;">🚪 Check-out: @acc.PlannedCheckOut.Value.ToString("dd.MM.yyyy HH:mm")</FluentLabel>
+                                            }
+                                            @if (acc.EarliestCheckIn.HasValue || acc.EarliestCheckOut.HasValue)
+                                            {
+                                                <FluentLabel Style="font-size: 0.8em; color: var(--neutral-foreground-hint);">
+                                                    Earliest:
+                                                    @if (acc.EarliestCheckIn.HasValue) { <text> Check-in @acc.EarliestCheckIn.Value.ToString("HH:mm")</text> }
+                                                    @if (acc.EarliestCheckOut.HasValue) { <text> / Check-out @acc.EarliestCheckOut.Value.ToString("HH:mm")</text> }
+                                                </FluentLabel>
+                                            }
+                                        </FluentStack>
+                                    </FluentCard>
+                                }
+                            </FluentStack>
+                        }
+                    </FluentCard>
+                </FluentGridItem>
             </FluentGrid>
         </FluentGridItem>
         <FluentGridItem xs="12" lg="6" xl="9">
@@ -166,6 +224,56 @@
     </FluentDialogFooter>
 </FluentDialog>
 
+<FluentDialog @bind-Hidden="@HideAccommodationDialog" Modal="true" TrapFocus="true">
+    <FluentDialogHeader>
+        <FluentLabel Typo="Typography.H4">@(IsEditingAccommodation ? "Edit Accommodation" : "Add Accommodation")</FluentLabel>
+    </FluentDialogHeader>
+    <FluentDialogBody>
+        @if (EditingAccommodation != null)
+        {
+            <FluentStack Orientation="Orientation.Vertical">
+                <FluentTextField @bind-Value="@EditingAccommodation.Name" Label="Name" Required Style="width: 100%;" />
+                <FluentTextField @bind-Value="@EditingAccommodation.Address" Label="Address" Style="width: 100%;" />
+                <FluentStack Orientation="Orientation.Vertical" Style="gap: 4px; width: 100%;">
+                    <FluentLabel>Planned Check-in</FluentLabel>
+                    <input type="datetime-local"
+                           value="@_plannedCheckInString"
+                           @onchange="@((e) => _plannedCheckInString = e.Value?.ToString() ?? string.Empty)"
+                           style="border: 1px solid var(--neutral-stroke-rest); border-radius: 4px; padding: 4px 8px; font-size: 0.875em; background: transparent; width: 100%;" />
+                </FluentStack>
+                <FluentStack Orientation="Orientation.Vertical" Style="gap: 4px; width: 100%;">
+                    <FluentLabel>Planned Check-out</FluentLabel>
+                    <input type="datetime-local"
+                           value="@_plannedCheckOutString"
+                           @onchange="@((e) => _plannedCheckOutString = e.Value?.ToString() ?? string.Empty)"
+                           style="border: 1px solid var(--neutral-stroke-rest); border-radius: 4px; padding: 4px 8px; font-size: 0.875em; background: transparent; width: 100%;" />
+                </FluentStack>
+                <FluentStack Orientation="Orientation.Vertical" Style="gap: 4px; width: 100%;">
+                    <FluentLabel>Earliest Check-in Time</FluentLabel>
+                    <input type="time"
+                           value="@_earliestCheckInString"
+                           @onchange="@((e) => _earliestCheckInString = e.Value?.ToString() ?? string.Empty)"
+                           style="border: 1px solid var(--neutral-stroke-rest); border-radius: 4px; padding: 4px 8px; font-size: 0.875em; background: transparent; width: 100%;" />
+                </FluentStack>
+                <FluentStack Orientation="Orientation.Vertical" Style="gap: 4px; width: 100%;">
+                    <FluentLabel>Earliest Check-out Time</FluentLabel>
+                    <input type="time"
+                           value="@_earliestCheckOutString"
+                           @onchange="@((e) => _earliestCheckOutString = e.Value?.ToString() ?? string.Empty)"
+                           style="border: 1px solid var(--neutral-stroke-rest); border-radius: 4px; padding: 4px 8px; font-size: 0.875em; background: transparent; width: 100%;" />
+                </FluentStack>
+                <FluentNumberField @bind-Value="@EditingAccommodation.Latitude" Label="Latitude" Step="0.0001" Style="width: 100%;" />
+                <FluentNumberField @bind-Value="@EditingAccommodation.Longitude" Label="Longitude" Step="0.0001" Style="width: 100%;" />
+                <FluentTextArea @bind-Value="@EditingAccommodation.Notes" Label="Notes" Rows="2" Style="width: 100%;" />
+            </FluentStack>
+        }
+    </FluentDialogBody>
+    <FluentDialogFooter>
+        <FluentButton Appearance="Appearance.Accent" OnClick="@SaveAccommodation">Save</FluentButton>
+        <FluentButton Appearance="Appearance.Neutral" OnClick="@(() => HideAccommodationDialog = true)">Cancel</FluentButton>
+    </FluentDialogFooter>
+</FluentDialog>
+
 @code {
     private bool IsLoading { get; set; } = true;
     private bool MapInitialized { get; set; }
@@ -190,6 +298,15 @@
     private bool HideAddPlaceDialog { get; set; } = true;
     private Place? NewPlace { get; set; }
     private string _newPlaceCategoryString = string.Empty;
+
+    // Accommodation state
+    private bool HideAccommodationDialog { get; set; } = true;
+    private Accommodation? EditingAccommodation { get; set; }
+    private bool IsEditingAccommodation { get; set; }
+    private string _plannedCheckInString = string.Empty;
+    private string _plannedCheckOutString = string.Empty;
+    private string _earliestCheckInString = string.Empty;
+    private string _earliestCheckOutString = string.Empty;
     
 
 
@@ -266,6 +383,16 @@
                     .Select(tp => new { latitude = tp.Place!.Latitude, longitude = tp.Place.Longitude })
                     .ToList();
                 await JSRuntime.InvokeVoidAsync("mapInterop.addRoute", coordinates, "#FF5722", 3);
+            }
+
+            // Add accommodation markers
+            foreach (var acc in PlanningTrip.Accommodations)
+            {
+                if (acc.Latitude == 0 && acc.Longitude == 0) continue;
+                var checkInStr = acc.PlannedCheckIn.HasValue ? acc.PlannedCheckIn.Value.ToString("dd.MM.yyyy HH:mm") : null;
+                var checkOutStr = acc.PlannedCheckOut.HasValue ? acc.PlannedCheckOut.Value.ToString("dd.MM.yyyy HH:mm") : null;
+                await JSRuntime.InvokeVoidAsync("mapInterop.addAccommodationMarker",
+                    acc.Id, acc.Latitude, acc.Longitude, acc.Name, checkInStr, checkOutStr);
             }
 
             await JSRuntime.InvokeVoidAsync("mapInterop.fitBounds");
@@ -477,6 +604,82 @@
         AllPlaces.Add(NewPlace);
         HideAddPlaceDialog = true;
         NewPlace = null;
+        StateHasChanged();
+        await UpdateMapContent();
+    }
+
+    private void OpenAddAccommodationDialog()
+    {
+        EditingAccommodation = new Accommodation { TripId = TripId };
+        IsEditingAccommodation = false;
+        _plannedCheckInString = string.Empty;
+        _plannedCheckOutString = string.Empty;
+        _earliestCheckInString = string.Empty;
+        _earliestCheckOutString = string.Empty;
+        HideAccommodationDialog = false;
+    }
+
+    private void OpenEditAccommodationDialog(Accommodation acc)
+    {
+        EditingAccommodation = new Accommodation
+        {
+            Id = acc.Id,
+            TripId = acc.TripId,
+            Name = acc.Name,
+            Address = acc.Address,
+            PlannedCheckIn = acc.PlannedCheckIn,
+            PlannedCheckOut = acc.PlannedCheckOut,
+            EarliestCheckIn = acc.EarliestCheckIn,
+            EarliestCheckOut = acc.EarliestCheckOut,
+            Latitude = acc.Latitude,
+            Longitude = acc.Longitude,
+            Notes = acc.Notes,
+            CreatedAt = acc.CreatedAt,
+            UpdatedAt = acc.UpdatedAt
+        };
+        IsEditingAccommodation = true;
+        _plannedCheckInString = acc.PlannedCheckIn.HasValue ? acc.PlannedCheckIn.Value.ToString("yyyy-MM-ddTHH:mm") : string.Empty;
+        _plannedCheckOutString = acc.PlannedCheckOut.HasValue ? acc.PlannedCheckOut.Value.ToString("yyyy-MM-ddTHH:mm") : string.Empty;
+        _earliestCheckInString = acc.EarliestCheckIn.HasValue ? acc.EarliestCheckIn.Value.ToString("HH:mm") : string.Empty;
+        _earliestCheckOutString = acc.EarliestCheckOut.HasValue ? acc.EarliestCheckOut.Value.ToString("HH:mm") : string.Empty;
+        HideAccommodationDialog = false;
+    }
+
+    private async Task SaveAccommodation()
+    {
+        if (EditingAccommodation == null || string.IsNullOrWhiteSpace(EditingAccommodation.Name))
+            return;
+
+        EditingAccommodation.PlannedCheckIn = DateTime.TryParse(_plannedCheckInString, out var ci) ? ci : null;
+        EditingAccommodation.PlannedCheckOut = DateTime.TryParse(_plannedCheckOutString, out var co) ? co : null;
+        EditingAccommodation.EarliestCheckIn = TimeOnly.TryParse(_earliestCheckInString, out var eci) ? eci : null;
+        EditingAccommodation.EarliestCheckOut = TimeOnly.TryParse(_earliestCheckOutString, out var eco) ? eco : null;
+
+        if (IsEditingAccommodation)
+        {
+            await TripRepository.UpdateAccommodationAsync(EditingAccommodation);
+            if (PlanningTrip != null)
+            {
+                var idx = PlanningTrip.Accommodations.FindIndex(a => a.Id == EditingAccommodation.Id);
+                if (idx >= 0) PlanningTrip.Accommodations[idx] = EditingAccommodation;
+            }
+        }
+        else
+        {
+            await TripRepository.AddAccommodationAsync(EditingAccommodation);
+            PlanningTrip?.Accommodations.Add(EditingAccommodation);
+        }
+
+        HideAccommodationDialog = true;
+        EditingAccommodation = null;
+        StateHasChanged();
+        await UpdateMapContent();
+    }
+
+    private async Task DeleteAccommodation(string accommodationId)
+    {
+        await TripRepository.DeleteAccommodationAsync(accommodationId);
+        PlanningTrip?.Accommodations.RemoveAll(a => a.Id == accommodationId);
         StateHasChanged();
         await UpdateMapContent();
     }

@@ -21,6 +21,7 @@ public class EfTripRepository : ITripRepository
                     .ThenInclude(p => p.Place)
             .Include(t => t.UnscheduledPlaces)
                 .ThenInclude(p => p.Place)
+            .Include(t => t.Accommodations)
             .Include(t => t.SharedWith)
             .ToListAsync();
     }
@@ -33,6 +34,7 @@ public class EfTripRepository : ITripRepository
                     .ThenInclude(p => p.Place)
             .Include(t => t.UnscheduledPlaces)
                 .ThenInclude(p => p.Place)
+            .Include(t => t.Accommodations)
             .Include(t => t.SharedWith)
             .FirstOrDefaultAsync(t => t.Id == id);
     }
@@ -71,6 +73,7 @@ public class EfTripRepository : ITripRepository
                     .ThenInclude(p => p.Place)
             .Include(t => t.UnscheduledPlaces)
                 .ThenInclude(p => p.Place)
+            .Include(t => t.Accommodations)
             .ToListAsync();
     }
 
@@ -123,5 +126,30 @@ public class EfTripRepository : ITripRepository
             .AnyAsync(t => t.Id == tripId && t.OwnerId == userId)
             || await _context.SharedTrips
                 .AnyAsync(st => st.TripId == tripId && st.UserId == userId);
+    }
+
+    public async Task<Accommodation> AddAccommodationAsync(Accommodation accommodation)
+    {
+        _context.Accommodations.Add(accommodation);
+        await _context.SaveChangesAsync();
+        return accommodation;
+    }
+
+    public async Task<Accommodation> UpdateAccommodationAsync(Accommodation accommodation)
+    {
+        accommodation.UpdatedAt = DateTime.UtcNow;
+        _context.Accommodations.Update(accommodation);
+        await _context.SaveChangesAsync();
+        return accommodation;
+    }
+
+    public async Task DeleteAccommodationAsync(string accommodationId)
+    {
+        var accommodation = await _context.Accommodations.FindAsync(accommodationId);
+        if (accommodation != null)
+        {
+            _context.Accommodations.Remove(accommodation);
+            await _context.SaveChangesAsync();
+        }
     }
 }

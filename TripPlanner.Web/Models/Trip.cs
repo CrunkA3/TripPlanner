@@ -16,6 +16,7 @@ public class Trip
     
     public List<TripDay> Days { get; set; } = new();
     public List<TripPlace> UnscheduledPlaces { get; set; } = new();
+    public List<Accommodation> Accommodations { get; set; } = new();
     
     // Sharing
     public List<SharedTrip> SharedWith { get; set; } = new();

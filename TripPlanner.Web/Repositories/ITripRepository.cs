@@ -14,4 +14,8 @@ public interface ITripRepository
     Task ShareWithUserAsync(string tripId, string userId);
     Task UnshareWithUserAsync(string tripId, string userId);
     Task<bool> CanUserAccessAsync(string tripId, string userId);
+
+    Task<Accommodation> AddAccommodationAsync(Accommodation accommodation);
+    Task<Accommodation> UpdateAccommodationAsync(Accommodation accommodation);
+    Task DeleteAccommodationAsync(string accommodationId);
 }
