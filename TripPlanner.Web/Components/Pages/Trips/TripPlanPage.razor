@@ -173,12 +173,12 @@
                                             {
                                                 <FluentLabel Style="font-size: 0.8em;">🚪 Check-out: @acc.PlannedCheckOut.Value.ToString("dd.MM.yyyy HH:mm")</FluentLabel>
                                             }
-                                            @if (acc.EarliestCheckIn.HasValue || acc.EarliestCheckOut.HasValue)
+                                            @if (acc.EarliestCheckIn.HasValue || acc.LatestCheckOut.HasValue)
                                             {
                                                 <FluentLabel Style="font-size: 0.8em; color: var(--neutral-foreground-hint);">
                                                     Earliest:
                                                     @if (acc.EarliestCheckIn.HasValue) { <text> Check-in @acc.EarliestCheckIn.Value.ToString("HH:mm")</text> }
-                                                    @if (acc.EarliestCheckOut.HasValue) { <text> / Check-out @acc.EarliestCheckOut.Value.ToString("HH:mm")</text> }
+                                                    @if (acc.LatestCheckOut.HasValue) { <text> / Latest Check-out @acc.LatestCheckOut.Value.ToString("HH:mm")</text> }
                                                 </FluentLabel>
                                             }
                                         </FluentStack>
@@ -256,10 +256,10 @@
                            style="border: 1px solid var(--neutral-stroke-rest); border-radius: 4px; padding: 4px 8px; font-size: 0.875em; background: transparent; width: 100%;" />
                 </FluentStack>
                 <FluentStack Orientation="Orientation.Vertical" Style="gap: 4px; width: 100%;">
-                    <FluentLabel>Earliest Check-out Time</FluentLabel>
+                    <FluentLabel>Latest Check-out Time</FluentLabel>
                     <input type="time"
-                           value="@_earliestCheckOutString"
-                           @onchange="@((e) => _earliestCheckOutString = e.Value?.ToString() ?? string.Empty)"
+                           value="@_latestCheckOutString"
+                           @onchange="@((e) => _latestCheckOutString = e.Value?.ToString() ?? string.Empty)"
                            style="border: 1px solid var(--neutral-stroke-rest); border-radius: 4px; padding: 4px 8px; font-size: 0.875em; background: transparent; width: 100%;" />
                 </FluentStack>
                 <FluentNumberField @bind-Value="@EditingAccommodation.Latitude" Label="Latitude" Step="0.0001" Style="width: 100%;" />
@@ -306,7 +306,7 @@
     private string _plannedCheckInString = string.Empty;
     private string _plannedCheckOutString = string.Empty;
     private string _earliestCheckInString = string.Empty;
-    private string _earliestCheckOutString = string.Empty;
+    private string _latestCheckOutString = string.Empty;
     
 
 
@@ -615,7 +615,7 @@
         _plannedCheckInString = string.Empty;
         _plannedCheckOutString = string.Empty;
         _earliestCheckInString = string.Empty;
-        _earliestCheckOutString = string.Empty;
+        _latestCheckOutString = string.Empty;
         HideAccommodationDialog = false;
     }
 
@@ -630,7 +630,7 @@
             PlannedCheckIn = acc.PlannedCheckIn,
             PlannedCheckOut = acc.PlannedCheckOut,
             EarliestCheckIn = acc.EarliestCheckIn,
-            EarliestCheckOut = acc.EarliestCheckOut,
+            LatestCheckOut = acc.LatestCheckOut,
             Latitude = acc.Latitude,
             Longitude = acc.Longitude,
             Notes = acc.Notes,
@@ -641,7 +641,7 @@
         _plannedCheckInString = acc.PlannedCheckIn.HasValue ? acc.PlannedCheckIn.Value.ToString("yyyy-MM-ddTHH:mm") : string.Empty;
         _plannedCheckOutString = acc.PlannedCheckOut.HasValue ? acc.PlannedCheckOut.Value.ToString("yyyy-MM-ddTHH:mm") : string.Empty;
         _earliestCheckInString = acc.EarliestCheckIn.HasValue ? acc.EarliestCheckIn.Value.ToString("HH:mm") : string.Empty;
-        _earliestCheckOutString = acc.EarliestCheckOut.HasValue ? acc.EarliestCheckOut.Value.ToString("HH:mm") : string.Empty;
+        _latestCheckOutString = acc.LatestCheckOut.HasValue ? acc.LatestCheckOut.Value.ToString("HH:mm") : string.Empty;
         HideAccommodationDialog = false;
     }
 
@@ -653,7 +653,7 @@
         EditingAccommodation.PlannedCheckIn = DateTime.TryParse(_plannedCheckInString, out var ci) ? ci : null;
         EditingAccommodation.PlannedCheckOut = DateTime.TryParse(_plannedCheckOutString, out var co) ? co : null;
         EditingAccommodation.EarliestCheckIn = TimeOnly.TryParse(_earliestCheckInString, out var eci) ? eci : null;
-        EditingAccommodation.EarliestCheckOut = TimeOnly.TryParse(_earliestCheckOutString, out var eco) ? eco : null;
+        EditingAccommodation.LatestCheckOut = TimeOnly.TryParse(_latestCheckOutString, out var lco) ? lco : null;
 
         if (IsEditingAccommodation)
         {

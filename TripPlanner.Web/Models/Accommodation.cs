@@ -15,7 +15,7 @@ public class Accommodation
 
     // Earliest possible times
     public TimeOnly? EarliestCheckIn { get; set; }
-    public TimeOnly? EarliestCheckOut { get; set; }
+    public TimeOnly? LatestCheckOut { get; set; }
 
     // Location
     public double Latitude { get; set; }
