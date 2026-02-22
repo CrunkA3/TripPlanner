@@ -5,6 +5,10 @@ namespace TripPlanner.Web.Repositories;
 public interface IPlaceRepository
 {
     Task<List<Place>> GetAllAsync();
+    Task<List<Place>> GetAllWithAnyWishlistAsync();
+    Task<List<Place>> GetAllForTripAsync(string tripId);
+
+
     Task<Place?> GetByIdAsync(string id);
     Task<Place> AddAsync(Place place);
     Task<Place> UpdateAsync(Place place);

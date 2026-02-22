@@ -10,15 +10,16 @@
 @inject ITripRepository TripRepository
 @inject IPlaceRepository PlaceRepository
 @inject UserService UserService
+@inject IDialogService DialogService
 @inject IJSRuntime JSRuntime
 
 @implements IAsyncDisposable
 
 @rendermode InteractiveServer
 
-@if (PlanningTrip != null)
-{
-    <FluentGrid Spacing="3">
+<FluentGrid Spacing="3">
+    @if (PlanningTrip != null)
+    {
         <FluentGridItem xs="12" lg="6" xl="3">
             <FluentGrid>
                 <FluentGridItem xs="12" lg="6">
@@ -177,8 +178,14 @@
                                             {
                                                 <FluentLabel Style="font-size: 0.8em; color: var(--neutral-foreground-hint);">
                                                     Earliest:
-                                                    @if (acc.EarliestCheckIn.HasValue) { <text> Check-in @acc.EarliestCheckIn.Value.ToString("HH:mm")</text> }
-                                                    @if (acc.LatestCheckOut.HasValue) { <text> / Latest Check-out @acc.LatestCheckOut.Value.ToString("HH:mm")</text> }
+                                                    @if (acc.EarliestCheckIn.HasValue)
+                                                    {
+                                                        <text> Check-in @acc.EarliestCheckIn.Value.ToString("HH:mm")</text>
+                                                    }
+                                                    @if (acc.LatestCheckOut.HasValue)
+                                                    {
+                                                        <text> / Latest Check-out @acc.LatestCheckOut.Value.ToString("HH:mm")</text>
+                                                    }
                                                 </FluentLabel>
                                             }
                                         </FluentStack>
@@ -190,39 +197,13 @@
                 </FluentGridItem>
             </FluentGrid>
         </FluentGridItem>
-        <FluentGridItem xs="12" lg="6" xl="9">
-            <!-- Map -->
-            <div id="trip-map" style="width: 100%; height: 100%; border-radius: 4px;"></div>
-        </FluentGridItem>
-    </FluentGrid>
-}
+    }
+    <FluentGridItem xs="12" lg="6" xl="9">
+        <!-- Map -->
+        <div id="trip-map" style="width: 100%; height: 100%; border-radius: 4px;"></div>
+    </FluentGridItem>
+</FluentGrid>
 
-<FluentDialog @bind-Hidden="@HideAddPlaceDialog" Modal="true" TrapFocus="true">
-    <FluentDialogHeader>
-        <FluentLabel Typo="Typography.H4">Add New Place</FluentLabel>
-    </FluentDialogHeader>
-    <FluentDialogBody>
-        @if (NewPlace != null)
-        {
-            <FluentStack Orientation="Orientation.Vertical">
-                <FluentTextField @bind-Value="@NewPlace.Name" Label="Name" Required Style="width: 100%;" />
-                <FluentTextArea @bind-Value="@NewPlace.Description" Label="Description" Rows="3" Style="width: 100%;" />
-                <FluentSelect TOption="string" Value="@_newPlaceCategoryString" Label="Category" Style="width: 100%;" ValueChanged="@OnNewPlaceCategoryChanged">
-                    @foreach (var category in Enum.GetValues<PlaceCategory>())
-                    {
-                        <FluentOption TOption="string" Value="@category.ToString()">@category.ToString()</FluentOption>
-                    }
-                </FluentSelect>
-                <FluentNumberField @bind-Value="@NewPlace.Latitude" Label="Latitude" Step="0.0001" Style="width: 100%;" />
-                <FluentNumberField @bind-Value="@NewPlace.Longitude" Label="Longitude" Step="0.0001" Style="width: 100%;" />
-            </FluentStack>
-        }
-    </FluentDialogBody>
-    <FluentDialogFooter>
-        <FluentButton Appearance="Appearance.Accent" OnClick="@SaveNewPlace">Save</FluentButton>
-        <FluentButton Appearance="Appearance.Neutral" OnClick="@(() => HideAddPlaceDialog = true)">Cancel</FluentButton>
-    </FluentDialogFooter>
-</FluentDialog>
 
 <FluentDialog @bind-Hidden="@HideAccommodationDialog" Modal="true" TrapFocus="true">
     <FluentDialogHeader>
@@ -274,6 +255,10 @@
     </FluentDialogFooter>
 </FluentDialog>
 
+
+
+<FluentDialogProvider />
+
 @code {
     private bool IsLoading { get; set; } = true;
     private bool MapInitialized { get; set; }
@@ -293,11 +278,7 @@
     private string? DraggedFromDayId { get; set; }
     private int DraggedFromOrder { get; set; }
     private string? CurrentDropTarget { get; set; }
-    
-    // Add new place state
-    private bool HideAddPlaceDialog { get; set; } = true;
-    private Place? NewPlace { get; set; }
-    private string _newPlaceCategoryString = string.Empty;
+
 
     // Accommodation state
     private bool HideAccommodationDialog { get; set; } = true;
@@ -307,10 +288,10 @@
     private string _plannedCheckOutString = string.Empty;
     private string _earliestCheckInString = string.Empty;
     private string _latestCheckOutString = string.Empty;
-    
 
 
-    
+
+
 
     protected override async Task OnInitializedAsync()
     {
@@ -422,13 +403,15 @@
     private async Task LoadData()
     {
         IsLoading = true;
-        
+
         var currentUserId = await UserService.GetCurrentUserIdAsync();
 
         PlanningTrip = await TripRepository.GetByIdAsync(TripId);
-        
-        AllPlaces = await PlaceRepository.GetAllAsync();
-        
+
+        var wishListPlaces = await PlaceRepository.GetAllWithAnyWishlistAsync();
+        var tripPlaces = await PlaceRepository.GetAllForTripAsync(TripId);
+        AllPlaces = wishListPlaces.UnionBy(tripPlaces, p => p.Id).ToList();
+
         // Load place details for all trips
         if (PlanningTrip != null)
         {
@@ -439,19 +422,19 @@
                     tripPlace.Place = AllPlaces.FirstOrDefault(p => p.Id == tripPlace.PlaceId);
                 }
             }
-                
+
             foreach (var tripPlace in PlanningTrip.UnscheduledPlaces)
             {
                 tripPlace.Place = AllPlaces.FirstOrDefault(p => p.Id == tripPlace.PlaceId);
             }
         }
-        
+
         IsLoading = false;
     }
 
 
 
-    
+
     private async Task RemovePlaceFromDay(string dayId, string placeId)
     {
         if (PlanningTrip == null)
@@ -489,7 +472,7 @@
     }
 
 
-    
+
     // Drag and drop handlers
     private void HandleDragStart(string placeId, string? fromDayId, int fromOrder)
     {
@@ -579,34 +562,27 @@
         }
     }
 
-    private void OpenAddPlaceDialog()
+    private async Task OpenAddPlaceDialog()
     {
-        NewPlace = new Place();
-        _newPlaceCategoryString = NewPlace.Category.ToString();
-        HideAddPlaceDialog = false;
-    }
-
-    private void OnNewPlaceCategoryChanged(string value)
-    {
-        _newPlaceCategoryString = value;
-        if (NewPlace != null && Enum.TryParse<PlaceCategory>(value, out var category))
+        var dialog = await DialogService.ShowDialogAsync<TripAddPlaceDialog>(new Place() { TripId = TripId }, new DialogParameters()
         {
-            NewPlace.Category = category;
+            PreventDismissOnOverlayClick = true,
+            PreventScroll = true,
+            TrapFocus = true
+        });
+
+        var result = await dialog.Result;
+
+        if (!result.Cancelled && result.Data is not null)
+        {
+            AllPlaces.Add((Place)result.Data);
+            StateHasChanged();
+            await UpdateMapContent();
         }
     }
 
-    private async Task SaveNewPlace()
-    {
-        if (NewPlace == null || string.IsNullOrWhiteSpace(NewPlace.Name))
-            return;
 
-        await PlaceRepository.AddAsync(NewPlace);
-        AllPlaces.Add(NewPlace);
-        HideAddPlaceDialog = true;
-        NewPlace = null;
-        StateHasChanged();
-        await UpdateMapContent();
-    }
+
 
     private void OpenAddAccommodationDialog()
     {
