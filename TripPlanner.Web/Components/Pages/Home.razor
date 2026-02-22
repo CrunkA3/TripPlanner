@@ -3,7 +3,6 @@
 
 @using Microsoft.AspNetCore.Components.Authorization
 @inject IJSRuntime JSRuntime
-@implements IAsyncDisposable
 
 <PageTitle>TripPlanner – Plan Your Perfect Trip</PageTitle>
 
@@ -198,18 +197,6 @@
             {
                 // parallax enhancement is non-critical; page still renders without it
             }
-        }
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        try
-        {
-            await JSRuntime.InvokeVoidAsync("heroParallax.destroy");
-        }
-        catch (JSException)
-        {
-            // ignore cleanup errors during disposal
         }
     }
 }
