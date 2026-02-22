@@ -28,12 +28,10 @@
         {
             <FluentLabel Typo="Typography.Subject">Click to browse for GPX file</FluentLabel>
             <FluentLabel Style="font-size: 0.875em;">Accepted formats: .gpx</FluentLabel>
-            <label for="@fileInputId">
-                <FluentButton Appearance="Appearance.Lightweight">
-                    <FluentIcon Value="@(new Icons.Regular.Size16.FolderOpen())" Slot="start" />
-                    Browse
-                </FluentButton>
-            </label>
+            <FluentButton Appearance="Appearance.Lightweight" OnClick="@TriggerFileInput">
+                <FluentIcon Value="@(new Icons.Regular.Size16.FolderOpen())" Slot="start" />
+                Browse
+            </FluentButton>
         }
     </FluentStack>
 
@@ -115,6 +113,11 @@
         {
             IsUploading = false;
         }
+    }
+
+    private async Task TriggerFileInput()
+    {
+        await JSRuntime.InvokeVoidAsync("clickElementById", fileInputId);
     }
 
     private async Task ResetUpload()
