@@ -17,6 +17,24 @@ public class EfPlaceRepository : IPlaceRepository
     {
         return await _context.Places
             .Include(p => p.Wishlist)
+            .Include(p => p.Trip)
+            .ToListAsync();
+    }
+
+
+    public async Task<List<Place>> GetAllWithAnyWishlistAsync()
+    {
+        return await _context.Places
+            .Where(p => p.WishlistId != null)
+            .Include(p => p.Wishlist)
+            .ToListAsync();
+    }
+
+    public async Task<List<Place>> GetAllForTripAsync(string tripId)
+    {
+        return await _context.Places
+            .Where(p => p.TripId == tripId)
+            .Include(p => p.Wishlist)
             .ToListAsync();
     }
 

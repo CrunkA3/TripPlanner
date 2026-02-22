@@ -14,7 +14,7 @@
 
 <PageTitle>Wishlist</PageTitle>
 
-<FluentStack Orientation="Orientation.Vertical" Width="100%">
+<FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Stretch" Width="100%">
     <FluentToolbar>
         <FluentLabel Typo="Typography.H3">
             <FluentIcon Icon="Icons.Regular.Size24.Heart" Color="Color.Accent" />
@@ -66,7 +66,7 @@
         <FluentGrid Spacing="3" Justify="JustifyContent.FlexStart">
             @foreach (var place in Places)
             {
-                <FluentGridItem xs="12" sm="6" md="4" lg="3">
+                <FluentGridItem xs="12" md="6" lg="3" xl="2" xxl="2">
                     <FluentCard Style="height: 100%;">
                         <FluentStack Orientation="Orientation.Vertical">
                             <FluentStack Orientation="Orientation.Horizontal">
@@ -224,7 +224,7 @@
     private async Task LoadPlaces()
     {
         IsLoading = true;
-        Places = await PlaceRepository.GetAllAsync();
+        Places = await PlaceRepository.GetAllWithAnyWishlistAsync();
         IsLoading = false;
     }
 
