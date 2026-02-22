@@ -28,8 +28,7 @@
         {
             <FluentLabel Typo="Typography.Subject">Click to browse for GPX file</FluentLabel>
             <FluentLabel Style="font-size: 0.875em;">Accepted formats: .gpx</FluentLabel>
-            <FluentButton Appearance="Appearance.Lightweight" OnClick="@TriggerFileInput">
-                <FluentIcon Value="@(new Icons.Regular.Size16.FolderOpen())" Slot="start" />
+            <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size16.FolderOpen())" OnClick="@TriggerFileInput">
                 Browse
             </FluentButton>
         }
