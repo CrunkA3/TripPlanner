@@ -1,0 +1,79 @@
+﻿@implements IDialogContentComponent<Place>
+
+
+@using TripPlanner.Web.Models
+@using TripPlanner.Web.Repositories
+
+@inject IPlaceRepository PlaceRepository
+
+
+<FluentDialogHeader>
+    <FluentLabel Typo="Typography.PaneHeader">@(Dialog.Instance.Parameters.Title ?? "Add Place")</FluentLabel>
+</FluentDialogHeader>
+<FluentDialogBody>
+    @if (Content != null)
+    {
+        <FluentStack Orientation="Orientation.Vertical">
+            <FluentTextField @bind-Value="@Content.Name" Label="Name" Required Style="width: 100%;" />
+            <FluentTextArea @bind-Value="@Content.Description" Label="Description" Rows="3" Style="width: 100%;" />
+            <FluentSelect TOption="string" Value="@_newPlaceCategoryString" Label="Category" Style="width: 100%;" ValueChanged="@OnNewPlaceCategoryChanged">
+                @foreach (var category in Enum.GetValues<PlaceCategory>())
+                {
+                    <FluentOption TOption="string" Value="@category.ToString()">@category.ToString()</FluentOption>
+                }
+            </FluentSelect>
+            <FluentNumberField @bind-Value="@Content.Latitude" Label="Latitude" Step="0.0001" Style="width: 100%;" />
+            <FluentNumberField @bind-Value="@Content.Longitude" Label="Longitude" Step="0.0001" Style="width: 100%;" />
+        </FluentStack>
+    }
+</FluentDialogBody>
+<FluentDialogFooter>
+    <FluentButton Appearance="Appearance.Accent" OnClick="@SavePlace">Save</FluentButton>
+    <FluentButton Appearance="Appearance.Neutral" OnClick="@CancelAsync">Cancel</FluentButton>
+</FluentDialogFooter>
+
+
+@code {
+    [Parameter]
+    public Place Content { get; set; } = default!;
+    private string _newPlaceCategoryString = string.Empty;
+
+    [CascadingParameter]
+    public FluentDialog Dialog { get; set; } = default!;
+
+
+    private void OnNewPlaceCategoryChanged(string value)
+    {
+        _newPlaceCategoryString = value;
+        if (Content != null && Enum.TryParse<PlaceCategory>(value, out var category))
+        {
+            Content.Category = category;
+        }
+    }
+
+
+    private async Task SavePlace()
+    {
+        if (Content == null || string.IsNullOrWhiteSpace(Content.Name))
+            return;
+
+        var dbPlace = await PlaceRepository.GetByIdAsync(Content.Id);
+
+        if (dbPlace is null)
+        {
+            await PlaceRepository.AddAsync(Content);
+        }
+        else
+        {
+            await PlaceRepository.UpdateAsync(Content);
+        }
+        await Dialog.CloseAsync(Content);
+    }
+
+
+    
+    private async Task CancelAsync()
+    {
+        await Dialog.CancelAsync();
+    }
+}

@@ -89,7 +89,7 @@
                                             </FluentLabel>
                                         </FluentStack>
 
-                                        <FluentDivider />
+                                        <FluentDivider Role="DividerRole.Presentation" />
 
                                         @if (!day.Places.Any())
                                         {
@@ -99,7 +99,7 @@
                                         }
                                         else
                                         {
-                                            <FluentStack Orientation="Orientation.Vertical" Style="gap: 8px;">
+                                            <FluentStack Orientation="Orientation.Vertical" VerticalGap="8">
                                                 @foreach (var tripPlace in day.Places.OrderBy(p => p.Order))
                                                 {
                                                     <FluentCard class="draggable"
@@ -107,10 +107,9 @@
                                                                 @ondragstart="@((e) => HandleDragStart(tripPlace.PlaceId, day.Id, tripPlace.Order))"
                                                                 @ondragend="@HandleDragEnd"
                                                                 Style="cursor: move; padding: 8px;">
-                                                        <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                                                        <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" HorizontalGap="3">
                                                             <FluentIcon Value="@(new Icons.Regular.Size16.Navigation())" />
-                                                            <FluentLabel Weight="FontWeight.Bold">@(tripPlace.Place?.Name ?? "Unknown")</FluentLabel>
-                                                            <FluentSpacer />
+                                                            <FluentLabel Weight="FontWeight.Bold" Style="flex: 1;overflow: hidden;text-overflow: ellipsis;">@(tripPlace.Place?.Name ?? "Unknown")</FluentLabel>
                                                             <input type="time"
                                                                    value="@(tripPlace.ScheduledTime.HasValue? tripPlace.ScheduledTime.Value.ToString("HH:mm") : "")"
                                                                    @onchange="@((e) => UpdateScheduledTime(tripPlace, e.Value?.ToString(), day.Date))"

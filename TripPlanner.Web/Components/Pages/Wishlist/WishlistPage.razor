@@ -141,8 +141,9 @@
                     }
                 </FluentSelect>
                 
-                <FluentNumberField @bind-Value="@EditingPlace.Latitude" Label="Latitude" Step="0.0001" Style="width: 100%;" />
-                <FluentNumberField @bind-Value="@EditingPlace.Longitude" Label="Longitude" Step="0.0001" Style="width: 100%;" />
+                <FluentTextField @bind-Value="@EditingPlace.LatitudeString" Label="Latitude" Style="width: 100%;" />
+                <FluentTextField @bind-Value="@EditingPlace.LongitudeString" Label="Longitude" Style="width: 100%;" />
+
                 
                 <FluentTextField @bind-Value="@NewTag" Label="Add Tags" Placeholder="Type and press Enter"
                                  @onkeydown="@HandleTagKeyDown" Style="width: 100%;" />
