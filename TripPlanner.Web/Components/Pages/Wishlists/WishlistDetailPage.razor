@@ -10,6 +10,7 @@
 @inject IWishlistRepository WishlistRepository
 @inject IPlaceRepository PlaceRepository
 @inject UserService UserService
+@inject IDialogService DialogService
 @inject NavigationManager NavigationManager
 
 @rendermode InteractiveServer
@@ -100,30 +101,11 @@ else
             </FluentStack>
         }
     </FluentStack>
-
-    <FluentDialog @ref="addPlaceDialog" Hidden="@(!showAddPlaceDialog)" Modal="true">
-        <h3>Add Place to @wishlist.Name</h3>
-        <EditForm Model="@newPlace" OnValidSubmit="@AddPlace">
-            <FluentStack Orientation="Orientation.Vertical">
-                <FluentTextField @bind-Value="newPlace.Name" Label="Name" Required="true" Style="width: 100%;" />
-                <FluentTextArea @bind-Value="newPlace.Description" Label="Description" Style="width: 100%;" />
-                <FluentSelect TOption="string" Value="@newPlace.Category.ToString()" ValueChanged="@((string value) => newPlace.Category = Enum.Parse<PlaceCategory>(value))" Label="Category" Style="width: 100%;">
-                    @foreach (var category in Enum.GetValues<PlaceCategory>())
-                    {
-                        <FluentOption Value="@category.ToString()">@category.ToString()</FluentOption>
-                    }
-                </FluentSelect>
-                <FluentNumberField @bind-Value="newPlace.Latitude" Label="Latitude" Step="0.0001" Style="width: 100%;" />
-                <FluentNumberField @bind-Value="newPlace.Longitude" Label="Longitude" Step="0.0001" Style="width: 100%;" />
-                <FluentTextField @bind-Value="newPlaceTags" Label="Tags (comma-separated)" Style="width: 100%;" />
-                <FluentStack Orientation="Orientation.Horizontal">
-                    <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent">Add</FluentButton>
-                    <FluentButton Appearance="Appearance.Neutral" OnClick="@(() => showAddPlaceDialog = false)">Cancel</FluentButton>
-                </FluentStack>
-            </FluentStack>
-        </EditForm>
-    </FluentDialog>
 }
+
+<FluentDialogProvider />
+
+
 
 @code {
     [Parameter]
@@ -134,10 +116,7 @@ else
     private bool canAccess;
     private string? currentUserId;
 
-    private FluentDialog? addPlaceDialog;
-    private bool showAddPlaceDialog;
-    private Place newPlace = new();
-    private string newPlaceTags = string.Empty;
+
 
     protected override async Task OnInitializedAsync()
     {
@@ -168,30 +147,40 @@ else
         places = await PlaceRepository.GetByWishlistIdAsync(WishlistId);
     }
 
-    private void ShowAddPlaceDialog()
+    private async Task ShowAddPlaceDialog()
     {
-        newPlace = new Place { WishlistId = WishlistId };
-        newPlaceTags = string.Empty;
-        showAddPlaceDialog = true;
-    }
-
-    private async Task AddPlace()
-    {
-        if (!string.IsNullOrWhiteSpace(newPlaceTags))
+        var dialog = await DialogService.ShowDialogAsync<WishlistAddPlaceDialog>(new Place() { WishlistId = WishlistId }, new DialogParameters()
         {
-            newPlace.Tags = newPlaceTags.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                .Select(t => t.Trim())
-                .ToList();
-        }
+            PreventDismissOnOverlayClick = true,
+            PreventScroll = true,
+            TrapFocus = true
+        });
 
-        await PlaceRepository.AddAsync(newPlace);
-        await LoadPlaces();
-        showAddPlaceDialog = false;
+        var result = await dialog.Result;
+
+        if (!result.Cancelled && result.Data is not null)
+        {
+            
+            await LoadPlaces();
+            StateHasChanged();
+        }
     }
 
-    private void EditPlace(Place place)
+    private async Task EditPlace(Place place)
     {
-        // TODO: Implement edit functionality
+        var dialog = await DialogService.ShowDialogAsync<WishlistAddPlaceDialog>(place, new DialogParameters()
+        {
+            PreventDismissOnOverlayClick = true,
+            PreventScroll = true,
+            TrapFocus = true
+        });
+
+        var result = await dialog.Result;
+
+        if (!result.Cancelled && result.Data is not null)
+        {
+            StateHasChanged();
+        }
     }
 
     private async Task DeletePlace(string placeId)

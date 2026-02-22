@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace TripPlanner.Web.Models;
 
 public class Place
@@ -30,4 +32,20 @@ public class Place
 
     // Computed property
     public bool HasGpxTrack => !string.IsNullOrEmpty(GpxTrackId);
+
+
+
+    [NotMapped]
+    public string LatitudeString
+    {
+        get => Latitude.ToString("N"); set => Latitude = double.Parse(value);
+    }
+
+    [NotMapped]
+    public string LongitudeString
+    {
+        get => Longitude.ToString("N"); set => Longitude = double.Parse(value);
+    }
+
+
 }
