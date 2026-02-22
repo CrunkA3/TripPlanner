@@ -157,7 +157,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-        CurrentUser = await UserService.GetCurrentUserAsync();
         await LoadMapData();
     }
 

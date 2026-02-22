@@ -262,6 +262,7 @@
 @code {
     private bool IsLoading { get; set; } = true;
     private bool MapInitialized { get; set; }
+    private ApplicationUser? CurrentUser { get; set; }
 
     [Parameter]
     public string TripId { get; set; } = string.Empty;
@@ -328,6 +329,16 @@
         {
             await JSRuntime.InvokeVoidAsync("mapInterop.clearMarkers");
             await JSRuntime.InvokeVoidAsync("mapInterop.clearRoutes");
+
+
+            // Add home location marker
+            if (CurrentUser?.HomeLatitude.HasValue == true && CurrentUser?.HomeLongitude.HasValue == true)
+            {
+                await JSRuntime.InvokeVoidAsync("mapInterop.addHomeMarker",
+                    CurrentUser.HomeLatitude.Value, CurrentUser.HomeLongitude.Value,
+                    CurrentUser.HomeLocationName ?? "Home");
+            }
+
 
             // Collect all scheduled places in chronological order
             var orderedPlaces = PlanningTrip.Days
@@ -408,6 +419,8 @@
 
         PlanningTrip = await TripRepository.GetByIdAsync(TripId);
 
+        
+        CurrentUser = await UserService.GetCurrentUserAsync();
         var wishListPlaces = await PlaceRepository.GetAllWithAnyWishlistAsync();
         var tripPlaces = await PlaceRepository.GetAllForTripAsync(TripId);
         AllPlaces = wishListPlaces.UnionBy(tripPlaces, p => p.Id).ToList();
