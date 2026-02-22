@@ -3,12 +3,24 @@ window.heroParallax = (function () {
     var HORIZONTAL_SENSITIVITY = 25;
     var VERTICAL_SENSITIVITY = 10;
     // Fraction of scroll offset (in px) applied as upward parallax shift per speed unit.
-    var SCROLL_DAMPING = 0.2;
+    var SCROLL_DAMPING = 0.4;
 
     var layers = [];
     var hero = null;
+    var scrollContainer = null;
     var mouseX = 0, mouseY = 0, scrollOffset = 0;
     var rafId = null;
+
+    function findScrollParent(el) {
+        while (el && el !== document.documentElement) {
+            var style = window.getComputedStyle(el);
+            if (/auto|scroll/.test(style.overflow + ' ' + style.overflowY)) {
+                return el;
+            }
+            el = el.parentElement;
+        }
+        return window;
+    }
 
     function applyTransforms() {
         layers.forEach(function (layer) {
@@ -33,7 +45,9 @@ window.heroParallax = (function () {
     }
 
     function onScroll() {
-        scrollOffset = window.scrollY;
+        scrollOffset = scrollContainer === window
+            ? window.scrollY
+            : scrollContainer.scrollTop;
         schedule();
     }
 
@@ -42,18 +56,22 @@ window.heroParallax = (function () {
             hero = document.querySelector('.home-hero');
             if (!hero) return;
             layers = Array.from(hero.querySelectorAll('[data-parallax]'));
+            scrollContainer = findScrollParent(hero.parentElement);
             document.addEventListener('mousemove', onMouseMove);
-            window.addEventListener('scroll', onScroll, { passive: true });
+            scrollContainer.addEventListener('scroll', onScroll, { passive: true });
         },
         destroy: function () {
             document.removeEventListener('mousemove', onMouseMove);
-            window.removeEventListener('scroll', onScroll);
+            if (scrollContainer) {
+                scrollContainer.removeEventListener('scroll', onScroll);
+            }
             if (rafId) {
                 cancelAnimationFrame(rafId);
                 rafId = null;
             }
             layers = [];
             hero = null;
+            scrollContainer = null;
             mouseX = 0;
             mouseY = 0;
             scrollOffset = 0;
