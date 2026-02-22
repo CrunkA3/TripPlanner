@@ -368,14 +368,7 @@
                 }
             }
 
-            // Draw a line connecting all scheduled places chronologically
-            if (orderedPlaces.Count > 1)
-            {
-                var coordinates = orderedPlaces
-                    .Select(tp => new { latitude = tp.Place!.Latitude, longitude = tp.Place.Longitude })
-                    .ToList();
-                await JSRuntime.InvokeVoidAsync("mapInterop.addRoute", coordinates, "#FF5722", 3);
-            }
+
 
             // Add accommodation markers
             foreach (var acc in PlanningTrip.Accommodations)
@@ -386,6 +379,69 @@
                 await JSRuntime.InvokeVoidAsync("mapInterop.addAccommodationMarker",
                     acc.Id, acc.Latitude, acc.Longitude, acc.Name, checkInStr, checkOutStr);
             }
+
+
+
+
+            // Draw a line connecting all scheduled places chronologically
+            var placesByDay = PlanningTrip.Days
+                .OrderBy(d => d.DayNumber)
+                .ToList();
+
+            if (placesByDay.Count > 1)
+            {
+                foreach (var day in placesByDay)
+                {
+                    if (!day.Date.HasValue) continue;
+
+                    var currentPlaces = day.Places
+                        .Where(tp => tp.Place is not null)
+                        .Select(tp => (time: tp.ScheduledTime, order: tp.Order, tp.Place!.Latitude, tp.Place!.Longitude))
+                        .ToList();
+
+                    var wayPoints = currentPlaces.ToList();
+                    if (day.DayNumber == 1 && CurrentUser is not null && CurrentUser.HomeLatitude.HasValue && CurrentUser.HomeLongitude.HasValue)
+                    {
+                        wayPoints.Add((time: day.Date.Value.Date, order: -2, Latitude: CurrentUser.HomeLatitude.Value, Longitude: CurrentUser.HomeLongitude.Value));
+                    }
+
+                    foreach (var acc in PlanningTrip.Accommodations)
+                    {
+                        if (acc.PlannedCheckIn.HasValue && acc.PlannedCheckOut.HasValue)
+                        {
+                            var accTimeStart = acc.PlannedCheckIn.Value;
+                            var accTimeEnd = acc.PlannedCheckOut.Value;
+                            var dayStart = day.Date.Value.Date;
+                            var dayEnd = day.Date.Value.Date.AddDays(1).AddTicks(-1);
+
+                            if (accTimeStart <= dayEnd && accTimeEnd >= dayStart)
+                            {
+                                wayPoints.Add((time: accTimeStart, order: -1, Latitude: acc.Latitude, Longitude: acc.Longitude));
+                                wayPoints.Add((time: accTimeEnd, order: 99, Latitude: acc.Latitude, Longitude: acc.Longitude));
+                            }
+                        }
+                    }
+
+                    if (wayPoints.Count > 1)
+                    {
+                        var coordinates = wayPoints
+                            .OrderBy(p => p.time)
+                            .ThenBy(p => p.order)
+                            .Select(p => new { latitude = p.Latitude, longitude = p.Longitude })
+                            .ToList();
+                        await JSRuntime.InvokeVoidAsync("mapInterop.addRoute", coordinates, "#FF5722", 3);
+                    }
+
+                }
+            }
+
+            // if (orderedPlaces.Count > 1)
+            // {
+            //     var coordinates = orderedPlaces
+            //         .Select(tp => new { latitude = tp.Place!.Latitude, longitude = tp.Place.Longitude })
+            //         .ToList();
+            //     await JSRuntime.InvokeVoidAsync("mapInterop.addRoute", coordinates, "#FF5722", 3);
+            // }
 
             await JSRuntime.InvokeVoidAsync("mapInterop.fitBounds");
         }
