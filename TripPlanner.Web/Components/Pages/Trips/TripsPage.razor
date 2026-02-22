@@ -81,9 +81,6 @@
                         <FluentDivider />
                             
                         <FluentStack Orientation="Orientation.Horizontal">
-                            <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size16.Eye())" OnClick="@(() => ViewTrip(trip))">
-                                View
-                            </FluentButton>
                             <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size16.Edit())" OnClick="@(() => EditTrip(trip))">
                                 Edit
                             </FluentButton>
@@ -129,122 +126,13 @@
     </FluentDialogFooter>
 </FluentDialog>
 
-<FluentDialog @bind-Hidden="@HideViewDialog" Modal="true" TrapFocus="true" Style="width: 90%; max-width: 1200px;">
-    <FluentDialogHeader>
-        <FluentLabel Typo="Typography.H4">@ViewingTrip?.Name</FluentLabel>
-    </FluentDialogHeader>
-    <FluentDialogBody>
-        @if (ViewingTrip != null)
-        {
-            <FluentStack Orientation="Orientation.Vertical">
-                <FluentLabel Typo="Typography.Body">@ViewingTrip.Description</FluentLabel>
-                
-                <FluentTabs>
-                    @foreach (var day in ViewingTrip.Days.OrderBy(d => d.DayNumber))
-                    {
-                        <FluentTab Label="@($"Day {day.DayNumber}")">
-                            <FluentCard>
-                                <FluentStack Orientation="Orientation.Vertical">
-                                    @if (day.Date.HasValue)
-                                    {
-                                        <FluentLabel Typo="Typography.Subject">
-                                            <FluentIcon Value="@(new Icons.Regular.Size16.Calendar())" />
-                                            @day.Date.Value.ToString("MMMM dd, yyyy")
-                                        </FluentLabel>
-                                    }
-                                    
-                                    @if (!day.Places.Any())
-                                    {
-                                        <FluentLabel Style="font-size: 0.875em;">No places scheduled for this day</FluentLabel>
-                                    }
-                                    else
-                                    {
-                                        var analysis = RoutingService.AnalyzeTripDay(day, AllPlaces);
-                                        
-                                        <FluentStack Orientation="Orientation.Horizontal" Wrap="true">
-                                            <FluentBadge BackgroundColor="var(--neutral-layer-3)">
-                                                Places: @day.Places.Count
-                                            </FluentBadge>
-                                            <FluentBadge BackgroundColor="var(--neutral-layer-3)">
-                                                Total Time: @TimeSpan.FromMinutes(analysis.TotalMinutes).ToString(@"hh\:mm")
-                                            </FluentBadge>
-                                            <FluentBadge BackgroundColor="var(--neutral-layer-3)">
-                                                Travel: @TimeSpan.FromMinutes(analysis.TotalTravelMinutes).ToString(@"hh\:mm")
-                                            </FluentBadge>
-                                        </FluentStack>
-                                        
-                                        @if (analysis.Warnings.Any())
-                                        {
-                                            <FluentMessageBar Intent="MessageIntent.Warning">
-                                                @foreach (var warning in analysis.Warnings)
-                                                {
-                                                    <div>@warning</div>
-                                                }
-                                            </FluentMessageBar>
-                                        }
-                                        
-                                        <FluentStack Orientation="Orientation.Vertical">
-                                            @foreach (var tripPlace in day.Places.OrderBy(p => p.Order))
-                                            {
-                                                <FluentCard>
-                                                    <FluentStack Orientation="Orientation.Horizontal">
-                                                        <FluentLabel Weight="FontWeight.Bold">#@tripPlace.Order</FluentLabel>
-                                                        <FluentLabel>@(tripPlace.Place?.Name ?? "Unknown")</FluentLabel>
-                                                        @if (tripPlace.ScheduledTime.HasValue)
-                                                        {
-                                                            <FluentLabel>@tripPlace.ScheduledTime.Value.ToString("HH:mm")</FluentLabel>
-                                                        }
-                                                        @if (tripPlace.DurationMinutes.HasValue)
-                                                        {
-                                                            <FluentLabel>(@tripPlace.DurationMinutes min)</FluentLabel>
-                                                        }
-                                                    </FluentStack>
-                                                    @if (!string.IsNullOrEmpty(tripPlace.Notes))
-                                                    {
-                                                        <FluentLabel Style="font-size: 0.875em;">Notes: @tripPlace.Notes</FluentLabel>
-                                                    }
-                                                </FluentCard>
-                                            }
-                                        </FluentStack>
-                                    }
-                                </FluentStack>
-                            </FluentCard>
-                        </FluentTab>
-                    }
-                    
-                    @if (ViewingTrip.UnscheduledPlaces.Any())
-                    {
-                        <FluentTab Label="Unscheduled">
-                            <FluentCard>
-                                <FluentLabel Typo="Typography.Subject">Places to Schedule</FluentLabel>
-                                <FluentStack Orientation="Orientation.Vertical">
-                                    @foreach (var place in ViewingTrip.UnscheduledPlaces)
-                                    {
-                                        <FluentCard>
-                                            <FluentLabel>@place.Place?.Name</FluentLabel>
-                                        </FluentCard>
-                                    }
-                                </FluentStack>
-                            </FluentCard>
-                        </FluentTab>
-                    }
-                </FluentTabs>
-            </FluentStack>
-        }
-    </FluentDialogBody>
-    <FluentDialogFooter>
-        <FluentButton Appearance="Appearance.Neutral" OnClick="@(() => HideViewDialog = true)">Close</FluentButton>
-    </FluentDialogFooter>
-</FluentDialog>
 
 @code {
     private List<Trip> Trips { get; set; } = new();
     private List<Place> AllPlaces { get; set; } = new();
     private bool IsLoading { get; set; } = true;
     private bool HideAddDialog { get; set; } = true;
-    private bool HideViewDialog { get; set; } = true;
     private Trip? EditingTrip { get; set; }
-    private Trip? ViewingTrip { get; set; }
     private int NumDays { get; set; } = 1;
     
     private string _startDateString = string.Empty;
@@ -344,12 +232,6 @@
         _startDateString = trip.StartDate?.ToString("yyyy-MM-dd") ?? string.Empty;
         _endDateString = trip.EndDate?.ToString("yyyy-MM-dd") ?? string.Empty;
         HideAddDialog = false;
-    }
-
-    private void ViewTrip(Trip trip)
-    {
-        ViewingTrip = trip;
-        HideViewDialog = false;
     }
 
     private async Task DeleteTrip(Trip trip)
