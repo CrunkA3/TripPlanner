@@ -254,3 +254,10 @@ window.mapInterop = {
         this.gpxTracks = [];
     }
 };
+
+window.clickElementById = function (elementId) {
+    var element = document.getElementById(elementId);
+    if (element) {
+        element.click();
+    }
+};
