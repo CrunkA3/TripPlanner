@@ -48,9 +48,13 @@
                                         <FluentStack Orientation="Orientation.Vertical">
                                             <FluentLabel Weight="FontWeight.Bold">@place.Name</FluentLabel>
                                             <FluentBadge BackgroundColor="var(--neutral-layer-3)">@place.Category</FluentBadge>
-                                            <FluentLabel Style="font-size: 0.875em;">
-                                                @place.Latitude.ToString("F2"), @place.Longitude.ToString("F2")
-                                            </FluentLabel>
+                                            <FluentStack Orientation="Orientation.Horizontal">
+                                                <FluentLabel Style="font-size: 0.875em;">
+                                                    @place.Latitude.ToString("F2"), @place.Longitude.ToString("F2")
+                                                </FluentLabel>
+                                                <FluentSpacer />
+                                                <FluentButton Appearance="Appearance.Lightweight" IconEnd="@(new Icons.Regular.Size16.Pen())" OnClick="@(async () => await OpenEditPlaceDialog(place))"></FluentButton>
+                                            </FluentStack>
                                         </FluentStack>
                                     </FluentCard>
                                 }
@@ -109,7 +113,7 @@
                                                                 Style="cursor: move; padding: 8px;">
                                                         <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" HorizontalGap="3">
                                                             <FluentIcon Value="@(new Icons.Regular.Size16.Navigation())" />
-                                                            <FluentLabel Weight="FontWeight.Bold" Style="flex: 1;overflow: hidden;text-overflow: ellipsis;">@(tripPlace.Place?.Name ?? "Unknown")</FluentLabel>
+                                                            <FluentLabel Weight="FontWeight.Bold" Style="flex: 1;overflow: hidden;text-overflow: ellipsis;" @ondblclick="@(async () => await OpenEditPlaceDialog(tripPlace.Place!))">@(tripPlace.Place?.Name ?? "Unknown")</FluentLabel>
                                                             <input type="time"
                                                                    value="@(tripPlace.ScheduledTime.HasValue? tripPlace.ScheduledTime.Value.ToString("HH:mm") : "")"
                                                                    @onchange="@((e) => UpdateScheduledTime(tripPlace, e.Value?.ToString(), day.Date))"
@@ -649,6 +653,23 @@
         }
     }
 
+    private async Task OpenEditPlaceDialog(Place place)
+    {
+        var dialog = await DialogService.ShowDialogAsync<TripAddPlaceDialog>(place, new DialogParameters()
+        {
+            PreventDismissOnOverlayClick = true,
+            PreventScroll = true,
+            TrapFocus = true
+        });
+
+        var result = await dialog.Result;
+
+        if (!result.Cancelled && result.Data is not null)
+        {
+            StateHasChanged();
+            await UpdateMapContent();
+        }
+    }
 
 
 
