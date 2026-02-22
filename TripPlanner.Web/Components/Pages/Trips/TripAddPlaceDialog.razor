@@ -57,7 +57,16 @@
         if (Content == null || string.IsNullOrWhiteSpace(Content.Name))
             return;
 
-        await PlaceRepository.AddAsync(Content);
+        var dbPlace = await PlaceRepository.GetByIdAsync(Content.Id);
+
+        if (dbPlace is null)
+        {
+            await PlaceRepository.AddAsync(Content);
+        }
+        else
+        {
+            await PlaceRepository.UpdateAsync(Content);
+        }
         await Dialog.CloseAsync(Content);
     }
 
