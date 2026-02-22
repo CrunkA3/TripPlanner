@@ -186,6 +186,8 @@
 </div>
 
 @code {
+    private bool _parallaxInitialized;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -193,6 +195,7 @@
             try
             {
                 await JSRuntime.InvokeVoidAsync("heroParallax.init");
+                _parallaxInitialized = true;
             }
             catch (JSException)
             {
@@ -203,13 +206,16 @@
 
     public async ValueTask DisposeAsync()
     {
-        try
+        if (_parallaxInitialized)
         {
-            await JSRuntime.InvokeVoidAsync("heroParallax.destroy");
-        }
-        catch (JSException)
-        {
-            // ignore cleanup errors during disposal
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("heroParallax.destroy");
+            }
+            catch (JSException)
+            {
+                // ignore cleanup errors during disposal
+            }
         }
     }
 }
