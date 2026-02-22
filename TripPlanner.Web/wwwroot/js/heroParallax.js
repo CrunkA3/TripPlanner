@@ -27,15 +27,8 @@ window.heroParallax = (function () {
     }
 
     function onMouseMove(e) {
-        var rect = hero.getBoundingClientRect();
-        mouseX = (e.clientX - rect.left - rect.width / 2) / (rect.width / 2);
-        mouseY = (e.clientY - rect.top - rect.height / 2) / (rect.height / 2);
-        schedule();
-    }
-
-    function onMouseLeave() {
-        mouseX = 0;
-        mouseY = 0;
+        mouseX = (e.clientX - window.innerWidth / 2) / (window.innerWidth / 2);
+        mouseY = (e.clientY - window.innerHeight / 2) / (window.innerHeight / 2);
         schedule();
     }
 
@@ -49,15 +42,11 @@ window.heroParallax = (function () {
             hero = document.querySelector('.home-hero');
             if (!hero) return;
             layers = Array.from(hero.querySelectorAll('[data-parallax]'));
-            hero.addEventListener('mousemove', onMouseMove);
-            hero.addEventListener('mouseleave', onMouseLeave);
+            document.addEventListener('mousemove', onMouseMove);
             window.addEventListener('scroll', onScroll, { passive: true });
         },
         destroy: function () {
-            if (hero) {
-                hero.removeEventListener('mousemove', onMouseMove);
-                hero.removeEventListener('mouseleave', onMouseLeave);
-            }
+            document.removeEventListener('mousemove', onMouseMove);
             window.removeEventListener('scroll', onScroll);
             if (rafId) {
                 cancelAnimationFrame(rafId);
