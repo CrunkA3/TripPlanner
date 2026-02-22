@@ -1,10 +1,122 @@
 ﻿@page "/"
 
 @using Microsoft.AspNetCore.Components.Authorization
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
 
 <PageTitle>TripPlanner – Plan Your Perfect Trip</PageTitle>
 
 <div class="home-hero">
+    <div class="hero-parallax-scene">
+
+        <!-- Layer 1 – distant background mountains (slowest) -->
+        <svg data-parallax="1" class="hero-parallax-layer"
+             viewBox="0 0 1400 320"
+             preserveAspectRatio="xMidYMax slice"
+             xmlns="http://www.w3.org/2000/svg"
+             aria-hidden="true">
+            <path d="M-50,320 L150,75 L270,130 L400,35 L540,120 L700,55 L860,145 L1010,70 L1180,150 L1500,320 Z"
+                  fill="rgba(255,255,255,0.07)" />
+        </svg>
+
+        <!-- Layer 2 – middle mountains + two hikers (medium speed) -->
+        <svg data-parallax="2" class="hero-parallax-layer"
+             viewBox="0 0 1400 320"
+             preserveAspectRatio="xMidYMax slice"
+             xmlns="http://www.w3.org/2000/svg"
+             aria-hidden="true">
+            <path d="M-50,320 L100,165 L220,215 L370,120 L510,185 L660,110 L820,180 L970,125 L1130,195 L1500,320 Z"
+                  fill="rgba(255,255,255,0.10)" />
+
+            <!-- Hiker A on left slope (approx. ground at y≈207) -->
+            <g transform="translate(200,207)"
+               fill="none"
+               stroke="rgba(255,255,255,0.85)"
+               stroke-width="3.5"
+               stroke-linecap="round"
+               stroke-linejoin="round">
+                <circle cx="2" cy="-65" r="9" fill="rgba(255,255,255,0.85)" stroke="none" />
+                <rect x="7" y="-62" width="11" height="16" rx="2.5" fill="rgba(255,255,255,0.65)" stroke="none" />
+                <line x1="2" y1="-56" x2="0" y2="-30" />
+                <line x1="1" y1="-48" x2="16" y2="-40" />
+                <line x1="1" y1="-48" x2="-13" y2="-38" />
+                <line x1="-13" y1="-38" x2="-18" y2="-10" />
+                <line x1="0" y1="-30" x2="12" y2="-14" />
+                <line x1="12" y1="-14" x2="14" y2="0" />
+                <line x1="0" y1="-30" x2="-11" y2="-16" />
+                <line x1="-11" y1="-16" x2="-13" y2="0" />
+            </g>
+
+            <!-- Hiker B on right slope (approx. ground at y≈143) -->
+            <g transform="translate(920,143)"
+               fill="none"
+               stroke="rgba(255,255,255,0.85)"
+               stroke-width="3.5"
+               stroke-linecap="round"
+               stroke-linejoin="round">
+                <circle cx="2" cy="-65" r="9" fill="rgba(255,255,255,0.85)" stroke="none" />
+                <rect x="7" y="-62" width="11" height="16" rx="2.5" fill="rgba(255,255,255,0.65)" stroke="none" />
+                <line x1="2" y1="-56" x2="0" y2="-30" />
+                <line x1="1" y1="-48" x2="16" y2="-40" />
+                <line x1="1" y1="-48" x2="-13" y2="-38" />
+                <line x1="-13" y1="-38" x2="-18" y2="-10" />
+                <line x1="0" y1="-30" x2="-11" y2="-16" />
+                <line x1="-11" y1="-16" x2="-13" y2="0" />
+                <line x1="0" y1="-30" x2="12" y2="-14" />
+                <line x1="12" y1="-14" x2="14" y2="0" />
+            </g>
+        </svg>
+
+        <!-- Layer 3 – foreground hills + runner + hiker (fastest) -->
+        <svg data-parallax="3" class="hero-parallax-layer"
+             viewBox="0 0 1400 320"
+             preserveAspectRatio="xMidYMax slice"
+             xmlns="http://www.w3.org/2000/svg"
+             aria-hidden="true">
+            <path d="M-50,320 L20,255 L140,295 L280,205 L440,265 L580,215 L720,255 L860,210 L1010,260 L1160,225 L1350,290 L1500,320 Z"
+                  fill="rgba(255,255,255,0.13)" />
+
+            <!-- Runner on left slope (approx. ground at y≈237) -->
+            <g transform="translate(230,237)"
+               fill="none"
+               stroke="rgba(255,255,255,0.90)"
+               stroke-width="3.5"
+               stroke-linecap="round"
+               stroke-linejoin="round">
+                <circle cx="10" cy="-65" r="9" fill="rgba(255,255,255,0.90)" stroke="none" />
+                <line x1="8" y1="-56" x2="-2" y2="-30" />
+                <line x1="5" y1="-48" x2="20" y2="-38" />
+                <line x1="20" y1="-38" x2="18" y2="-26" />
+                <line x1="5" y1="-48" x2="-12" y2="-38" />
+                <line x1="-12" y1="-38" x2="-15" y2="-26" />
+                <line x1="-2" y1="-30" x2="16" y2="-14" />
+                <line x1="16" y1="-14" x2="20" y2="0" />
+                <line x1="-2" y1="-30" x2="-18" y2="-16" />
+                <line x1="-18" y1="-16" x2="-10" y2="0" />
+            </g>
+
+            <!-- Hiker on right slope (approx. ground at y≈258) -->
+            <g transform="translate(1020,258)"
+               fill="none"
+               stroke="rgba(255,255,255,0.90)"
+               stroke-width="3.5"
+               stroke-linecap="round"
+               stroke-linejoin="round">
+                <circle cx="2" cy="-65" r="9" fill="rgba(255,255,255,0.90)" stroke="none" />
+                <rect x="7" y="-62" width="11" height="16" rx="2.5" fill="rgba(255,255,255,0.70)" stroke="none" />
+                <line x1="2" y1="-56" x2="0" y2="-30" />
+                <line x1="1" y1="-48" x2="16" y2="-40" />
+                <line x1="1" y1="-48" x2="-13" y2="-38" />
+                <line x1="-13" y1="-38" x2="-18" y2="-10" />
+                <line x1="0" y1="-30" x2="12" y2="-14" />
+                <line x1="12" y1="-14" x2="14" y2="0" />
+                <line x1="0" y1="-30" x2="-11" y2="-16" />
+                <line x1="-11" y1="-16" x2="-13" y2="0" />
+            </g>
+        </svg>
+
+    </div>
+
     <div class="home-hero-content">
         <FluentIcon Value="@(new Icons.Regular.Size24.Map())" Color="Color.Fill" Style="--fill-color: white; width: 3rem; height: 3rem;" />
         <h1 class="home-hero-title">Plan Your Perfect Trip</h1>
@@ -71,3 +183,32 @@
         </FluentGridItem>
     </FluentGrid>
 </div>
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("heroParallax.init");
+            }
+            catch (JSException)
+            {
+                // parallax enhancement is non-critical; page still renders without it
+            }
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("heroParallax.destroy");
+        }
+        catch (JSException)
+        {
+            // ignore cleanup errors during disposal
+        }
+    }
+}
