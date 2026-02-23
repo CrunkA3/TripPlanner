@@ -20,8 +20,8 @@
 <FluentStack Orientation="Orientation.Vertical" Width="100%" Style="height: calc(100vh - 200px);">
     <FluentToolbar>
         <FluentLabel Typo="Typography.H3">
-            <FluentIcon Value="@(new Icons.Regular.Size24.Map())" Color="Color.Accent" />
-            Map View
+            <FluentIcon Icon="Icons.Regular.Size24.Map" Color="Color.Accent" />
+            Map View @(isLandscape? Orientation.Horizontal: Orientation.Vertical)
         </FluentLabel>
         <FluentSpacer />
         <FluentSelect TOption="string" @bind-Value="@SelectedTripId" Label="Select Trip" Style="min-width: 200px;">
@@ -31,21 +31,20 @@
                 <FluentOption TOption="string" Value="@trip.Id">@trip.Name</FluentOption>
             }
         </FluentSelect>
-        <FluentButton Appearance="Appearance.Lightweight" OnClick="@LoadMapData">
-            <FluentIcon Value="@(new Icons.Regular.Size20.ArrowSync())" />
+        <FluentButton Appearance="Appearance.Outline" IconStart="@(new Icons.Regular.Size20.ArrowSync())" OnClick="@LoadMapData">
             Refresh
         </FluentButton>
     </FluentToolbar>
 
     <FluentCard Style="flex: 1; display: flex; flex-direction: column;">
-        <FluentStack Orientation="Orientation.Horizontal" Style="height: 100%;">
+        <FluentStack Orientation="@(isLandscape? Orientation.Horizontal: Orientation.Vertical)" Style="height: 100%;">
             <!-- Map Container -->
-            <div id="map-container" style="flex: 1; min-height: 500px; background: var(--neutral-layer-2); border-radius: 4px;">
-                <div id="map" style="width: 100%; height: 100%; min-height: 500px;"></div>
+            <div id="map-container" class="@(isLandscape ? "horizontal" : "vertical")">
+                <div id="map" style="width: 100%; height: 100%;"></div>
             </div>
 
             <!-- Side Panel -->
-            <FluentStack Orientation="Orientation.Vertical" Style="width: 300px; max-height: 100%; overflow-y: auto; padding-left: 16px;">
+            <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Stretch" Style="width: 300px; max-width: 100%; max-height: 100%; overflow-y: auto; padding-left: 16px;">
                 <FluentLabel Typo="Typography.Subject" Weight="FontWeight.Bold">Places on Map</FluentLabel>
 
                 @if (CurrentUser?.HomeLatitude.HasValue == true && CurrentUser?.HomeLongitude.HasValue == true)
@@ -53,7 +52,7 @@
                     <FluentCard Style="border-left: 4px solid #1A73E8;">
                         <FluentStack Orientation="Orientation.Vertical">
                             <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
-                                <FluentIcon Value="@(new Icons.Regular.Size16.Home())" Color="Color.Accent" />
+                                <FluentIcon Icon="Icons.Regular.Size16.Home" Color="Color.Accent" />
                                 <FluentLabel Weight="FontWeight.Bold">@(CurrentUser.HomeLocationName ?? "Home")</FluentLabel>
                             </FluentStack>
                             <FluentLabel Style="font-size: 0.875em;">
@@ -77,20 +76,40 @@
                         @if (Places.Any())
                         {
                             <FluentAccordionItem Heading="Wishlist Places" Expanded="true">
-                                <FluentStack Orientation="Orientation.Vertical">
-                                    @foreach (var place in Places)
-                                    {
-                                        <FluentCard>
-                                            <FluentStack Orientation="Orientation.Vertical">
-                                                <FluentLabel Weight="FontWeight.Bold">@place.Name</FluentLabel>
-                                                <FluentBadge BackgroundColor="var(--neutral-layer-3)">@place.Category</FluentBadge>
-                                                <FluentLabel Style="font-size: 0.875em;">
-                                                    @place.Latitude.ToString("F4"), @place.Longitude.ToString("F4")
-                                                </FluentLabel>
-                                            </FluentStack>
-                                        </FluentCard>
-                                    }
-                                </FluentStack>
+                                @if (isLandscape)
+                                {
+                                    <FluentStack Orientation="Orientation.Vertical">
+                                        @foreach (var place in Places)
+                                        {
+                                            <FluentCard>
+                                                <FluentStack Orientation="Orientation.Vertical">
+                                                    <FluentLabel Weight="FontWeight.Bold">@place.Name</FluentLabel>
+                                                    <FluentBadge BackgroundColor="var(--neutral-layer-3)">@place.Category</FluentBadge>
+                                                    <FluentLabel Style="font-size: 0.875em;">
+                                                        @place.Latitude.ToString("F4"), @place.Longitude.ToString("F4")
+                                                    </FluentLabel>
+                                                </FluentStack>
+                                            </FluentCard>
+                                        }
+                                    </FluentStack>
+                                }
+                                else
+                                {
+                                    <FluentHorizontalScroll Speed="600" Easing=ScrollEasing.EaseInOut>
+                                        @foreach (var place in Places)
+                                        {
+                                            <FluentCard Style="height:150px;width: 150px;">
+                                                <FluentStack Orientation="Orientation.Vertical">
+                                                    <FluentLabel Weight="FontWeight.Bold">@place.Name</FluentLabel>
+                                                    <FluentBadge BackgroundColor="var(--neutral-layer-3)">@place.Category</FluentBadge>
+                                                    <FluentLabel Style="font-size: 0.875em;">
+                                                        @place.Latitude.ToString("F4"), @place.Longitude.ToString("F4")
+                                                    </FluentLabel>
+                                                </FluentStack>
+                                            </FluentCard>
+                                        }
+                                    </FluentHorizontalScroll>
+                                }
                             </FluentAccordionItem>
                         }
                         
@@ -108,7 +127,7 @@
                                                     @if (tripPlace.ScheduledTime.HasValue)
                                                     {
                                                         <FluentLabel Style="font-size: 0.875em;">
-                                                            <FluentIcon Value="@(new Icons.Regular.Size12.Clock())" />
+                                                            <FluentIcon Icon="Icons.Regular.Size12.Clock" />
                                                             @tripPlace.ScheduledTime.Value.ToString("HH:mm")
                                                         </FluentLabel>
                                                     }
@@ -155,17 +174,29 @@
     private bool MapInitialized { get; set; }
     private ApplicationUser? CurrentUser { get; set; }
 
+    private bool isLandscape = true;
+
     protected override async Task OnInitializedAsync()
     {
         await LoadMapData();
+
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // Get initial orientation
+        var orientation = await JSRuntime.InvokeAsync<string>("screenOrientationHelper.getOrientation");
+        isLandscape = orientation.StartsWith("landscape");
+
+
         if (firstRender)
         {
             await InitializeMap();
             await UpdateMapContent();
+        
+
+            // Listen for changes
+            await JSRuntime.InvokeVoidAsync("screenOrientationHelper.onOrientationChange", DotNetObjectReference.Create(this));
         }
     }
 
@@ -253,8 +284,8 @@
                 foreach (var place in Places)
                 {
                     var color = GetCategoryColor(place.Category);
-                    await JSRuntime.InvokeVoidAsync("mapInterop.addMarker", 
-                        place.Id, place.Latitude, place.Longitude, 
+                    await JSRuntime.InvokeVoidAsync("mapInterop.addMarker",
+                        place.Id, place.Latitude, place.Longitude,
                         place.Name, place.Category.ToString(), color);
                 }
             }
@@ -320,6 +351,16 @@
             PlaceCategory.Entertainment => "#E91E63",
             _ => "#757575"
         };
+    }
+
+
+
+    [JSInvokable]
+    public async Task OnOrientationChanged(string newOrientation)
+    {
+        isLandscape = newOrientation.StartsWith("landscape");
+        StateHasChanged();
+        await UpdateMapContent();
     }
 
     public async ValueTask DisposeAsync()
