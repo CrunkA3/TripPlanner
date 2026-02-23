@@ -47,6 +47,9 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 
 
+// Register HttpClient for image URL downloads
+builder.Services.AddHttpClient();
+
 // Register TripPlanner repositories (EF Core)
 builder.Services.AddScoped<IPlaceRepository, EfPlaceRepository>();
 builder.Services.AddScoped<ITripRepository, EfTripRepository>();
