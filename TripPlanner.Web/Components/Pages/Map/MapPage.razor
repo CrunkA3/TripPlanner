@@ -20,7 +20,7 @@
 <FluentStack Orientation="Orientation.Vertical" Width="100%" Style="height: calc(100vh - 200px);">
     <FluentToolbar>
         <FluentLabel Typo="Typography.H3">
-            <FluentIcon Value="@(new Icons.Regular.Size24.Map())" Color="Color.Accent" />
+            <FluentIcon Icon="Icons.Regular.Size24.Map" Color="Color.Accent" />
             Map View
         </FluentLabel>
         <FluentSpacer />
@@ -31,8 +31,7 @@
                 <FluentOption TOption="string" Value="@trip.Id">@trip.Name</FluentOption>
             }
         </FluentSelect>
-        <FluentButton Appearance="Appearance.Lightweight" OnClick="@LoadMapData">
-            <FluentIcon Value="@(new Icons.Regular.Size20.ArrowSync())" />
+        <FluentButton Appearance="Appearance.Outline" IconStart="@(new Icons.Regular.Size20.ArrowSync())" OnClick="@LoadMapData">
             Refresh
         </FluentButton>
     </FluentToolbar>
@@ -53,7 +52,7 @@
                     <FluentCard Style="border-left: 4px solid #1A73E8;">
                         <FluentStack Orientation="Orientation.Vertical">
                             <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
-                                <FluentIcon Value="@(new Icons.Regular.Size16.Home())" Color="Color.Accent" />
+                                <FluentIcon Icon="Icons.Regular.Size16.Home" Color="Color.Accent" />
                                 <FluentLabel Weight="FontWeight.Bold">@(CurrentUser.HomeLocationName ?? "Home")</FluentLabel>
                             </FluentStack>
                             <FluentLabel Style="font-size: 0.875em;">
@@ -108,7 +107,7 @@
                                                     @if (tripPlace.ScheduledTime.HasValue)
                                                     {
                                                         <FluentLabel Style="font-size: 0.875em;">
-                                                            <FluentIcon Value="@(new Icons.Regular.Size12.Clock())" />
+                                                            <FluentIcon Icon="Icons.Regular.Size12.Clock" />
                                                             @tripPlace.ScheduledTime.Value.ToString("HH:mm")
                                                         </FluentLabel>
                                                     }
