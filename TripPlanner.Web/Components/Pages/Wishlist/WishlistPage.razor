@@ -67,7 +67,7 @@
             @foreach (var place in Places)
             {
                 <FluentGridItem xs="12" md="6" lg="3" xl="2" xxl="2">
-                    <FluentCard Style="height: 100%;">
+                    <FluentCard Style="@GetCardStyle(place)">
                         <FluentStack Orientation="Orientation.Vertical">
                             <FluentStack Orientation="Orientation.Horizontal">
                                 <FluentLabel Typo="Typography.Subject" Weight="FontWeight.Bold">@place.Name</FluentLabel>
@@ -195,7 +195,24 @@
 </FluentDialog>
 
 @code {
+    private string GetCardStyle(Place place)
+    {
+        if (place.ImageData != null && place.ImageContentType != null
+            && System.Text.RegularExpressions.Regex.IsMatch(place.ImageContentType, @"^image/[a-zA-Z0-9\-\+\.]+$"))
+        {
+            if (!_cardStyleCache.TryGetValue(place.Id, out var style))
+            {
+                var base64 = Convert.ToBase64String(place.ImageData);
+                style = $"height: 100%; background-image: linear-gradient(rgba(255,255,255,0.82), rgba(255,255,255,0.82)), url('data:{place.ImageContentType};base64,{base64}'); background-size: cover; background-position: center;";
+                _cardStyleCache[place.Id] = style;
+            }
+            return style;
+        }
+        return "height: 100%;";
+    }
+
     private List<Place> Places { get; set; } = new();
+    private Dictionary<string, string> _cardStyleCache = new();
     private List<GpxTrack> GpxTracks { get; set; } = new();
     private bool IsLoading { get; set; } = true;
     private bool HideAddDialog { get; set; } = true;
@@ -226,6 +243,7 @@
     {
         IsLoading = true;
         Places = await PlaceRepository.GetAllWithAnyWishlistAsync();
+        _cardStyleCache.Clear();
         IsLoading = false;
     }
 
@@ -240,6 +258,7 @@
         FilterCategory = string.IsNullOrEmpty(FilterCategoryString) ? null : Enum.Parse<PlaceCategory>(FilterCategoryString);
         FilterHasGpx = FilterHasGpxValue ? true : (bool?)null;
         Places = await PlaceRepository.FilterAsync(FilterCategory, null, FilterHasGpx);
+        _cardStyleCache.Clear();
         IsLoading = false;
     }
 
