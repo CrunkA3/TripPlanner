@@ -63,63 +63,7 @@
     }
     else
     {
-        <FluentGrid Spacing="3" Justify="JustifyContent.FlexStart">
-            @foreach (var place in Places)
-            {
-                <FluentGridItem xs="12" md="6" lg="3" xl="2" xxl="2">
-                    <FluentCard Style="@GetCardStyle(place)">
-                        <FluentStack Orientation="Orientation.Vertical">
-                            <FluentStack Orientation="Orientation.Horizontal">
-                                <FluentLabel Typo="Typography.Subject" Weight="FontWeight.Bold">@place.Name</FluentLabel>
-                                @if (place.HasGpxTrack)
-                                {
-                                    <FluentSpacer />
-                                    <FluentBadge Appearance="Appearance.Accent">GPX</FluentBadge>
-                                }
-                            </FluentStack>
-                            <FluentDivider Style="width: 100%;" Role="DividerRole.Presentation" />
-                            
-                            <FluentLabel Typo="Typography.Body">@place.Description</FluentLabel>
-                            
-                            <FluentStack Orientation="Orientation.Horizontal" Wrap="true">
-                                <FluentBadge BackgroundColor="var(--neutral-layer-3)">@place.Category</FluentBadge>
-                                @if (place.Wishlist is not null)
-                                {
-                                    <FluentBadge BackgroundColor="var(--neutral-layer-3)">@place.Wishlist.Name</FluentBadge>
-                                }
-                            </FluentStack>
-                            
-                            @if (place.Tags.Any())
-                            {
-                                <FluentStack Orientation="Orientation.Horizontal" Wrap="true">
-                                    @foreach (var tag in place.Tags)
-                                    {
-                                        <FluentBadge BackgroundColor="var(--accent-fill-rest)">@tag</FluentBadge>
-                                    }
-                                </FluentStack>
-                            }
-                            
-                            <FluentLabel Style="font-size: 0.875em;">
-                                <FluentIcon Icon="Icons.Regular.Size16.Location" />
-                                @place.Latitude.ToString("F4"), @place.Longitude.ToString("F4")
-                            </FluentLabel>
-                            
-                            <FluentDivider />
-                            
-                            <FluentStack Orientation="Orientation.Horizontal">
-                                <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size16.Edit())" OnClick="@(() => EditPlace(place))">
-                                    Edit
-                                </FluentButton>
-                                <FluentSpacer />
-                                <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size16.Delete())" OnClick="@(() => DeletePlace(place))">
-                                    Delete
-                                </FluentButton>
-                            </FluentStack>
-                        </FluentStack>
-                    </FluentCard>
-                </FluentGridItem>
-            }
-        </FluentGrid>
+        <WishlistItems Places="Places" OnEditPlace="EditPlace" OnDeletePlace="DeletePlace" />
     }
 </FluentStack>
 
@@ -195,24 +139,8 @@
 </FluentDialog>
 
 @code {
-    private string GetCardStyle(Place place)
-    {
-        if (place.ImageData != null && place.ImageContentType != null
-            && System.Text.RegularExpressions.Regex.IsMatch(place.ImageContentType, @"^image/[a-zA-Z0-9\-\+\.]+$"))
-        {
-            if (!_cardStyleCache.TryGetValue(place.Id, out var style))
-            {
-                var base64 = Convert.ToBase64String(place.ImageData);
-                style = $"height: 100%; background-image: linear-gradient(rgba(255,255,255,0.82), rgba(255,255,255,0.82)), url('data:{place.ImageContentType};base64,{base64}'); background-size: cover; background-position: center;";
-                _cardStyleCache[place.Id] = style;
-            }
-            return style;
-        }
-        return "height: 100%;";
-    }
 
     private List<Place> Places { get; set; } = new();
-    private Dictionary<string, string> _cardStyleCache = new();
     private List<GpxTrack> GpxTracks { get; set; } = new();
     private bool IsLoading { get; set; } = true;
     private bool HideAddDialog { get; set; } = true;
@@ -243,7 +171,6 @@
     {
         IsLoading = true;
         Places = await PlaceRepository.GetAllWithAnyWishlistAsync();
-        _cardStyleCache.Clear();
         IsLoading = false;
     }
 
@@ -258,7 +185,6 @@
         FilterCategory = string.IsNullOrEmpty(FilterCategoryString) ? null : Enum.Parse<PlaceCategory>(FilterCategoryString);
         FilterHasGpx = FilterHasGpxValue ? true : (bool?)null;
         Places = await PlaceRepository.FilterAsync(FilterCategory, null, FilterHasGpx);
-        _cardStyleCache.Clear();
         IsLoading = false;
     }
 
@@ -297,9 +223,9 @@
         HideAddDialog = false;
     }
 
-    private async Task DeletePlace(Place place)
+    private async Task DeletePlace(string placeId)
     {
-        await PlaceRepository.DeleteAsync(place.Id);
+        await PlaceRepository.DeleteAsync(placeId);
         await LoadPlaces();
     }
 

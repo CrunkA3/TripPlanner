@@ -27,7 +27,7 @@ window.heroParallax = (function () {
             var speed = parseFloat(layer.dataset.parallax) || 0;
             var tx = mouseX * speed * HORIZONTAL_SENSITIVITY;
             var ty = mouseY * speed * VERTICAL_SENSITIVITY - scrollOffset * speed * SCROLL_DAMPING;
-            layer.style.transform = 'translate(' + tx + 'px, ' + ty + 'px)';
+            layer.style.transform = 'scale(1.2) translate(' + tx + 'px, ' + ty + 'px)';
         });
         rafId = null;
     }
@@ -40,7 +40,7 @@ window.heroParallax = (function () {
 
     function onMouseMove(e) {
         mouseX = (e.clientX - window.innerWidth / 2) / (window.innerWidth / 2);
-        mouseY = (e.clientY - window.innerHeight / 2) / (window.innerHeight / 2);
+        mouseY = (e.clientY) / (window.innerHeight);
         schedule();
     }
 
