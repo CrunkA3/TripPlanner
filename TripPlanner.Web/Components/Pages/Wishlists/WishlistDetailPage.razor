@@ -66,10 +66,10 @@ else
         }
         else
         {
-            <FluentStack Orientation="Orientation.Horizontal" Wrap="true" Width="100%">
+            <FluentStack Orientation="Orientation.Horizontal" Wrap="true" Width="100%" HorizontalGap="10" VerticalGap="10">
                 @foreach (var place in places)
                 {
-                    <FluentCard Style="width: 300px; margin: 10px;">
+                    <FluentCard Style="width: 250px; height: 300px;">
                         <FluentStack Orientation="Orientation.Vertical">
                             <FluentLabel Typo="Typography.H5">@place.Name</FluentLabel>
                             <FluentBadge Appearance="Appearance.Accent">@place.Category</FluentBadge>
