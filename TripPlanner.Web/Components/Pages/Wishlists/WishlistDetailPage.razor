@@ -1,6 +1,7 @@
 @page "/wishlists/{WishlistId}"
 
 @using Microsoft.AspNetCore.Authorization
+@using TripPlanner.Web.Components.Shared
 @using TripPlanner.Web.Models
 @using TripPlanner.Web.Repositories
 @using TripPlanner.Web.Services
@@ -29,7 +30,7 @@ else if (!canAccess)
 }
 else
 {
-    <FluentStack Orientation="Orientation.Vertical" Width="100%">
+    <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Stretch" Width="100%">
         <FluentToolbar>
             <FluentButton Appearance="Appearance.Lightweight" OnClick="@(() => NavigationManager.NavigateTo("/wishlists"))">
                 <FluentIcon Value="@(new Icons.Regular.Size20.ArrowLeft())" Slot="start" />
@@ -66,39 +67,7 @@ else
         }
         else
         {
-            <FluentStack Orientation="Orientation.Horizontal" Wrap="true" Width="100%" HorizontalGap="10" VerticalGap="10">
-                @foreach (var place in places)
-                {
-                    <FluentCard Style="width: 250px; height: 300px;">
-                        <FluentStack Orientation="Orientation.Vertical">
-                            <FluentLabel Typo="Typography.H5">@place.Name</FluentLabel>
-                            <FluentBadge Appearance="Appearance.Accent">@place.Category</FluentBadge>
-                            <p>@place.Description</p>
-                            <FluentStack Orientation="Orientation.Horizontal">
-                                <FluentIcon Value="@(new Icons.Regular.Size16.Location())" />
-                                <span>@place.Latitude.ToString("F4"), @place.Longitude.ToString("F4")</span>
-                            </FluentStack>
-                            @if (place.Tags.Any())
-                            {
-                                <FluentStack Orientation="Orientation.Horizontal" Wrap="true">
-                                    @foreach (var tag in place.Tags)
-                                    {
-                                        <FluentBadge>@tag</FluentBadge>
-                                    }
-                                </FluentStack>
-                            }
-                            <FluentStack Orientation="Orientation.Horizontal">
-                                <FluentButton Appearance="Appearance.Lightweight" OnClick="@(() => EditPlace(place))">
-                                    Edit
-                                </FluentButton>
-                                <FluentButton Appearance="Appearance.Lightweight" OnClick="@(() => DeletePlace(place.Id))">
-                                    Delete
-                                </FluentButton>
-                            </FluentStack>
-                        </FluentStack>
-                    </FluentCard>
-                }
-            </FluentStack>
+            <WishlistItems Places="places" OnEditPlace="EditPlace" OnDeletePlace="DeletePlace" />
         }
     </FluentStack>
 }
