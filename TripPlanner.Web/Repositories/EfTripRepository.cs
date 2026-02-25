@@ -36,6 +36,7 @@ public class EfTripRepository : ITripRepository
                 .ThenInclude(p => p.Place)
             .Include(t => t.Accommodations)
             .Include(t => t.SharedWith)
+                .ThenInclude(st => st.User)
             .FirstOrDefaultAsync(t => t.Id == id);
     }
 

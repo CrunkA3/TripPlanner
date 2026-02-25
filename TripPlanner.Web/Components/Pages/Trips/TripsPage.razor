@@ -87,6 +87,12 @@
                             <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size16.CalendarEdit())" OnClick="@(() => PlanTrip(trip))">
                                 Plan
                             </FluentButton>
+                            @if (trip.OwnerId == CurrentUserId)
+                            {
+                                <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size16.Share())" OnClick="@(() => OpenShareDialog(trip))">
+                                    Share
+                                </FluentButton>
+                            }
                             <FluentSpacer />
                             <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size16.Delete())" OnClick="@(() => DeleteTrip(trip))">
                                 Delete
@@ -127,6 +133,43 @@
 </FluentDialog>
 
 
+<FluentDialog @bind-Hidden="@HideShareDialog" Modal="true" TrapFocus="true" Style="width: 500px;">
+    <FluentDialogHeader>
+        <FluentLabel Typo="Typography.H4">Share Trip: @SharingTrip?.Name</FluentLabel>
+    </FluentDialogHeader>
+    <FluentDialogBody>
+        @if (SharingTrip != null)
+        {
+            <FluentStack Orientation="Orientation.Vertical">
+                @if (SharingTrip.SharedWith.Any())
+                {
+                    <FluentLabel Typo="Typography.Body" Weight="FontWeight.Bold">Shared with:</FluentLabel>
+                    @foreach (var shared in SharingTrip.SharedWith)
+                    {
+                        <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                            <FluentLabel Style="flex: 1;">@(shared.User?.Email ?? shared.UserId)</FluentLabel>
+                            <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size16.Delete())" OnClick="@(() => UnshareTrip(shared.UserId))">
+                                Remove
+                            </FluentButton>
+                        </FluentStack>
+                    }
+                    <FluentDivider />
+                }
+                <FluentTextField @bind-Value="@ShareEmail" Label="Share with (email address)" Style="width: 100%;" />
+                @if (!string.IsNullOrEmpty(ShareMessage))
+                {
+                    <FluentLabel Style="font-size: 0.875em;">@ShareMessage</FluentLabel>
+                }
+            </FluentStack>
+        }
+    </FluentDialogBody>
+    <FluentDialogFooter>
+        <FluentButton Appearance="Appearance.Accent" OnClick="@ShareTrip">Share</FluentButton>
+        <FluentButton Appearance="Appearance.Neutral" OnClick="@(() => HideShareDialog = true)">Close</FluentButton>
+    </FluentDialogFooter>
+</FluentDialog>
+
+
 @code {
     private List<Trip> Trips { get; set; } = new();
     private List<Place> AllPlaces { get; set; } = new();
@@ -137,6 +180,12 @@
     
     private string _startDateString = string.Empty;
     private string _endDateString = string.Empty;
+    
+    private string? CurrentUserId { get; set; }
+    private bool HideShareDialog { get; set; } = true;
+    private Trip? SharingTrip { get; set; }
+    private string ShareEmail { get; set; } = string.Empty;
+    private string? ShareMessage { get; set; }
 
     private void OnStartDateChanged(string value)
     {
@@ -158,13 +207,13 @@
 
     protected override async Task OnInitializedAsync()
     {
+        CurrentUserId = await UserService.GetCurrentUserIdAsync();
         await LoadData();
     }
 
     private async Task CreateNewTrip()
     {
-        var currentUserId = await UserService.GetCurrentUserIdAsync();
-        EditingTrip = new Trip { OwnerId = currentUserId ?? string.Empty };
+        EditingTrip = new Trip { OwnerId = CurrentUserId ?? string.Empty };
         NumDays = 1;
         _startDateString = string.Empty;
         _endDateString = string.Empty;
@@ -180,11 +229,10 @@
     {
         IsLoading = true;
         
-        var currentUserId = await UserService.GetCurrentUserIdAsync();
-        if (currentUserId != null)
+        if (CurrentUserId != null)
         {
-            var ownedTrips = await TripRepository.GetByOwnerAsync(currentUserId);
-            var sharedTrips = await TripRepository.GetSharedWithUserAsync(currentUserId);
+            var ownedTrips = await TripRepository.GetByOwnerAsync(CurrentUserId);
+            var sharedTrips = await TripRepository.GetSharedWithUserAsync(CurrentUserId);
             Trips = ownedTrips.Concat(sharedTrips).ToList();
         }
         else
@@ -238,6 +286,46 @@
     {
         await TripRepository.DeleteAsync(trip.Id);
         await LoadData();
+    }
+
+    private async Task OpenShareDialog(Trip trip)
+    {
+        SharingTrip = await TripRepository.GetByIdAsync(trip.Id);
+        ShareEmail = string.Empty;
+        ShareMessage = null;
+        HideShareDialog = false;
+    }
+
+    private async Task ShareTrip()
+    {
+        if (SharingTrip == null || string.IsNullOrWhiteSpace(ShareEmail))
+            return;
+
+        var userToShare = await UserService.GetUserByEmailAsync(ShareEmail);
+        if (userToShare == null)
+        {
+            ShareMessage = "User not found.";
+            return;
+        }
+
+        if (userToShare.Id == CurrentUserId)
+        {
+            ShareMessage = "You cannot share a trip with yourself.";
+            return;
+        }
+
+        await TripRepository.ShareWithUserAsync(SharingTrip.Id, userToShare.Id);
+        SharingTrip = await TripRepository.GetByIdAsync(SharingTrip.Id);
+        ShareEmail = string.Empty;
+        ShareMessage = "Trip shared successfully.";
+    }
+
+    private async Task UnshareTrip(string userId)
+    {
+        if (SharingTrip == null) return;
+        await TripRepository.UnshareWithUserAsync(SharingTrip.Id, userId);
+        SharingTrip = await TripRepository.GetByIdAsync(SharingTrip.Id);
+        ShareMessage = null;
     }
 
     private async Task SaveTrip()
