@@ -305,6 +305,27 @@ code {
     }
 }
 
+/* ── Wishlist cards ─────────────────────────────────────────────────────── */
+
+.wishlist-card {
+    height: 100%;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.wishlist-card:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+.wishlist-card--shared {
+    border-left: 3px solid var(--accent-fill-rest);
+}
+
+.wishlist-empty-card {
+    text-align: center;
+    padding: 1rem;
+}
+
 table {
     width: 100%;
     border-collapse: collapse;
