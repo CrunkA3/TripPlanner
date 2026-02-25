@@ -33,48 +33,120 @@ else
     <h2>My Wishlists</h2>
     @if (!ownedWishlists.Any())
     {
-        <p>You haven't created any wishlists yet.</p>
+        <FluentCard class="wishlist-empty-card">
+            <FluentStack HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center" Style="padding: 2rem;">
+                <FluentIcon Value="@(new Icons.Regular.Size48.Heart())" Color="Color.Neutral" />
+                <FluentLabel Typo="Typography.Body">You haven't created any wishlists yet. Click "Create Wishlist" to get started!</FluentLabel>
+            </FluentStack>
+        </FluentCard>
     }
     else
     {
-        <FluentDataGrid Items="@ownedWishlists.AsQueryable()" Style="margin-bottom: 30px;">
-            <PropertyColumn Property="@(w => w.Name)" Title="Name" />
-            <PropertyColumn Property="@(w => w.Description)" Title="Description" />
-            <PropertyColumn Property="@(w => w.Places.Count)" Title="Places" />
-            <PropertyColumn Property="@(w => w.SharedWith.Count)" Title="Shared With" />
-            <PropertyColumn Property="@(w => w.CreatedAt)" Title="Created" Format="yyyy-MM-dd" />
-            <TemplateColumn Title="Actions">
-                <FluentButton Appearance="Appearance.Lightweight" OnClick="@(() => ViewWishlist(context.Id))">
-                    View
-                </FluentButton>
-                <FluentButton Appearance="Appearance.Lightweight" OnClick="@(() => ShowShareDialog(context))">
-                    Share
-                </FluentButton>
-                <FluentButton Appearance="Appearance.Lightweight" OnClick="@(() => DeleteWishlist(context.Id))">
-                    Delete
-                </FluentButton>
-            </TemplateColumn>
-        </FluentDataGrid>
+        <FluentGrid Spacing="3" Justify="JustifyContent.FlexStart" Style="margin-bottom: 30px;">
+            @foreach (var wishlist in ownedWishlists)
+            {
+                <FluentGridItem xs="12" sm="6" md="4" lg="3">
+                    <FluentCard class="wishlist-card">
+                        <FluentStack Orientation="Orientation.Vertical" Style="height: 100%;">
+                            <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                                <FluentIcon Value="@(new Icons.Regular.Size24.Heart())" Color="Color.Accent" />
+                                <FluentLabel Typo="Typography.Subject" Weight="FontWeight.Bold" Style="margin-left: 0.5rem; flex: 1;">@wishlist.Name</FluentLabel>
+                            </FluentStack>
+                            <FluentDivider Style="width: 100%;" Role="DividerRole.Presentation" />
+                            @if (!string.IsNullOrEmpty(wishlist.Description))
+                            {
+                                <FluentLabel Typo="Typography.Body" Style="flex: 1;">@wishlist.Description</FluentLabel>
+                            }
+                            else
+                            {
+                                <FluentLabel Typo="Typography.Body" Style="flex: 1; color: var(--neutral-foreground-hint); font-style: italic;">No description</FluentLabel>
+                            }
+                            <FluentSpacer />
+                            <FluentStack Orientation="Orientation.Horizontal" Wrap="true" Style="gap: 0.4rem;">
+                                <FluentBadge BackgroundColor="var(--accent-fill-rest)" Color="white">
+                                    <FluentIcon Value="@(new Icons.Regular.Size12.Location())" /> @wishlist.Places.Count places
+                                </FluentBadge>
+                                @if (wishlist.SharedWith.Count > 0)
+                                {
+                                    <FluentBadge BackgroundColor="var(--neutral-layer-3)">
+                                        <FluentIcon Value="@(new Icons.Regular.Size12.People())" /> @wishlist.SharedWith.Count shared
+                                    </FluentBadge>
+                                }
+                            </FluentStack>
+                            <FluentLabel Style="font-size: 0.8em; color: var(--neutral-foreground-hint);">
+                                Created: @wishlist.CreatedAt.ToString("yyyy-MM-dd")
+                            </FluentLabel>
+                            <FluentDivider Style="width: 100%;" Role="DividerRole.Presentation" />
+                            <FluentStack Orientation="Orientation.Horizontal">
+                                <FluentButton Appearance="Appearance.Accent" IconStart="@(new Icons.Regular.Size16.Eye())" OnClick="@(() => ViewWishlist(wishlist.Id))">
+                                    View
+                                </FluentButton>
+                                <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size16.Share())" OnClick="@(() => ShowShareDialog(wishlist))">
+                                    Share
+                                </FluentButton>
+                                <FluentSpacer />
+                                <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size16.Delete())" OnClick="@(() => DeleteWishlist(wishlist.Id))">
+                                    Delete
+                                </FluentButton>
+                            </FluentStack>
+                        </FluentStack>
+                    </FluentCard>
+                </FluentGridItem>
+            }
+        </FluentGrid>
     }
 
     <h2>Shared With Me</h2>
     @if (!sharedWishlists.Any())
     {
-        <p>No wishlists have been shared with you.</p>
+        <FluentCard class="wishlist-empty-card">
+            <FluentStack HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center" Style="padding: 2rem;">
+                <FluentIcon Value="@(new Icons.Regular.Size48.People())" Color="Color.Neutral" />
+                <FluentLabel Typo="Typography.Body">No wishlists have been shared with you yet.</FluentLabel>
+            </FluentStack>
+        </FluentCard>
     }
     else
     {
-        <FluentDataGrid Items="@sharedWishlists.AsQueryable()">
-            <PropertyColumn Property="@(w => w.Name)" Title="Name" />
-            <PropertyColumn Property="@(w => w.Description)" Title="Description" />
-            <PropertyColumn Property="@(w => w.Places.Count)" Title="Places" />
-            <PropertyColumn Property="@(w => w.Owner!.Email)" Title="Owner" />
-            <TemplateColumn Title="Actions">
-                <FluentButton Appearance="Appearance.Lightweight" OnClick="@(() => ViewWishlist(context.Id))">
-                    View
-                </FluentButton>
-            </TemplateColumn>
-        </FluentDataGrid>
+        <FluentGrid Spacing="3" Justify="JustifyContent.FlexStart">
+            @foreach (var wishlist in sharedWishlists)
+            {
+                <FluentGridItem xs="12" sm="6" md="4" lg="3">
+                    <FluentCard class="wishlist-card wishlist-card--shared">
+                        <FluentStack Orientation="Orientation.Vertical" Style="height: 100%;">
+                            <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                                <FluentIcon Value="@(new Icons.Regular.Size24.HeartCircle())" Color="Color.Accent" />
+                                <FluentLabel Typo="Typography.Subject" Weight="FontWeight.Bold" Style="margin-left: 0.5rem; flex: 1;">@wishlist.Name</FluentLabel>
+                            </FluentStack>
+                            <FluentDivider Style="width: 100%;" Role="DividerRole.Presentation" />
+                            @if (!string.IsNullOrEmpty(wishlist.Description))
+                            {
+                                <FluentLabel Typo="Typography.Body" Style="flex: 1;">@wishlist.Description</FluentLabel>
+                            }
+                            else
+                            {
+                                <FluentLabel Typo="Typography.Body" Style="flex: 1; color: var(--neutral-foreground-hint); font-style: italic;">No description</FluentLabel>
+                            }
+                            <FluentSpacer />
+                            <FluentStack Orientation="Orientation.Horizontal" Wrap="true" Style="gap: 0.4rem;">
+                                <FluentBadge BackgroundColor="var(--accent-fill-rest)" Color="white">
+                                    <FluentIcon Value="@(new Icons.Regular.Size12.Location())" /> @wishlist.Places.Count places
+                                </FluentBadge>
+                                <FluentBadge BackgroundColor="var(--neutral-layer-3)">
+                                    <FluentIcon Value="@(new Icons.Regular.Size12.Person())" /> @wishlist.Owner?.Email
+                                </FluentBadge>
+                            </FluentStack>
+                            <FluentDivider Style="width: 100%;" Role="DividerRole.Presentation" />
+                            <FluentStack Orientation="Orientation.Horizontal">
+                                <FluentButton Appearance="Appearance.Accent" IconStart="@(new Icons.Regular.Size16.Eye())" OnClick="@(() => ViewWishlist(wishlist.Id))">
+                                    View
+                                </FluentButton>
+                            </FluentStack>
+                        </FluentStack>
+                    </FluentCard>
+                </FluentGridItem>
+            }
+        </FluentGrid>
     }
 }
 
