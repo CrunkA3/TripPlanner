@@ -169,6 +169,10 @@
                                             {
                                                 <FluentLabel Style="font-size: 0.8em;">📍 @acc.Address</FluentLabel>
                                             }
+                                            @if (!string.IsNullOrEmpty(acc.Link))
+                                            {
+                                                <FluentLabel Style="font-size: 0.8em;">🔗 <a href="@acc.Link" target="_blank" rel="noopener noreferrer">@acc.Link</a></FluentLabel>
+                                            }
                                             @if (acc.PlannedCheckIn.HasValue)
                                             {
                                                 <FluentLabel Style="font-size: 0.8em;">🏨 Check-in: @acc.PlannedCheckIn.Value.ToString("dd.MM.yyyy HH:mm")</FluentLabel>
@@ -248,6 +252,7 @@
                 </FluentStack>
                 <FluentNumberField @bind-Value="@EditingAccommodation.Latitude" Label="Latitude" Step="0.0001" Style="width: 100%;" />
                 <FluentNumberField @bind-Value="@EditingAccommodation.Longitude" Label="Longitude" Step="0.0001" Style="width: 100%;" />
+                <FluentTextField @bind-Value="@EditingAccommodation.Link" Label="Link" Style="width: 100%;" />
                 <FluentTextArea @bind-Value="@EditingAccommodation.Notes" Label="Notes" Rows="2" Style="width: 100%;" />
             </FluentStack>
         }
@@ -698,6 +703,7 @@
             LatestCheckOut = acc.LatestCheckOut,
             Latitude = acc.Latitude,
             Longitude = acc.Longitude,
+            Link = acc.Link,
             Notes = acc.Notes,
             CreatedAt = acc.CreatedAt,
             UpdatedAt = acc.UpdatedAt

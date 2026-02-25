@@ -21,6 +21,8 @@ public class Accommodation
     public double Latitude { get; set; }
     public double Longitude { get; set; }
 
+    public string? Link { get; set; }
+
     public string? Notes { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
