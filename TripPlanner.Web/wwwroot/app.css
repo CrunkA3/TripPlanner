@@ -339,3 +339,24 @@ table {
         vertical-align: middle;
         border-bottom: calc(var(--stroke-width) * 1px) solid var(--neutral-stroke-divider-rest);
     }
+
+/* Cookie consent banner */
+.cookie-consent {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 1.5rem;
+    background: var(--neutral-layer-2);
+    color: var(--neutral-foreground-rest);
+    border-top: calc(var(--stroke-width) * 1px) solid var(--neutral-stroke-rest);
+    flex-wrap: wrap;
+}
+
+.cookie-consent a {
+    color: var(--accent-foreground-rest);
+}

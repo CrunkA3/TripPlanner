@@ -1,0 +1,34 @@
+@rendermode InteractiveServer
+@inject IJSRuntime JSRuntime
+
+@if (_visible)
+{
+    <div class="cookie-consent" role="region" aria-label="Cookie consent">
+        <span>
+            This site uses strictly necessary cookies for authentication and security.
+            By continuing to use TripPlanner you agree to our
+            <a href="/privacy">Privacy Policy</a>.
+        </span>
+        <FluentButton Appearance="Appearance.Accent" @onclick="Accept">Accept</FluentButton>
+    </div>
+}
+
+@code {
+    private bool _visible;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var accepted = await JSRuntime.InvokeAsync<string?>("cookieConsent.getItem");
+            _visible = accepted != "accepted";
+            StateHasChanged();
+        }
+    }
+
+    private async Task Accept()
+    {
+        await JSRuntime.InvokeVoidAsync("cookieConsent.setItem");
+        _visible = false;
+    }
+}

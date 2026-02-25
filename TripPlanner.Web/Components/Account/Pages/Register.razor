@@ -35,6 +35,10 @@
                 <FluentValidationMessage For="() => Input.Password" class="text-danger" />
                 <FluentTextField type="password" Name="Input.ConfirmPassword" @bind-Value="Input.ConfirmPassword" AutoComplete="new-password" Required="true" Placeholder="password" Label="Confirm Password" Style="width: 100%" />
                 <FluentValidationMessage For="() => Input.ConfirmPassword" class="text-danger" />
+                <FluentCheckbox Name="Input.AcceptPrivacyPolicy" @bind-Value="Input.AcceptPrivacyPolicy" Label="" Required="true">
+                    I have read and agree to the <a href="/privacy" target="_blank">Privacy Policy</a>. <span aria-hidden="true" style="color:red">*</span>
+                </FluentCheckbox>
+                <FluentValidationMessage For="() => Input.AcceptPrivacyPolicy" class="text-danger" />
                 <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Style="width: 100%">Log in</FluentButton>
             </FluentStack>
         </EditForm>
@@ -140,5 +144,10 @@
         [Display(Name = "Confirm password")]
         [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
         public string ConfirmPassword { get; set; } = "";
+
+        [Required(ErrorMessage = "You must accept the Privacy Policy to register.")]
+        [Range(typeof(bool), "true", "true", ErrorMessage = "You must accept the Privacy Policy to register.")]
+        [Display(Name = "Privacy Policy")]
+        public bool AcceptPrivacyPolicy { get; set; }
     }
 }
