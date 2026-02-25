@@ -36,6 +36,7 @@ bld/
 **/obj/
 # Also ignore Windows-style path artifacts on Linux
 TripPlanner.Web/bin\Debug/
+"TripPlanner.Web/bin\Debug/"
 
 # Visual Studio 2015/2017 cache/options directory
 .vs/
