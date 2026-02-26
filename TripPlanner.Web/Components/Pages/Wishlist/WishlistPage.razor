@@ -1,14 +1,18 @@
 @page "/wishlist"
 
+@using Microsoft.AspNetCore.Authorization
 @using TripPlanner.Web.Models
 @using TripPlanner.Web.Repositories
 @using TripPlanner.Web.Services
 @using TripPlanner.Web.Components.Shared
 @using static TripPlanner.Web.Components.Shared.GpxFileUpload
 
+@attribute [Authorize]
+
 @inject IPlaceRepository PlaceRepository
 @inject IGpxRepository GpxRepository
 @inject GpxService GpxService
+@inject UserService UserService
 
 @rendermode InteractiveServer
 
@@ -152,6 +156,8 @@
     private string NewTag { get; set; } = string.Empty;
     private string _selectedCategoryString = string.Empty;
 
+    private ApplicationUser? CurrentUser { get; set; }
+
     private void OnCategoryChanged(string value)
     {
         _selectedCategoryString = value;
@@ -163,14 +169,18 @@
 
     protected override async Task OnInitializedAsync()
     {
+        CurrentUser = await UserService.GetCurrentUserAsync();
+
         await LoadPlaces();
         await LoadGpxTracks();
     }
 
     private async Task LoadPlaces()
     {
+        if (CurrentUser is null) return;
+
         IsLoading = true;
-        Places = await PlaceRepository.GetAllWithAnyWishlistAsync();
+        Places = await PlaceRepository.GetAllWithAnyWishlistAsync(CurrentUser.Id);
         IsLoading = false;
     }
 

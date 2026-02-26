@@ -4,12 +4,12 @@ namespace TripPlanner.Web.Repositories;
 
 public interface IPlaceRepository
 {
-    Task<List<Place>> GetAllAsync();
-    Task<List<Place>> GetAllWithAnyWishlistAsync();
+    Task<List<Place>> GetAllByUserAsync(string userId);
+    Task<List<Place>> GetAllWithAnyWishlistAsync(string userId);
     Task<List<Place>> GetAllForTripAsync(string tripId);
 
 
-    Task<Place?> GetByIdAsync(string id);
+    Task<Place?> GetByIdAsync(string id, string userId);
     Task<Place> AddAsync(Place place);
     Task<Place> UpdateAsync(Place place);
     Task DeleteAsync(string id);

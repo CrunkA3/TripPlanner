@@ -234,13 +234,14 @@
             var ownedTrips = await TripRepository.GetByOwnerAsync(CurrentUserId);
             var sharedTrips = await TripRepository.GetSharedWithUserAsync(CurrentUserId);
             Trips = ownedTrips.Concat(sharedTrips).ToList();
+            AllPlaces = await PlaceRepository.GetAllByUserAsync(currentUserId);
         }
         else
         {
             Trips = new List<Trip>();
+            AllPlaces = new List<Place>();
         }
         
-        AllPlaces = await PlaceRepository.GetAllAsync();
         
         // Load place details for all trips
         foreach (var trip in Trips)
