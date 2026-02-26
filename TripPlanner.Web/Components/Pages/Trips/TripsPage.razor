@@ -234,7 +234,7 @@
             var ownedTrips = await TripRepository.GetByOwnerAsync(CurrentUserId);
             var sharedTrips = await TripRepository.GetSharedWithUserAsync(CurrentUserId);
             Trips = ownedTrips.Concat(sharedTrips).ToList();
-            AllPlaces = await PlaceRepository.GetAllByUserAsync(currentUserId);
+            AllPlaces = await PlaceRepository.GetAllByUserAsync(CurrentUserId);
         }
         else
         {
