@@ -3,9 +3,11 @@
 
 @using TripPlanner.Web.Models
 @using TripPlanner.Web.Repositories
+@using TripPlanner.Web.Services
 
 @inject IPlaceRepository PlaceRepository
 @inject IHttpClientFactory HttpClientFactory
+@inject UserService UserService
 
 
 <FluentDialogHeader>
@@ -66,7 +68,16 @@
     private string _fileInputId = $"img-upload-{Guid.NewGuid():N}";
     private const long MaxImageSizeBytes = 5 * 1024 * 1024;
 
+    private ApplicationUser? CurrentUser { get; set; }
+
     [Inject] private IJSRuntime JS { get; set; } = default!;
+
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        CurrentUser = await UserService.GetCurrentUserAsync();
+    }
 
     protected override void OnParametersSet()
     {
@@ -170,10 +181,13 @@
 
     private async Task SavePlace()
     {
+        if (CurrentUser is null)
+            return;
+
         if (Content == null || string.IsNullOrWhiteSpace(Content.Name))
             return;
 
-        var dbPlace = await PlaceRepository.GetByIdAsync(Content.Id);
+        var dbPlace = await PlaceRepository.GetByIdAsync(Content.Id, CurrentUser.Id);
 
         if (dbPlace is null)
         {

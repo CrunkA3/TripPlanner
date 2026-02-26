@@ -1,28 +1,43 @@
 using Microsoft.EntityFrameworkCore;
 using TripPlanner.Web.Data;
 using TripPlanner.Web.Models;
+using TripPlanner.Web.Services;
 
 namespace TripPlanner.Web.Repositories;
 
-public class EfPlaceRepository : IPlaceRepository
+public class PlaceRepository : IPlaceRepository
 {
     private readonly ApplicationDbContext _context;
 
-    public EfPlaceRepository(ApplicationDbContext context)
+    public PlaceRepository(ApplicationDbContext context)
     {
         _context = context;
     }
 
-    public async Task<List<Place>> GetAllAsync()
+    public async Task<List<Place>> GetAllByUserAsync(string userId)
     {
-        return await _context.Places
+        var sharedWishlists = _context.UserWishlists
+            .Where(w => w.UserId == userId);
+
+        var tripPlaces = _context.Trips
+            .Include(t => t.Days)
+            .ThenInclude(td => td.Places)
+            .Where(t => t.OwnerId == userId)
+            .SelectMany(t => t.Days.SelectMany(d => d.Places.Select(tp => tp.PlaceId)));
+
+        var query = _context.Places
             .Include(p => p.Wishlist)
-            .Include(p => p.Trip)
-            .ToListAsync();
+            .Where(p => p.Wishlist != null && (
+                            p.Wishlist.OwnerId == userId ||
+                            sharedWishlists.Any(swl => swl.WishlistId == p.WishlistId) ||
+                            tripPlaces.Any(placeId => placeId == p.Id)))
+            .Include(p => p.Trip);
+
+        return await query.ToListAsync();
     }
 
 
-    public async Task<List<Place>> GetAllWithAnyWishlistAsync()
+    public async Task<List<Place>> GetAllWithAnyWishlistAsync(string userId)
     {
         return await _context.Places
             .Where(p => p.WishlistId != null)
@@ -38,7 +53,7 @@ public class EfPlaceRepository : IPlaceRepository
             .ToListAsync();
     }
 
-    public async Task<Place?> GetByIdAsync(string id)
+    public async Task<Place?> GetByIdAsync(string id, string userId)
     {
         return await _context.Places
             .Include(p => p.Wishlist)
@@ -79,7 +94,7 @@ public class EfPlaceRepository : IPlaceRepository
             query = query.Where(p => p.Category == category.Value);
         }
 
-        if (tags != null && tags.Any())
+        if (tags != null && tags.Count != 0)
         {
             foreach (var tag in tags)
             {

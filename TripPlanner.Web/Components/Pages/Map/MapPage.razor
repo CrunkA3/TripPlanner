@@ -1,5 +1,6 @@
 @page "/map"
 
+@using Microsoft.AspNetCore.Authorization
 @using TripPlanner.Web.Models
 @using TripPlanner.Web.Repositories
 @using TripPlanner.Web.Services
@@ -10,6 +11,8 @@
 @inject IGpxRepository GpxRepository
 @inject IJSRuntime JSRuntime
 @inject UserService UserService
+
+@attribute [Authorize]
 
 @implements IAsyncDisposable
 
@@ -193,7 +196,7 @@
         {
             await InitializeMap();
             await UpdateMapContent();
-        
+
 
             // Listen for changes
             await JSRuntime.InvokeVoidAsync("screenOrientationHelper.onOrientationChange", DotNetObjectReference.Create(this));
@@ -224,9 +227,14 @@
     private async Task LoadMapData()
     {
         IsLoading = true;
-        
+
         CurrentUser = await UserService.GetCurrentUserAsync();
-        Places = await PlaceRepository.GetAllAsync();
+
+        if (CurrentUser is not null)
+        {
+            Places = await PlaceRepository.GetAllByUserAsync(CurrentUser.Id);
+        }
+
         Trips = await TripRepository.GetAllAsync();
         GpxTracks = await GpxRepository.GetAllAsync();
         

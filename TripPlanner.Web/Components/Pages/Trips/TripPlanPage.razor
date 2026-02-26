@@ -474,15 +474,17 @@
     {
         IsLoading = true;
 
-        var currentUserId = await UserService.GetCurrentUserIdAsync();
 
         PlanningTrip = await TripRepository.GetByIdAsync(TripId);
 
         
         CurrentUser = await UserService.GetCurrentUserAsync();
-        var wishListPlaces = await PlaceRepository.GetAllWithAnyWishlistAsync();
-        var tripPlaces = await PlaceRepository.GetAllForTripAsync(TripId);
-        AllPlaces = wishListPlaces.UnionBy(tripPlaces, p => p.Id).ToList();
+        if (CurrentUser is not null)
+        {
+            var wishListPlaces = await PlaceRepository.GetAllWithAnyWishlistAsync(CurrentUser.Id);
+            var tripPlaces = await PlaceRepository.GetAllForTripAsync(TripId);
+            AllPlaces = wishListPlaces.UnionBy(tripPlaces, p => p.Id).ToList();
+        }
 
         // Load place details for all trips
         if (PlanningTrip != null)
