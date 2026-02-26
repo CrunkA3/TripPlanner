@@ -3,7 +3,7 @@
     @foreach (var place in Places)
     {
         <FluentGridItem xs="12" md="6" lg="3" xl="2" xxl="2">
-            <div class="place-card">
+            <div class="place-card @GetCategoryClass(place.Category)">
                 <div class="place-card-image-header">
                     @if (HasValidImage(place))
                     {
