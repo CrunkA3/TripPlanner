@@ -16,7 +16,7 @@ public class PlaceRepository : IPlaceRepository
 
     public async Task<List<Place>> GetAllByUserAsync(string userId)
     {
-        var sharedWishlists = _context.UserWishlists
+        var userWishlists = _context.UserWishlists
             .Where(w => w.UserId == userId);
 
         var tripPlaces = _context.Trips
@@ -28,8 +28,7 @@ public class PlaceRepository : IPlaceRepository
         var query = _context.Places
             .Include(p => p.Wishlist)
             .Where(p => p.Wishlist != null && (
-                            p.Wishlist.OwnerId == userId ||
-                            sharedWishlists.Any(swl => swl.WishlistId == p.WishlistId) ||
+                            userWishlists.Any(swl => swl.WishlistId == p.WishlistId) ||
                             tripPlaces.Any(placeId => placeId == p.Id)))
             .Include(p => p.Trip);
 
@@ -42,6 +41,7 @@ public class PlaceRepository : IPlaceRepository
         return await _context.Places
             .Where(p => p.WishlistId != null)
             .Include(p => p.Wishlist)
+            .ThenInclude(wl => wl!.SharedWith)
             .ToListAsync();
     }
 

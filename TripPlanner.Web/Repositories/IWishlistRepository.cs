@@ -5,7 +5,6 @@ namespace TripPlanner.Web.Repositories;
 public interface IWishlistRepository
 {
     Task<List<Wishlist>> GetAllByUserAsync(string userId);
-    Task<List<Wishlist>> GetSharedWithUserAsync(string userId);
     Task<Wishlist?> GetByIdAsync(string id);
     Task<Wishlist> AddAsync(Wishlist wishlist);
     Task<Wishlist> UpdateAsync(Wishlist wishlist);
@@ -13,4 +12,7 @@ public interface IWishlistRepository
     Task ShareWithUserAsync(string wishlistId, string userId);
     Task UnshareWithUserAsync(string wishlistId, string userId);
     Task<bool> CanUserAccessAsync(string wishlistId, string userId);
+    Task<bool> CanUserEditAsync(string wishlistId, string userId);
+    Task<bool> CanUserAdministrateAsync(string wishlistId, string userId);
+
 }

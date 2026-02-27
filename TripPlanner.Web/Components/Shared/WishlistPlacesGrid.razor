@@ -1,9 +1,13 @@
 ﻿@using TripPlanner.Web.Models
+@using TripPlanner.Web.Services
+
+@inject UserService UserService
+
 <FluentGrid Spacing="3" Justify="JustifyContent.FlexStart">
     @foreach (var place in Places)
     {
         <FluentGridItem xs="12" md="6" lg="3" xl="2" xxl="2">
-            <div class="place-card @GetCategoryClass(place.Category)">
+            <div class="place-card" style="@("border-top-color: " + GetCategoryColor(place.Category))">
                 <div class="place-card-image-header">
                     @if (HasValidImage(place))
                     {
@@ -57,7 +61,7 @@
                     </div>
                 </div>
 
-                @if (OnEditPlace.HasDelegate || OnDeletePlace.HasDelegate)
+                @if (CanEdit && place.Wishlist is not null && place.Wishlist.SharedWith.Any(sw => sw.Level <= ShareLevel.Editor && sw.UserId == currentUserId) && (OnEditPlace.HasDelegate || OnDeletePlace.HasDelegate))
                 {
                     <hr class="place-card-divider" />
                     <div class="place-card-footer">
@@ -70,7 +74,7 @@
                         <FluentSpacer />
                         @if (OnDeletePlace.HasDelegate)
                         {
-                            <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size16.Delete())" OnClick="@(() => OnDeletePlace.InvokeAsync(place.Id))">
+                            <FluentButton Appearance="Appearance.Lightweight" Color="var(--error)" IconStart="@(new Icons.Regular.Size16.Delete().WithColor(Color.Error))" OnClick="@(() => OnDeletePlace.InvokeAsync(place.Id))">
                                 Delete
                             </FluentButton>
                         }
@@ -86,6 +90,9 @@
     [Parameter, EditorRequired]
     public IEnumerable<Place> Places { get; set; } = default!;
 
+    [Parameter, EditorRequired]
+    public bool CanEdit { get; set; } = false;
+
     [Parameter]
     public EventCallback<Place> OnEditPlace { get; set; }
 
@@ -93,6 +100,13 @@
     public EventCallback<string> OnDeletePlace { get; set; }
 
     private Dictionary<string, string> _imageSrcCache = new();
+
+    private string? currentUserId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentUserId = await UserService.GetCurrentUserIdAsync();
+    }
 
     protected override void OnParametersSet()
     {
@@ -115,40 +129,42 @@
 
     private string GetCategoryClass(PlaceCategory category) => category switch
     {
-        PlaceCategory.Viewpoint     => "place-cat-viewpoint",
-        PlaceCategory.Museum        => "place-cat-museum",
-        PlaceCategory.Restaurant    => "place-cat-restaurant",
-        PlaceCategory.Nature        => "place-cat-nature",
-        PlaceCategory.Activity      => "place-cat-activity",
+        PlaceCategory.Viewpoint => "place-cat-viewpoint",
+        PlaceCategory.Museum => "place-cat-museum",
+        PlaceCategory.Restaurant => "place-cat-restaurant",
+        PlaceCategory.Nature => "place-cat-nature",
+        PlaceCategory.Activity => "place-cat-activity",
         PlaceCategory.Accommodation => "place-cat-accommodation",
-        PlaceCategory.Shopping      => "place-cat-shopping",
+        PlaceCategory.Shopping => "place-cat-shopping",
         PlaceCategory.Entertainment => "place-cat-entertainment",
-        _                           => "place-cat-other",
+        _ => "place-cat-other",
     };
 
     private string GetCategoryColor(PlaceCategory category) => category switch
     {
-        PlaceCategory.Viewpoint     => "#6a11cb",
-        PlaceCategory.Museum        => "#b06000",
-        PlaceCategory.Restaurant    => "#c0392b",
-        PlaceCategory.Nature        => "#1a7a32",
-        PlaceCategory.Activity      => "#0052cc",
+        PlaceCategory.Viewpoint => "#6a11cb",
+        PlaceCategory.Museum => "#b06000",
+        PlaceCategory.Restaurant => "#c0392b",
+        PlaceCategory.Nature => "#1a7a32",
+        PlaceCategory.Activity => "#0052cc",
         PlaceCategory.Accommodation => "#00695c",
-        PlaceCategory.Shopping      => "#ad1457",
+        PlaceCategory.Shopping => "#ad1457",
         PlaceCategory.Entertainment => "#e65100",
-        _                           => "#616161",
+        _ => "#616161",
     };
 
     private Icon GetCategoryIcon(PlaceCategory category) => category switch
     {
-        PlaceCategory.Viewpoint     => new Icons.Regular.Size32.Globe(),
-        PlaceCategory.Museum        => new Icons.Regular.Size32.Building(),
-        PlaceCategory.Restaurant    => new Icons.Regular.Size32.Food(),
-        PlaceCategory.Nature        => new Icons.Regular.Size32.LeafTwo(),
-        PlaceCategory.Activity      => new Icons.Regular.Size32.Run(),
+        PlaceCategory.Viewpoint => new Icons.Regular.Size32.Globe(),
+        PlaceCategory.Museum => new Icons.Regular.Size32.Building(),
+        PlaceCategory.Restaurant => new Icons.Regular.Size32.Food(),
+        PlaceCategory.Nature => new Icons.Regular.Size32.LeafTwo(),
+        PlaceCategory.Activity => new Icons.Regular.Size32.Run(),
         PlaceCategory.Accommodation => new Icons.Regular.Size32.BuildingHome(),
-        PlaceCategory.Shopping      => new Icons.Regular.Size32.ShoppingBag(),
+        PlaceCategory.Shopping => new Icons.Regular.Size32.ShoppingBag(),
         PlaceCategory.Entertainment => new Icons.Regular.Size32.StarEmphasis(),
-        _                           => new Icons.Regular.Size32.LocationArrow(),
+        _ => new Icons.Regular.Size32.LocationArrow(),
     };
+
+
 }

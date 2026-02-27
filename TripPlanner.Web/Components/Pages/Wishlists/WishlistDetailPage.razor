@@ -16,7 +16,7 @@
 
 @rendermode InteractiveServer
 
-<PageTitle>@wishlist?.Name ?? "Wishlist"</PageTitle>
+<PageTitle>@(wishlist?.Name ?? "Wishlist")</PageTitle>
 
 @if (wishlist == null)
 {
@@ -32,26 +32,27 @@ else
 {
     <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Stretch" Width="100%">
         <FluentToolbar>
-            <FluentButton Appearance="Appearance.Lightweight" OnClick="@(() => NavigationManager.NavigateTo("/wishlists"))">
-                <FluentIcon Value="@(new Icons.Regular.Size20.ArrowLeft())" Slot="start" />
+            <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size20.ArrowLeft())" OnClick="@(() => NavigationManager.NavigateTo("/wishlists"))">
                 Back to Wishlists
             </FluentButton>
             <FluentSpacer />
             <FluentLabel Typo="Typography.H3">
-                <FluentIcon Value="@(new Icons.Regular.Size24.Heart())" Color="Color.Accent" />
+                <FluentIcon Icon="Icons.Regular.Size24.Heart" Color="Color.Accent" />
                 @wishlist.Name
             </FluentLabel>
             <FluentSpacer />
-            <FluentButton Appearance="Appearance.Accent" OnClick="@ShowAddPlaceDialog">
-                <FluentIcon Value="@(new Icons.Regular.Size20.Add())" Slot="start" />
-                Add Place
-            </FluentButton>
+            @if (canEdit)
+            {
+                <FluentButton Appearance="Appearance.Accent" IconStart="@(new Icons.Regular.Size20.Add())" OnClick="@ShowAddPlaceDialog">
+                    Add Place
+                </FluentButton>
+            }
         </FluentToolbar>
 
         @if (!string.IsNullOrEmpty(wishlist.Description))
         {
             <FluentCard>
-                <p>@wishlist.Description</p>
+                <FluentLabel>@wishlist.Description</FluentLabel>
             </FluentCard>
         }
 
@@ -67,7 +68,7 @@ else
         }
         else
         {
-            <WishlistItems Places="places" OnEditPlace="EditPlace" OnDeletePlace="DeletePlace" />
+            <WishlistPlacesGrid Places="places" CanEdit="@canEdit" OnEditPlace="EditPlace" OnDeletePlace="DeletePlace" />
         }
     </FluentStack>
 }
@@ -83,6 +84,7 @@ else
     private Wishlist? wishlist;
     private List<Place>? places;
     private bool canAccess;
+    private bool canEdit;
     private string? currentUserId;
 
 
@@ -106,6 +108,7 @@ else
             canAccess = await WishlistRepository.CanUserAccessAsync(WishlistId, currentUserId);
             if (canAccess)
             {
+                canEdit = await WishlistRepository.CanUserEditAsync(WishlistId, currentUserId);
                 await LoadPlaces();
             }
         }

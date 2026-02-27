@@ -56,7 +56,7 @@
     {
         <FluentProgressRing />
     }
-    else if (!Places.Any())
+    else if (FilteredPlaces is null || !FilteredPlaces.Any())
     {
         <FluentCard>
             <FluentStack HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
@@ -67,7 +67,7 @@
     }
     else
     {
-        <WishlistItems Places="Places" OnEditPlace="EditPlace" OnDeletePlace="DeletePlace" />
+        <WishlistPlacesGrid CanEdit="true" Places="FilteredPlaces" OnEditPlace="EditPlace" OnDeletePlace="DeletePlace" />
     }
 </FluentStack>
 
@@ -144,7 +144,11 @@
 
 @code {
 
-    private List<Place> Places { get; set; } = new();
+    private IQueryable<Place>? Places { get; set; }
+    private IQueryable<Place>? FilteredPlaces => Places?
+        .Where(p => !FilterCategory.HasValue || p.Category == FilterCategory.Value)
+        .Where(p => !FilterHasGpx.GetValueOrDefault(false) || p.GpxTrackId != null);
+
     private List<GpxTrack> GpxTracks { get; set; } = new();
     private bool IsLoading { get; set; } = true;
     private bool HideAddDialog { get; set; } = true;
@@ -180,7 +184,7 @@
         if (CurrentUser is null) return;
 
         IsLoading = true;
-        Places = await PlaceRepository.GetAllWithAnyWishlistAsync(CurrentUser.Id);
+        Places = (await PlaceRepository.GetAllWithAnyWishlistAsync(CurrentUser.Id)).AsQueryable();
         IsLoading = false;
     }
 
@@ -194,7 +198,6 @@
         IsLoading = true;
         FilterCategory = string.IsNullOrEmpty(FilterCategoryString) ? null : Enum.Parse<PlaceCategory>(FilterCategoryString);
         FilterHasGpx = FilterHasGpxValue ? true : (bool?)null;
-        Places = await PlaceRepository.FilterAsync(FilterCategory, null, FilterHasGpx);
         IsLoading = false;
     }
 
@@ -243,7 +246,7 @@
     {
         if (EditingPlace == null) return;
 
-        if (string.IsNullOrEmpty(EditingPlace.Id) || !Places.Any(p => p.Id == EditingPlace.Id))
+        if (string.IsNullOrEmpty(EditingPlace.Id) || (Places is not null && !Places.Any(p => p.Id == EditingPlace.Id)))
         {
             await PlaceRepository.AddAsync(EditingPlace);
         }
