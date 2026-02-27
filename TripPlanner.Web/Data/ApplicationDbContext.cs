@@ -26,11 +26,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         base.OnModelCreating(modelBuilder);
 
         // Configure Wishlist
-        modelBuilder.Entity<Wishlist>()
-            .HasOne(w => w.Owner)
-            .WithMany(u => u.Wishlists)
-            .HasForeignKey(w => w.OwnerId)
-            .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<Wishlist>();
 
         // Configure UserWishlist (many-to-many relationship)
         modelBuilder.Entity<UserWishlist>()

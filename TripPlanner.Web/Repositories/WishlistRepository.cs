@@ -16,21 +16,13 @@ public class WishlistRepository : IWishlistRepository
     public async Task<List<Wishlist>> GetAllByUserAsync(string userId)
     {
         return await _context.Wishlists
-            .Where(w => w.OwnerId == userId)
+            .Include(wl => wl.SharedWith)
+            .Where(ul => ul.SharedWith.Any(sw => sw.UserId == userId))
             .Include(w => w.Places)
             .Include(w => w.SharedWith)
             .ToListAsync();
     }
 
-    public async Task<List<Wishlist>> GetSharedWithUserAsync(string userId)
-    {
-        return await _context.UserWishlists
-            .Where(uw => uw.UserId == userId)
-            .Include(uw => uw.Wishlist)
-                .ThenInclude(w => w!.Places)
-            .Select(uw => uw.Wishlist!)
-            .ToListAsync();
-    }
 
     public async Task<Wishlist?> GetByIdAsync(string id)
     {
@@ -95,9 +87,19 @@ public class WishlistRepository : IWishlistRepository
 
     public async Task<bool> CanUserAccessAsync(string wishlistId, string userId)
     {
-        return await _context.Wishlists
-            .AnyAsync(w => w.Id == wishlistId && w.OwnerId == userId)
-            || await _context.UserWishlists
+        return await _context.UserWishlists
                 .AnyAsync(uw => uw.WishlistId == wishlistId && uw.UserId == userId);
+    }
+
+    public async Task<bool> CanUserAdministrateAsync(string wishlistId, string userId)
+    {
+        return await _context.UserWishlists
+                .AnyAsync(uw => uw.WishlistId == wishlistId && uw.UserId == userId && uw.Level == ShareLevel.Owner);
+    }
+
+    public async Task<bool> CanUserEditAsync(string wishlistId, string userId)
+    {
+        return await _context.UserWishlists
+                .AnyAsync(uw => uw.WishlistId == wishlistId && uw.UserId == userId && uw.Level <= ShareLevel.Editor);
     }
 }

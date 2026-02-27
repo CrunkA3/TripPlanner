@@ -21,17 +21,17 @@
 <FluentStack Orientation="Orientation.Horizontal" Style="margin-bottom: 20px;">
     <FluentButton Appearance="Appearance.Accent" IconStart="@(new Icons.Regular.Size20.Add())" OnClick="@ShowCreateDialog">
         Create Wishlist
-        </FluentButton>
+    </FluentButton>
 </FluentStack>
 
-@if (ownedWishlists == null || sharedWishlists == null)
+@if (wishlists == null)
 {
     <FluentProgressRing>Loading...</FluentProgressRing>
 }
 else
 {
     <h2>My Wishlists</h2>
-    @if (!ownedWishlists.Any())
+    @if (!wishlists.Any())
     {
         <FluentCard class="wishlist-empty-card">
             <FluentStack HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center" Style="padding: 2rem;">
@@ -43,7 +43,7 @@ else
     else
     {
         <FluentGrid Spacing="3" Justify="JustifyContent.FlexStart" Style="margin-bottom: 30px;">
-            @foreach (var wishlist in ownedWishlists)
+            @foreach (var wishlist in wishlists)
             {
                 <FluentGridItem xs="12" sm="6" md="4" lg="3">
                     <FluentCard class="wishlist-card">
@@ -66,10 +66,10 @@ else
                                 <FluentBadge BackgroundColor="var(--accent-fill-rest)" Color="white">
                                     <FluentIcon Value="@(new Icons.Regular.Size12.Location())" /> @wishlist.Places.Count places
                                 </FluentBadge>
-                                @if (wishlist.SharedWith.Count > 0)
+                                @if (wishlist.SharedWith.Count > 1)
                                 {
                                     <FluentBadge BackgroundColor="var(--neutral-layer-3)">
-                                        <FluentIcon Value="@(new Icons.Regular.Size12.People())" /> @wishlist.SharedWith.Count shared
+                                        <FluentIcon Value="@(new Icons.Regular.Size12.People())" /> @wishlist.SharedWith.Count
                                     </FluentBadge>
                                 }
                             </FluentStack>
@@ -81,66 +81,16 @@ else
                                 <FluentButton Appearance="Appearance.Accent" IconStart="@(new Icons.Regular.Size16.Eye())" OnClick="@(() => ViewWishlist(wishlist.Id))">
                                     View
                                 </FluentButton>
-                                <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size16.Share())" OnClick="@(() => ShowShareDialog(wishlist))">
-                                    Share
-                                </FluentButton>
-                                <FluentSpacer />
-                                <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size16.Delete())" OnClick="@(() => DeleteWishlist(wishlist.Id))">
-                                    Delete
-                                </FluentButton>
-                            </FluentStack>
-                        </FluentStack>
-                    </FluentCard>
-                </FluentGridItem>
-            }
-        </FluentGrid>
-    }
-
-    <h2>Shared With Me</h2>
-    @if (!sharedWishlists.Any())
-    {
-        <FluentCard class="wishlist-empty-card">
-            <FluentStack HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center" Style="padding: 2rem;">
-                <FluentIcon Value="@(new Icons.Regular.Size48.People())" Color="Color.Neutral" />
-                <FluentLabel Typo="Typography.Body">No wishlists have been shared with you yet.</FluentLabel>
-            </FluentStack>
-        </FluentCard>
-    }
-    else
-    {
-        <FluentGrid Spacing="3" Justify="JustifyContent.FlexStart">
-            @foreach (var wishlist in sharedWishlists)
-            {
-                <FluentGridItem xs="12" sm="6" md="4" lg="3">
-                    <FluentCard class="wishlist-card wishlist-card--shared">
-                        <FluentStack Orientation="Orientation.Vertical" Style="height: 100%;">
-                            <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
-                                <FluentIcon Value="@(new Icons.Regular.Size24.HeartCircle())" Color="Color.Accent" />
-                                <FluentLabel Typo="Typography.Subject" Weight="FontWeight.Bold" Style="margin-left: 0.5rem; flex: 1;">@wishlist.Name</FluentLabel>
-                            </FluentStack>
-                            <FluentDivider Style="width: 100%;" Role="DividerRole.Presentation" />
-                            @if (!string.IsNullOrEmpty(wishlist.Description))
-                            {
-                                <FluentLabel Typo="Typography.Body" Style="flex: 1;">@wishlist.Description</FluentLabel>
-                            }
-                            else
-                            {
-                                <FluentLabel Typo="Typography.Body" Style="flex: 1; color: var(--neutral-foreground-hint); font-style: italic;">No description</FluentLabel>
-                            }
-                            <FluentSpacer />
-                            <FluentStack Orientation="Orientation.Horizontal" Wrap="true" Style="gap: 0.4rem;">
-                                <FluentBadge BackgroundColor="var(--accent-fill-rest)" Color="white">
-                                    <FluentIcon Value="@(new Icons.Regular.Size12.Location())" /> @wishlist.Places.Count places
-                                </FluentBadge>
-                                <FluentBadge BackgroundColor="var(--neutral-layer-3)">
-                                    <FluentIcon Value="@(new Icons.Regular.Size12.Person())" /> @wishlist.Owner?.Email
-                                </FluentBadge>
-                            </FluentStack>
-                            <FluentDivider Style="width: 100%;" Role="DividerRole.Presentation" />
-                            <FluentStack Orientation="Orientation.Horizontal">
-                                <FluentButton Appearance="Appearance.Accent" IconStart="@(new Icons.Regular.Size16.Eye())" OnClick="@(() => ViewWishlist(wishlist.Id))">
-                                    View
-                                </FluentButton>
+                                @if (wishlist.SharedWith.Any(wl => wl.UserId == currentUserId && wl.Level == ShareLevel.Owner))
+                                {
+                                    <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size16.Share())" OnClick="@(() => ShowShareDialog(wishlist))">
+                                        Share
+                                    </FluentButton>
+                                    <FluentSpacer />
+                                    <FluentButton Appearance="Appearance.Lightweight" Color="var(--error)" IconStart="@(new Icons.Regular.Size16.Delete().WithColor(Color.Error))" OnClick="@(() => DeleteWishlist(wishlist.Id))">
+                                        Delete
+                                    </FluentButton>
+                                }
                             </FluentStack>
                         </FluentStack>
                     </FluentCard>
@@ -176,10 +126,9 @@ else
 </FluentDialog>
 
 @code {
-    private List<Wishlist>? ownedWishlists;
-    private List<Wishlist>? sharedWishlists;
+    private List<Wishlist>? wishlists;
     private string? currentUserId;
-    
+
     private FluentDialog? createDialog;
     private FluentDialog? shareDialog;
     private bool hideCreateDialog = true;
@@ -202,8 +151,7 @@ else
     {
         if (currentUserId != null)
         {
-            ownedWishlists = await WishlistRepository.GetAllByUserAsync(currentUserId);
-            sharedWishlists = await WishlistRepository.GetSharedWithUserAsync(currentUserId);
+            wishlists = await WishlistRepository.GetAllByUserAsync(currentUserId);
         }
     }
 
@@ -217,7 +165,7 @@ else
     {
         if (currentUserId != null)
         {
-            newWishlist.OwnerId = currentUserId;
+            newWishlist.SharedWith.Add(new UserWishlist { Level = ShareLevel.Owner, UserId = currentUserId, SharedAt = DateTime.Now });
             await WishlistRepository.AddAsync(newWishlist);
             await LoadWishlists();
             hideCreateDialog = true;
