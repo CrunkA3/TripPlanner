@@ -99,6 +99,14 @@
                     <FluentDatePicker Label="Visit Date" Value="@EditingPlace.VisitDate" ValueChanged="@(d => EditingPlace.VisitDate = d.HasValue ? d.Value.Date + (EditingPlace.VisitDate?.TimeOfDay ?? TimeSpan.Zero) : null)" Style="flex: 1;" />
                     <FluentTimePicker Label="Visit Time" Value="@EditingPlace.VisitDate" ValueChanged="@(t => EditingPlace.VisitDate = t.HasValue ? (EditingPlace.VisitDate?.Date ?? DateTime.Today) + t.Value.TimeOfDay : null)" Style="flex: 1;" />
                 </FluentStack>
+                <FluentStack Orientation="Orientation.Horizontal" Width="100%" Style="gap: 8px;">
+                    <FluentDatePicker Label="Visit Date End" Value="@EditingPlace.VisitDateEnd" ValueChanged="@(d => EditingPlace.VisitDateEnd = d.HasValue ? d.Value.Date + (EditingPlace.VisitDateEnd?.TimeOfDay ?? TimeSpan.Zero) : null)" Style="flex: 1;" />
+                    <FluentTimePicker Label="Visit Time End" Value="@EditingPlace.VisitDateEnd" ValueChanged="@(t => EditingPlace.VisitDateEnd = t.HasValue ? (EditingPlace.VisitDateEnd?.Date ?? DateTime.Today) + t.Value.TimeOfDay : null)" Style="flex: 1;" />
+                </FluentStack>
+                @if (EditingPlace.VisitDate.HasValue && EditingPlace.VisitDateEnd.HasValue && EditingPlace.VisitDateEnd < EditingPlace.VisitDate)
+                {
+                    <FluentLabel Color="Color.Error" Style="font-size: 0.875em;">Visit end date must be on or after the start date.</FluentLabel>
+                }
 
                 
                 <FluentTextField @bind-Value="@NewTag" Label="Add Tags" Placeholder="Type and press Enter"
@@ -244,6 +252,7 @@
             Tags = new List<string>(place.Tags),
             GpxTrackId = place.GpxTrackId,
             VisitDate = place.VisitDate,
+            VisitDateEnd = place.VisitDateEnd,
             CreatedAt = place.CreatedAt,
             UpdatedAt = place.UpdatedAt
         };

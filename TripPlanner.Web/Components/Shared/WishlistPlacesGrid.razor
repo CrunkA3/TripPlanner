@@ -64,7 +64,13 @@
                     {
                         <div class="place-card-location">
                             <FluentIcon Icon="Icons.Regular.Size12.Calendar" />
-                            <span>@place.VisitDate.Value.ToString("yyyy-MM-dd HH:mm")</span>
+                            <span>
+                                @place.VisitDate.Value.ToString("yyyy-MM-dd HH:mm")
+                                @if (place.VisitDateEnd.HasValue)
+                                {
+                                    <text> – @place.VisitDateEnd.Value.ToString("yyyy-MM-dd HH:mm")</text>
+                                }
+                            </span>
                         </div>
                     }
                 </div>
