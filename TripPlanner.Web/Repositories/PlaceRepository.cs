@@ -41,6 +41,7 @@ public class PlaceRepository : IPlaceRepository
         return await _context.Places
             .Where(p => p.WishlistId != null)
             .Include(p => p.Wishlist)
+            .ThenInclude(wl => wl!.SharedWith)
             .ToListAsync();
     }
 

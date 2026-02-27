@@ -1,4 +1,8 @@
 ﻿@using TripPlanner.Web.Models
+@using TripPlanner.Web.Services
+
+@inject UserService UserService
+
 <FluentGrid Spacing="3" Justify="JustifyContent.FlexStart">
     @foreach (var place in Places)
     {
@@ -57,7 +61,7 @@
                     </div>
                 </div>
 
-                @if (CanEdit && (OnEditPlace.HasDelegate || OnDeletePlace.HasDelegate))
+                @if (CanEdit && place.Wishlist is not null && place.Wishlist.SharedWith.Any(sw => sw.Level <= ShareLevel.Editor && sw.UserId == currentUserId) && (OnEditPlace.HasDelegate || OnDeletePlace.HasDelegate))
                 {
                     <hr class="place-card-divider" />
                     <div class="place-card-footer">
@@ -70,7 +74,7 @@
                         <FluentSpacer />
                         @if (OnDeletePlace.HasDelegate)
                         {
-                            <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size16.Delete())" OnClick="@(() => OnDeletePlace.InvokeAsync(place.Id))">
+                            <FluentButton Appearance="Appearance.Lightweight" Color="var(--error)" IconStart="@(new Icons.Regular.Size16.Delete().WithColor(Color.Error))" OnClick="@(() => OnDeletePlace.InvokeAsync(place.Id))">
                                 Delete
                             </FluentButton>
                         }
@@ -96,6 +100,13 @@
     public EventCallback<string> OnDeletePlace { get; set; }
 
     private Dictionary<string, string> _imageSrcCache = new();
+
+    private string? currentUserId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentUserId = await UserService.GetCurrentUserIdAsync();
+    }
 
     protected override void OnParametersSet()
     {
