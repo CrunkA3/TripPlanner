@@ -1,142 +1,148 @@
-# TripPlanner - Personal Travel and Trip Planning Application
+# TripPlanner – Persönliche Reiseplanung
 
-A modern Blazor Server application for planning trips and managing travel wishlists with **multi-user support and sharing capabilities** using .NET 10, Entity Framework Core, ASP.NET Core Identity, and Fluent UI components.
+Eine moderne **Blazor Server**-Webanwendung zur Reiseplanung und Verwaltung von Reisewunschlisten – mit **Multi-User-Unterstützung und Sharing-Funktionen** auf Basis von .NET 10, Entity Framework Core, ASP.NET Core Identity und Fluent UI Components.
+
+## Screenshots
+
+### Startseite
+![Startseite](https://github.com/user-attachments/assets/4b741916-4910-464d-8e9f-8b8d9d511401)
+
+### Registrierung
+![Registrierung](https://github.com/user-attachments/assets/21436adc-170b-4a02-8671-b8247edc7ac1)
+
+### Anmeldung
+![Anmeldung](https://github.com/user-attachments/assets/0601eaa9-e6eb-4b02-bf80-12e34f0f56c9)
+
+### Wunschlisten
+![Wunschlisten](https://github.com/user-attachments/assets/6a236f13-8d5d-4b62-a928-af2940cb847e)
+
+### Reisen
+![Reisen](https://github.com/user-attachments/assets/7e49bee7-de4b-4f4d-8a5a-20c5473c5224)
+
+---
 
 ## Features
 
-### 1. User Management & Authentication
-- **User registration and login** with ASP.NET Core Identity
-- Secure password requirements
-- Email-based user identification
-- User profile with first and last name
+### 1. Benutzerverwaltung & Authentifizierung
+- **Registrierung und Login** mit ASP.NET Core Identity
+- Sichere Passwortanforderungen
+- E-Mail-basierte Benutzeridentifikation
+- Optionale Angabe des Home-Standorts (Koordinaten + Name)
 
-### 2. Multiple Wishlists
-- **Create multiple wishlists** for different purposes (e.g., "European Destinations", "Beach Vacation Ideas")
-- Each wishlist can contain multiple places
-- Organize places by wishlist
-- **Share wishlists with other users** via email
-- View wishlists shared with you
-- Full CRUD operations on wishlists
+### 2. Wunschlisten (Wishlists)
+- **Mehrere Wunschlisten erstellen** für verschiedene Reiseziele (z. B. „Europareise 2025", „Strandurlaub-Ideen")
+- Jede Wunschliste kann mehrere Orte enthalten
+- **Wunschlisten mit anderen Nutzern teilen** (per E-Mail-Adresse)
+- Gemeinsames Anzeigen und Bearbeiten geteilter Listen
+- Vollständige CRUD-Operationen für Wunschlisten
 
-### 3. Place Management
-- Save places you want to visit with detailed information
-- Each place includes:
-  - Name and description
-  - Category (Viewpoint, Museum, Restaurant, Nature, etc.)
-  - GPS coordinates (Latitude/Longitude)
-  - Tags for organization
-  - Optional GPX track upload
-  - Association with a wishlist
-- Filter places by category, tags, or GPX track presence
-- View all places in a responsive card grid
+### 3. Orte verwalten (Places)
+- Orte mit ausführlichen Informationen speichern:
+  - Name und Beschreibung
+  - Kategorie (Aussichtspunkt, Museum, Restaurant, Natur usw.)
+  - GPS-Koordinaten (Breiten-/Längengrad)
+  - Tags zur Organisation
+  - Optionales Bild (Upload oder URL)
+  - Optionaler GPX-Track-Upload
+  - Zuordnung zu einer Wunschliste oder Reise
+- Orte nach Kategorie, Tags oder GPX-Track filtern
+- Responsive Kachel-Ansicht aller Orte
 
-### 4. Trip Planning
-- Create multi-day trips with detailed itineraries
-- **Ownership and sharing**: Each trip has an owner and can be shared with other users
-- For each trip:
-  - Add multiple days
-  - Schedule places for specific times
-  - Set duration for each activity
-  - Add notes for each place
-- Automatic trip analysis:
-  - Calculate total scheduled time
-  - Estimate travel time between locations
-  - Detect scheduling conflicts
-  - Warn about overly packed days
-- View trips you own or that have been shared with you
+### 4. Reiseplanung (Trips)
+- Mehrtägige Reisen mit detaillierten Tagesitinerarien erstellen
+- **Eigentümerschaft und Sharing**: Jede Reise hat einen Besitzer und kann mit anderen geteilt werden
+- Pro Reise:
+  - Mehrere Tage hinzufügen
+  - Orte für bestimmte Zeiten planen
+  - Dauer je Aktivität festlegen
+  - Notizen pro Ort hinterlegen
+  - Unterkünfte mit Check-in/-out-Zeiten verwalten
+- Automatische Reiseanalyse:
+  - Gesamtdauer berechnen
+  - Fahrtzeiten zwischen Orten schätzen
+  - Planungskonflikte erkennen
+  - Warnung bei überfüllten Tagen
+- Eigene und geteilte Reisen in einer Übersicht
 
-### 5. Map Visualization
-- Interactive map view (placeholder for Leaflet.js/MapLibre integration)
-- Display wishlist places and trip routes
-- Filter map content by trip selection
-- Side panel with place details
+### 5. Kartenansicht (Map)
+- Interaktive Kartenansicht (MapLibre GL JS Integration)
+- Orte der Wunschlisten und Reiserouten anzeigen
+- Karteninhalt nach Reise filtern
+- Seitenpanel mit Ortsdetails
 
-## Technical Architecture
+---
 
-### Clean Architecture
+## Technische Architektur
+
+### Projektstruktur
 ```
 TripPlanner.Web/
-├── Data/                     # Database context
+├── Data/                     # Datenbankkontext
 │   └── ApplicationDbContext.cs
-├── Models/                  # Domain entities
-│   ├── User.cs             # Identity user with custom properties
-│   ├── Wishlist.cs         # Wishlist with sharing support
-│   ├── UserWishlist.cs     # Many-to-many: User-Wishlist sharing
-│   ├── Place.cs            # Place entity with wishlist association
-│   ├── Trip.cs             # Trip with ownership
-│   ├── SharedTrip.cs       # Many-to-many: User-Trip sharing
+├── Models/                   # Domain-Entities
+│   ├── ApplicationUser.cs    # Identity-User mit zusätzlichen Eigenschaften
+│   ├── Wishlist.cs           # Wunschliste mit Sharing-Unterstützung
+│   ├── Place.cs              # Ort mit Wunschlisten-/Reisezuordnung
+│   ├── Trip.cs               # Reise mit Eigentümerschaft
+│   ├── SharedTrip.cs         # m:n User-Trip-Sharing
+│   ├── Accommodation.cs      # Unterkunft mit Check-in/-out
 │   ├── GpxTrack.cs
 │   └── PlaceCategory.cs
-├── Repositories/            # Data access layer
-│   ├── IWishlistRepository.cs
-│   ├── WishlistRepository.cs
-│   ├── IPlaceRepository.cs
-│   ├── EfPlaceRepository.cs
-│   ├── ITripRepository.cs
-│   ├── EfTripRepository.cs
-│   ├── IGpxRepository.cs
-│   └── EfGpxRepository.cs
-│   └── LocalStorage*.cs    # Browser localStorage implementations
-├── Services/                # Business logic
-│   ├── UserService.cs      # User authentication helpers
-│   ├── GpxService.cs       # GPX parsing and calculations
-│   └── RoutingService.cs   # Distance and time calculations
+├── Repositories/             # Datenzugriffsschicht
+│   ├── IWishlistRepository.cs / WishlistRepository.cs
+│   ├── IPlaceRepository.cs   / PlaceRepository.cs
+│   ├── ITripRepository.cs    / EfTripRepository.cs
+│   └── IGpxRepository.cs     / EfGpxRepository.cs
+├── Services/                 # Geschäftslogik
+│   ├── UserService.cs        # Authentifizierungs-Hilfsmethoden
+│   ├── GpxService.cs         # GPX-Parsing und Berechnungen
+│   └── RoutingService.cs     # Distanz- und Zeitberechnungen
 └── Components/
-    ├── Account/            # Authentication pages
-    │   ├── Login.razor
-    │   ├── Register.razor
-    │   └── Logout.razor
-    ├── Layout/
-    │   ├── MainLayout.razor
-    │   └── NavMenu.razor
+    ├── Account/              # Authentifizierungsseiten (Login, Register, …)
+    ├── Layout/               # MainLayout.razor, NavMenu.razor
     └── Pages/
         ├── Home.razor
-        ├── Wishlists/
-        │   ├── WishlistsPage.razor      # List and manage wishlists
-        │   └── WishlistDetailPage.razor # View and manage places in a wishlist
-        ├── Wishlist/
-        │   └── WishlistPage.razor       # (Legacy - to be updated)
-        ├── Trips/
-        │   └── TripsPage.razor
-        └── Map/
-            └── MapPage.razor
+        ├── Wishlists/        # WishlistsPage, WishlistDetailPage, WishlistAddPlaceDialog
+        ├── Trips/            # TripsPage, TripPlanPage, TripAddPlaceDialog
+        └── Map/              # MapPage
 ```
 
-### Technologies
+### Technologien
 - **Framework**: .NET 10, ASP.NET Core Blazor Server
-- **Database**: Entity Framework Core 9.0 with SQLite (development) / PostgreSQL-ready
-- **Authentication**: ASP.NET Core Identity
-- **UI Library**: Microsoft Fluent UI Blazor Components 4.13.2
-- **Mapping**: Placeholder for Leaflet.js or MapLibre GL JS integration
+- **Datenbank**: Entity Framework Core 10.0.3 mit **SQL Server**
+- **Authentifizierung**: ASP.NET Core Identity (Cookie-basiert)
+- **UI-Bibliothek**: Microsoft Fluent UI Blazor Components 4.14.0
+- **Karte**: MapLibre GL JS (Integration in MapPage)
+- **Orchestrierung**: .NET Aspire 13.0 (`TripPlanner.AppHost`)
 
-### Key Services
+### Wichtige Services
 
 #### GpxService
-- Parse GPX files (XML format)
-- Calculate track statistics:
-  - Total distance using Haversine formula
-  - Elevation gain and loss
-  - Track point analysis
+- GPX-Dateien parsen (XML-Format)
+- Track-Statistiken berechnen:
+  - Gesamtdistanz (Haversine-Formel)
+  - Höhengewinn und -verlust
+  - Track-Punkt-Analyse
 
 #### RoutingService
-- Calculate distances between places
-- Estimate travel times (default: 50 km/h)
-- Analyze trip days:
-  - Total scheduled time
-  - Travel time between locations
-  - Detect scheduling conflicts
-  - Warn about unrealistic schedules
+- Distanzen zwischen Orten berechnen
+- Fahrtzeiten schätzen (Standard: 50 km/h)
+- Tagesanalyse pro Reise:
+  - Gesamtdauer (Aktivitäten + Fahrten)
+  - Planungskonflikte erkennen
+  - Warnung bei unrealistischen Zeitplänen
 
-### Data Models
+### Datenmodelle
 
-**User** (extends IdentityUser)
+**ApplicationUser** (erweitert IdentityUser)
 ```csharp
-- Id: string (GUID - from Identity)
-- Email: string (from Identity)
-- FirstName: string?
-- LastName: string?
-- Wishlists: List<Wishlist> (owned)
-- SharedWishlists: List<UserWishlist> (shared with user)
+- Id: string (GUID – aus Identity)
+- Email: string (aus Identity)
+- HomeLatitude: double?
+- HomeLongitude: double?
+- HomeLocationName: string?
+- Wishlists: List<Wishlist>
+- SharedWishlists: List<UserWishlist>
 - OwnedTrips: List<Trip>
 - SharedTrips: List<SharedTrip>
 ```
@@ -146,9 +152,8 @@ TripPlanner.Web/
 - Id: string (GUID)
 - Name: string
 - Description: string?
-- OwnerId: string (FK to User)
 - Places: List<Place>
-- SharedWith: List<UserWishlist>
+- SharedWith: List<UserWishlist>  // inkl. ShareLevel (Owner/Viewer)
 - CreatedAt, UpdatedAt: DateTime
 ```
 
@@ -158,11 +163,12 @@ TripPlanner.Web/
 - Name: string
 - Description: string
 - Category: PlaceCategory (enum)
-- Latitude: double
-- Longitude: double
+- Latitude, Longitude: double
 - Tags: List<string>
-- GpxTrackId: string? (optional FK)
-- WishlistId: string? (optional FK to Wishlist)
+- ImageData: byte[]? / ImageContentType: string?
+- GpxTrackId: string? (optional)
+- WishlistId: string? (optional)
+- TripId: string? (optional)
 - CreatedAt, UpdatedAt: DateTime
 ```
 
@@ -172,240 +178,206 @@ TripPlanner.Web/
 - Name: string
 - Description: string
 - StartDate, EndDate: DateTime?
-- OwnerId: string (FK to User)
+- OwnerId: string (FK to ApplicationUser)
 - Days: List<TripDay>
 - UnscheduledPlaces: List<TripPlace>
+- Accommodations: List<Accommodation>
 - SharedWith: List<SharedTrip>
 - CreatedAt, UpdatedAt: DateTime
 ```
 
-**UserWishlist** (Many-to-Many: User ↔ Wishlist)
-```csharp
-- UserId: string (FK to User)
-- WishlistId: string (FK to Wishlist)
-- SharedAt: DateTime
-```
-
-**SharedTrip** (Many-to-Many: User ↔ Trip)
-```csharp
-- UserId: string (FK to User)
-- TripId: string (FK to Trip)
-- SharedAt: DateTime
-```
-
-**TripDay**
+**Accommodation**
 ```csharp
 - Id: string (GUID)
-- DayNumber: int
-- Date: DateTime?
-- Places: List<TripPlace> (ordered)
+- TripId: string (FK to Trip)
+- Name: string
+- Address: string?
+- PlannedCheckIn, PlannedCheckOut: DateTime?
+- EarliestCheckIn: TimeOnly?
+- LatestCheckOut: TimeOnly?
+- Latitude, Longitude: double
+- Link: string?
+- Notes: string?
 ```
 
-## Setup and Development
+**UserWishlist** (m:n User ↔ Wishlist)
+```csharp
+- UserId: string (FK)
+- WishlistId: string (FK)
+- Level: ShareLevel (Owner / Viewer)
+- SharedAt: DateTime
+```
 
-### Prerequisites
+**SharedTrip** (m:n User ↔ Trip)
+```csharp
+- UserId: string (FK)
+- TripId: string (FK)
+- SharedAt: DateTime
+```
+
+---
+
+## Einrichtung & Entwicklung
+
+### Voraussetzungen
 - .NET 10 SDK
-- Visual Studio 2022, VS Code, or Rider
-- SQLite (included with EF Core package)
+- **SQL Server** (lokal oder per Docker)
+- Visual Studio 2022, VS Code oder Rider
 
-### First Time Setup
+### Erste Schritte
 
-1. **Clone the repository**
+1. **Repository klonen**
    ```bash
    git clone <repository-url>
    cd TripPlanner
    ```
 
-2. **Initialize the database**
-   
-   The database will be automatically created and migrated on first run. Alternatively, you can manually apply migrations:
-   
+2. **SQL Server starten** (z. B. per Docker)
    ```bash
-   cd TripPlanner.Web
-   dotnet ef database update
+   docker run -d --name tripplanner-sqlserver \
+     -e "ACCEPT_EULA=Y" \
+     -e "SA_PASSWORD=YourStrong!Passw0rd" \
+     -p 1433:1433 \
+     mcr.microsoft.com/mssql/server:2022-latest
    ```
 
-3. **Run the application**
-   ```bash
-   cd TripPlanner.Web
-   dotnet run
-   ```
-
-Navigate to `https://localhost:5001` (or the port shown in console)
-
-### Database Migrations
-
-When models change, create and apply migrations:
-
-```bash
-cd TripPlanner.Web
-
-# Create a new migration
-dotnet ef migrations add <MigrationName>
-
-# Apply migrations to database
-dotnet ef database update
-
-# Revert last migration
-dotnet ef migrations remove
-```
-
-The database file `tripplanner.db` is stored in the `TripPlanner.Web` directory (excluded from git).
-
-### Database Configuration
-
-By default, the application uses SQLite. The connection string is in `appsettings.json`:
-
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Data Source=tripplanner.db"
-  }
-}
-```
-
-**For PostgreSQL** (production):
-1. Install `Npgsql.EntityFrameworkCore.PostgreSQL` package
-2. Update `Program.cs` to use PostgreSQL:
-   ```csharp
-   builder.Services.AddDbContext<ApplicationDbContext>(options =>
-       options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
-   ```
-3. Update connection string in `appsettings.json`:
+3. **Verbindungszeichenfolge anpassen** (`TripPlanner.Web/appsettings.json`):
    ```json
    {
      "ConnectionStrings": {
-       "DefaultConnection": "Host=localhost;Database=tripplanner;Username=postgres;Password=yourpassword"
+       "DefaultConnection": "Server=localhost,1433;Database=TripPlannerDb;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True;MultipleActiveResultSets=true"
+     }
+   }
+   ```
+   
+   Alternativ per lokalem SQL Server Express (Windows):
+   ```json
+   {
+     "ConnectionStrings": {
+       "DefaultConnection": "Server=(localdb)\\mssqllocaldb;Database=TripPlannerDb;Trusted_Connection=True;MultipleActiveResultSets=true"
      }
    }
    ```
 
-### Building
+4. **Anwendung starten**
+   ```bash
+   cd TripPlanner.Web
+   dotnet run
+   ```
+   
+   Migrationen werden beim ersten Start automatisch angewendet.
+
+5. Unter `http://localhost:5278` aufrufen und registrieren.
+
+### Ausführen mit .NET Aspire (orchestriert)
+```bash
+cd TripPlanner.AppHost
+dotnet run
+```
+Startet `apiservice` und `webfrontend` mit Health Checks.
+
+### Docker Compose
+```bash
+docker-compose up --build
+```
+Startet SQL Server + Webanwendung; Web erreichbar auf Port `8980` (HTTP) und `8981` (HTTPS).
+
+### Datenbankmigrationen
+Immer aus dem `TripPlanner.Web`-Verzeichnis ausführen:
+```bash
+cd TripPlanner.Web
+
+# Neue Migration erstellen
+dotnet ef migrations add <MigrationName>
+
+# Migrationen anwenden
+dotnet ef database update
+
+# Letzte Migration rückgängig machen
+dotnet ef migrations remove
+```
+
+### Build
 ```bash
 dotnet build
 ```
 
-### Running Tests
+### Tests ausführen
 ```bash
 dotnet test
 ```
+> **Hinweis**: Integrationstests nutzen `Aspire.Hosting.Testing` und benötigen eine erreichbare SQL Server-Instanz.
 
-### Current Status
+---
 
-✅ **Completed**:
-- Complete architecture and data models
-- User authentication and authorization (ASP.NET Core Identity)
-- Database persistence with Entity Framework Core (SQLite)
-- Multi-user support with ownership
-- Wishlist management with sharing capabilities
-- Trip management with sharing capabilities
-- Repository pattern with EF Core implementations
-- All services implemented with business logic
-- Three main pages (Wishlists, Trips, Map)
-- Authentication pages (Login, Register)
-- Fluent UI integration
-- Navigation with auth context
+## Aktueller Status
 
-⚠️ **Known Issues**:
-- The original WishlistPage needs to be updated or removed (replaced by WishlistsPage and WishlistDetailPage)
-- Map integration is still a placeholder
+✅ **Umgesetzt**:
+- Vollständige Architektur und Datenmodelle
+- Benutzerauthentifizierung und -autorisierung (ASP.NET Core Identity)
+- Datenbankpersistenz mit Entity Framework Core (SQL Server)
+- Multi-User-Unterstützung mit Eigentümerschaft
+- Wunschlisten-Verwaltung mit Sharing
+- Reiseplanung mit Sharing und Tagesitinerarien
+- Unterkunftsverwaltung pro Reise
+- Repository-Pattern mit EF Core
+- Alle Services mit Geschäftslogik implementiert
+- Hauptseiten: Wishlists, Trips (inkl. TripPlan), Map, Places
+- Authentifizierungsseiten (Login, Register, Profilverwaltung)
+- Fluent UI Integration
+- Parallax-Heldenbereich auf der Startseite
+- Kartenansicht mit MapLibre GL JS
 
-🔄 **To Complete**:
-1. Integrate actual map library (Leaflet.js or MapLibre)
-2. Implement GPX file upload functionality  
-3. Add drag-and-drop for trip planning
-4. Add UI for sharing trips with other users
-5. Add seed data for demonstration
-6. Comprehensive testing
-7. Deploy to production with PostgreSQL
+⚠️ **Bekannte Einschränkungen**:
+- Ältere `WishlistPage` (`/wishlist`) noch vorhanden (ersetzt durch `WishlistsPage` / `WishlistDetailPage`)
+- GPX-Datei-Upload noch nicht vollständig in der UI
 
-## Features in Detail
+🔄 **Noch ausstehend**:
+1. GPX-Upload vollständig in UI einbinden
+2. Drag-and-Drop für Tagesplanung
+3. PDF-/JSON-Export von Reisen
+4. Seed-Daten für Demo-Zwecke
+5. Umfassende Tests
 
-### Distance Calculations
-Uses the Haversine formula for accurate great-circle distance between GPS coordinates:
-```csharp
-R = 6371 km (Earth's radius)
+---
+
+## Sharing-Funktionen
+
+### Wunschlisten teilen
+1. **Wunschliste erstellen** auf der „Wishlists"-Seite
+2. **Orte hinzufügen**
+3. **Teilen**: E-Mail-Adresse des Empfängers eingeben
+4. **Empfänger** kann die geteilte Liste einsehen und bearbeiten
+5. Eigentümer-Kennzeichnung über `ShareLevel.Owner`
+
+### Reisen teilen
+- Jede Reise hat einen Eigentümer (`OwnerId`)
+- Reisen können mit anderen Nutzern geteilt werden (Dialog im Trips-Bereich)
+- Geteilte Nutzer können Reisedetails und Itinerarien einsehen
+
+---
+
+## Sicherheit
+
+- **Passwortanforderungen**: Mindestens 6 Zeichen, Groß-/Kleinbuchstaben und Ziffern erforderlich
+- **Sichere Authentifizierung** via ASP.NET Core Identity mit Cookie-basierter Authentifizierung
+- **Autorisierung**: Alle Seiten (außer Home, Login, Register) erfordern Anmeldung
+- **Datenisolation**: Nutzer sehen nur eigene oder explizit geteilte Daten
+
+---
+
+## Distanzberechnung
+
+Verwendet die Haversine-Formel für genaue Großkreisabstände zwischen GPS-Koordinaten:
+```
+R = 6371 km (Erdradius)
 a = sin²(Δlat/2) + cos(lat1) × cos(lat2) × sin²(Δlon/2)
 c = 2 × atan2(√a, √(1-a))
-distance = R × c
+Distanz = R × c
 ```
 
-### Trip Analysis
-Analyzes each trip day to provide:
-- Total time including activities and travel
-- Realistic schedule assessment
-- Conflict detection (overlapping times)
-- Warnings for overly packed days (>14 hours)
+---
 
-### Data Persistence
-All data is stored in a **relational database** (SQLite for development, PostgreSQL-ready for production):
-- User accounts and authentication data (Identity tables)
-- Wishlists with ownership and sharing relationships
-- Places associated with wishlists
-- Trips with ownership and sharing relationships
-- GPX track data
+## Lizenz
 
-Data persists across sessions and supports multi-user collaboration through sharing.
-
-## Sharing Features
-
-### Wishlist Sharing
-1. **Create a wishlist** from the "Wishlists" page
-2. **Add places** to your wishlist
-3. **Share with others** by entering their email address
-4. **Recipients** can view and contribute to the shared wishlist
-5. **View shared wishlists** in the "Shared With Me" section
-
-### Trip Sharing
-- Each trip has an owner
-- Trips can be shared with other users
-- Shared users can view trip details and itineraries
-- (UI for trip sharing coming soon)
-
-## Security
-
-- **Password requirements**: Minimum 6 characters, requires uppercase, lowercase, and digit
-- **Secure authentication** using ASP.NET Core Identity with cookie-based auth
-- **Authorization**: Protected pages require login
-- **Data isolation**: Users can only access their own data or data explicitly shared with them
-
-## Future Enhancements
-
-1. **Map Integration**
-   - Add Leaflet.js or MapLibre GL JS
-   - Display places as markers
-   - Show GPX tracks as polylines
-   - Route visualization between places
-
-2. **GPX Features**
-   - File upload with drag-and-drop
-   - Track preview and editing
-   - Export trip as GPX
-
-3. **Enhanced Planning**
-   - Drag-and-drop day planning
-   - Copy/move places between days
-  - Template trips
-
-4. **Sharing**
-   - Export trips as PDF/JSON
-   - Share via link
-   - Import/export functionality
-
-5. **Backend API**
-   - Optional cloud sync
-   - Multi-device support
-   - User accounts
-
-## Contributing
-
-This is a demonstration project showcasing:
-- Clean architecture in Blazor
-- Fluent UI component usage
-- LocalStorage data persistence
-- GPS and routing calculations
-- Modern .NET 10 features
-
-## License
-
-See LICENSE.txt for details.
+Siehe LICENSE.txt für Details.
