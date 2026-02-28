@@ -25,8 +25,8 @@ public class GpxService
         var trackPoints = doc.Descendants(ns + "trkpt").ToList();
         foreach (var trkpt in trackPoints)
         {
-            var lat = double.Parse(trkpt.Attribute("lat")?.Value ?? "0");
-            var lon = double.Parse(trkpt.Attribute("lon")?.Value ?? "0");
+            var lat = double.Parse(trkpt.Attribute("lat")?.Value ?? "0", System.Globalization.CultureInfo.InvariantCulture);
+            var lon = double.Parse(trkpt.Attribute("lon")?.Value ?? "0", System.Globalization.CultureInfo.InvariantCulture);
             var ele = trkpt.Element(ns + "ele");
             var time = trkpt.Element(ns + "time");
 
