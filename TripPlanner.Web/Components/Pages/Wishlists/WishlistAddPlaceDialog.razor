@@ -27,13 +27,14 @@
             </FluentSelect>
             <FluentNumberField @bind-Value="@Content.Latitude" Label="Latitude" Step="0.0001" Style="width: 100%;" />
             <FluentNumberField @bind-Value="@Content.Longitude" Label="Longitude" Step="0.0001" Style="width: 100%;" />
+
             <FluentStack Orientation="Orientation.Horizontal" Width="100%" Style="gap: 8px;">
-                <FluentDatePicker Label="Visit Date" Value="@Content.VisitDate" ValueChanged="@(d => Content.VisitDate = d.HasValue ? d.Value.Date + (Content.VisitDate?.TimeOfDay ?? TimeSpan.Zero) : null)" Style="flex: 1;" />
-                <FluentTimePicker Label="Visit Time" Value="@Content.VisitDate" ValueChanged="@(t => Content.VisitDate = t.HasValue ? (Content.VisitDate?.Date ?? DateTime.Today) + t.Value.TimeOfDay : null)" Style="flex: 1;" />
+                <FluentDatePicker Label="Start" Value="@Content.VisitDate" ValueChanged="@(d => Content.VisitDate = d.HasValue ? d.Value.Date + (Content.VisitDate?.TimeOfDay ?? TimeSpan.Zero) : null)" Style="flex: 1;" />
+                <FluentTimePicker Value="@Content.VisitDate" ValueChanged="@(t => Content.VisitDate = t.HasValue ? (Content.VisitDate?.Date ?? DateTime.Today) + t.Value.TimeOfDay : null)" Style="flex: 1;" />
             </FluentStack>
             <FluentStack Orientation="Orientation.Horizontal" Width="100%" Style="gap: 8px;">
-                <FluentDatePicker Label="Visit Date End" Value="@Content.VisitDateEnd" ValueChanged="@(d => Content.VisitDateEnd = d.HasValue ? d.Value.Date + (Content.VisitDateEnd?.TimeOfDay ?? TimeSpan.Zero) : null)" Style="flex: 1;" />
-                <FluentTimePicker Label="Visit Time End" Value="@Content.VisitDateEnd" ValueChanged="@(t => Content.VisitDateEnd = t.HasValue ? (Content.VisitDateEnd?.Date ?? DateTime.Today) + t.Value.TimeOfDay : null)" Style="flex: 1;" />
+                <FluentDatePicker Label="End" Value="@Content.VisitDateEnd" ValueChanged="@(d => Content.VisitDateEnd = d.HasValue ? d.Value.Date + (Content.VisitDateEnd?.TimeOfDay ?? TimeSpan.Zero) : null)" Style="flex: 1;" />
+                <FluentTimePicker Value="@Content.VisitDateEnd" ValueChanged="@(t => Content.VisitDateEnd = t.HasValue ? (Content.VisitDateEnd?.Date ?? DateTime.Today) + t.Value.TimeOfDay : null)" Style="flex: 1;" />
             </FluentStack>
             @if (Content.VisitDate.HasValue && Content.VisitDateEnd.HasValue && Content.VisitDateEnd < Content.VisitDate)
             {
