@@ -4,10 +4,13 @@
 @using TripPlanner.Web.Models
 @using TripPlanner.Web.Repositories
 @using TripPlanner.Web.Services
+@using static TripPlanner.Web.Components.Shared.GpxFileUpload
 
 @inject IPlaceRepository PlaceRepository
+@inject IGpxRepository GpxRepository
 @inject IHttpClientFactory HttpClientFactory
 @inject UserService UserService
+@inject GpxService GpxService
 
 
 <FluentDialogHeader>
@@ -25,21 +28,24 @@
                     <FluentOption TOption="string" Value="@category.ToString()">@category.ToString()</FluentOption>
                 }
             </FluentSelect>
+
+            <FluentAutocomplete TOption="string" Label="Tags" OnOptionsSearch="@OnTagSearchAsync" @bind-SelectedOptions="@SelectedTags" />
+
             <FluentNumberField @bind-Value="@Content.Latitude" Label="Latitude" Step="0.0001" Style="width: 100%;" />
             <FluentNumberField @bind-Value="@Content.Longitude" Label="Longitude" Step="0.0001" Style="width: 100%;" />
-            <FluentStack Orientation="Orientation.Horizontal" Width="100%" Style="gap: 8px;">
-                <FluentDatePicker Label="Visit Date" Value="@Content.VisitDate" ValueChanged="@(d => Content.VisitDate = d.HasValue ? d.Value.Date + (Content.VisitDate?.TimeOfDay ?? TimeSpan.Zero) : null)" Style="flex: 1;" />
-                <FluentTimePicker Label="Visit Time" Value="@Content.VisitDate" ValueChanged="@(t => Content.VisitDate = t.HasValue ? (Content.VisitDate?.Date ?? DateTime.Today) + t.Value.TimeOfDay : null)" Style="flex: 1;" />
-            </FluentStack>
-            <FluentStack Orientation="Orientation.Horizontal" Width="100%" Style="gap: 8px;">
-                <FluentDatePicker Label="Visit Date End" Value="@Content.VisitDateEnd" ValueChanged="@(d => Content.VisitDateEnd = d.HasValue ? d.Value.Date + (Content.VisitDateEnd?.TimeOfDay ?? TimeSpan.Zero) : null)" Style="flex: 1;" />
-                <FluentTimePicker Label="Visit Time End" Value="@Content.VisitDateEnd" ValueChanged="@(t => Content.VisitDateEnd = t.HasValue ? (Content.VisitDateEnd?.Date ?? DateTime.Today) + t.Value.TimeOfDay : null)" Style="flex: 1;" />
-            </FluentStack>
+
+            <FluentDatePicker Label="Start" Value="@Content.VisitDate" ValueChanged="@(d => Content.VisitDate = d.HasValue ? d.Value.Date + (Content.VisitDate?.TimeOfDay ?? TimeSpan.Zero) : null)" Style="flex: 1;" />
+            <FluentTimePicker Label="Start Time" Value="@Content.VisitDate" ValueChanged="@(t => Content.VisitDate = t.HasValue ? (Content.VisitDate?.Date ?? DateTime.Today) + t.Value.TimeOfDay : null)" Style="flex: 1;" />
+            <FluentDatePicker Label="End" Value="@Content.VisitDateEnd" ValueChanged="@(d => Content.VisitDateEnd = d.HasValue ? d.Value.Date + (Content.VisitDateEnd?.TimeOfDay ?? TimeSpan.Zero) : null)" Style="flex: 1;" />
+            <FluentTimePicker Label="End Time" Value="@Content.VisitDateEnd" ValueChanged="@(t => Content.VisitDateEnd = t.HasValue ? (Content.VisitDateEnd?.Date ?? DateTime.Today) + t.Value.TimeOfDay : null)" Style="flex: 1;" />
+
             @if (Content.VisitDate.HasValue && Content.VisitDateEnd.HasValue && Content.VisitDateEnd < Content.VisitDate)
             {
                 <FluentLabel Color="Color.Error" Style="font-size: 0.875em;">Visit end date must be on or after the start date.</FluentLabel>
             }
 
+
+            <FluentDivider Role="DividerRole.Separator" />
             <FluentLabel Style="margin-top: 8px;">Image</FluentLabel>
             @if (_imagePreviewSrc != null)
             {
@@ -56,7 +62,35 @@
             }
             <FluentLabel Style="font-size: 0.875em; color: var(--neutral-foreground-hint);">Or upload from device:</FluentLabel>
             <InputFile id="@_fileInputId" OnChange="@HandleFileSelected" accept="image/*" style="display: none;" />
-            <FluentButton Appearance="Appearance.Lightweight" OnClick="@TriggerFileInput">Browse...</FluentButton>
+            <FluentButton Appearance="Appearance.Outline" OnClick="@TriggerFileInput">Browse</FluentButton>
+
+            <FluentDivider Role="DividerRole.Presentation" />
+
+            <FluentLabel Typo="Typography.Subject">GPX Track (Optional)</FluentLabel>
+            @if (!string.IsNullOrEmpty(Content.GpxTrackId))
+            {
+                var gpxTrack = GpxTracks.FirstOrDefault(g => g.Id == Content.GpxTrackId);
+                @if (gpxTrack != null)
+                {
+                    <FluentCard>
+                        <FluentStack Orientation="Orientation.Horizontal">
+                            <FluentIcon Icon="Icons.Regular.Size20.Location" Color="Color.Accent" />
+                            <FluentStack Orientation="Orientation.Vertical" Style="flex: 1;">
+                                <FluentLabel Weight="FontWeight.Bold">@gpxTrack.Name</FluentLabel>
+                                <FluentLabel Style="font-size: 0.875em;">
+                                    Distance: @gpxTrack.TotalDistance.ToString("F2") km | Points: @gpxTrack.Points.Count
+                                </FluentLabel>
+                            </FluentStack>
+                            <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size16.Delete())" OnClick="@RemoveGpxTrack">
+                            </FluentButton>
+                        </FluentStack>
+                    </FluentCard>
+                }
+            }
+            else
+            {
+                <GpxFileUpload OnFileUploaded="@HandleGpxUploaded" />
+            }
         </FluentStack>
     }
 </FluentDialogBody>
@@ -74,6 +108,10 @@
     [CascadingParameter]
     public FluentDialog Dialog { get; set; } = default!;
 
+    private List<GpxTrack> GpxTracks { get; set; } = new();
+    private IEnumerable<string> Tags { get; set; } = new List<string>() { "hiking", "kids", "water", "easy", "hard" };
+    private IEnumerable<string> SelectedTags { get; set; } = Array.Empty<string>();
+
     private string _imageUrl = string.Empty;
     private string? _imagePreviewSrc;
     private string? _imageError;
@@ -89,6 +127,8 @@
     protected override async Task OnInitializedAsync()
     {
         CurrentUser = await UserService.GetCurrentUserAsync();
+        SelectedTags = Content.Tags;
+        await LoadGpxTracks();
     }
 
     protected override void OnParametersSet()
@@ -97,6 +137,11 @@
         {
             _imagePreviewSrc = $"data:{Content.ImageContentType};base64,{Convert.ToBase64String(Content.ImageData)}";
         }
+    }
+
+    private async Task LoadGpxTracks()
+    {
+        GpxTracks = await GpxRepository.GetAllAsync();
     }
 
     private void OnNewPlaceCategoryChanged(string value)
@@ -178,6 +223,29 @@
         _imagePreviewSrc = $"data:{file.ContentType};base64,{Convert.ToBase64String(Content.ImageData)}";
     }
 
+    private async Task SavePlace()
+    {
+        if (CurrentUser is null)
+            return;
+
+        if (Content == null || string.IsNullOrWhiteSpace(Content.Name))
+            return;
+
+        var dbPlace = await PlaceRepository.GetByIdAsync(Content.Id, CurrentUser.Id);
+
+        Content.Tags = SelectedTags.ToList();
+
+        if (dbPlace is null)
+        {
+            await PlaceRepository.AddAsync(Content);
+        }
+        else
+        {
+            await PlaceRepository.UpdateAsync(Content);
+        }
+        await Dialog.CloseAsync(Content);
+    }
+
     private async Task TriggerFileInput()
     {
         await JS.InvokeVoidAsync("clickElementById", _fileInputId);
@@ -191,26 +259,51 @@
         _imageUrl = string.Empty;
     }
 
-    private async Task SavePlace()
+
+    private async Task OnTagSearchAsync(OptionsSearchEventArgs<string> e)
     {
-        if (CurrentUser is null)
-            return;
-
-        if (Content == null || string.IsNullOrWhiteSpace(Content.Name))
-            return;
-
-        var dbPlace = await PlaceRepository.GetByIdAsync(Content.Id, CurrentUser.Id);
-
-        if (dbPlace is null)
-        {
-            await PlaceRepository.AddAsync(Content);
-        }
-        else
-        {
-            await PlaceRepository.UpdateAsync(Content);
-        }
-        await Dialog.CloseAsync(Content);
+        e.Items = Tags.Where(i => i.StartsWith(e.Text, StringComparison.OrdinalIgnoreCase))
+                      .Union([e.Text])
+                      .Distinct(StringComparer.OrdinalIgnoreCase)
+                      .OrderBy(i => i);
     }
+
+
+
+    private async Task HandleGpxUploaded(GpxUploadResult result)
+    {
+        if (result.Success && Content != null)
+        {
+            try
+            {
+                // Parse the GPX file
+                var gpxTrack = GpxService.ParseGpxContent(result.Content, result.FileName);
+                gpxTrack.CreatedAt = DateTime.UtcNow;
+
+                // Save the GPX track
+                await GpxRepository.AddAsync(gpxTrack);
+
+                // Link it to the place
+                Content.GpxTrackId = gpxTrack.Id;
+
+                // Reload GPX tracks
+                await LoadGpxTracks();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error processing GPX file: {ex.Message}");
+            }
+        }
+    }
+
+    private void RemoveGpxTrack()
+    {
+        if (Content != null)
+        {
+            Content.GpxTrackId = null;
+        }
+    }
+
 
 
     

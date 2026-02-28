@@ -142,6 +142,7 @@ else
     {
         var dialog = await DialogService.ShowDialogAsync<WishlistAddPlaceDialog>(place, new DialogParameters()
         {
+            Title = "Edit Place",
             PreventDismissOnOverlayClick = true,
             PreventScroll = true,
             TrapFocus = true
