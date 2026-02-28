@@ -28,6 +28,9 @@
                     <FluentOption TOption="string" Value="@category.ToString()">@category.ToString()</FluentOption>
                 }
             </FluentSelect>
+
+            <FluentAutocomplete TOption="string" Label="Tags" OnOptionsSearch="@OnTagSearchAsync" @bind-SelectedOptions="@SelectedTags" />
+
             <FluentNumberField @bind-Value="@Content.Latitude" Label="Latitude" Step="0.0001" Style="width: 100%;" />
             <FluentNumberField @bind-Value="@Content.Longitude" Label="Longitude" Step="0.0001" Style="width: 100%;" />
 
@@ -104,8 +107,10 @@
 
     [CascadingParameter]
     public FluentDialog Dialog { get; set; } = default!;
-    
+
     private List<GpxTrack> GpxTracks { get; set; } = new();
+    private IEnumerable<string> Tags { get; set; } = new List<string>() { "hiking", "kids", "water", "easy", "hard" };
+    private IEnumerable<string> SelectedTags { get; set; } = Array.Empty<string>();
 
     private string _imageUrl = string.Empty;
     private string? _imagePreviewSrc;
@@ -122,6 +127,7 @@
     protected override async Task OnInitializedAsync()
     {
         CurrentUser = await UserService.GetCurrentUserAsync();
+        SelectedTags = Content.Tags;
         await LoadGpxTracks();
     }
 
@@ -217,6 +223,29 @@
         _imagePreviewSrc = $"data:{file.ContentType};base64,{Convert.ToBase64String(Content.ImageData)}";
     }
 
+    private async Task SavePlace()
+    {
+        if (CurrentUser is null)
+            return;
+
+        if (Content == null || string.IsNullOrWhiteSpace(Content.Name))
+            return;
+
+        var dbPlace = await PlaceRepository.GetByIdAsync(Content.Id, CurrentUser.Id);
+
+        Content.Tags = SelectedTags.ToList();
+
+        if (dbPlace is null)
+        {
+            await PlaceRepository.AddAsync(Content);
+        }
+        else
+        {
+            await PlaceRepository.UpdateAsync(Content);
+        }
+        await Dialog.CloseAsync(Content);
+    }
+
     private async Task TriggerFileInput()
     {
         await JS.InvokeVoidAsync("clickElementById", _fileInputId);
@@ -230,26 +259,15 @@
         _imageUrl = string.Empty;
     }
 
-    private async Task SavePlace()
+
+    private async Task OnTagSearchAsync(OptionsSearchEventArgs<string> e)
     {
-        if (CurrentUser is null)
-            return;
-
-        if (Content == null || string.IsNullOrWhiteSpace(Content.Name))
-            return;
-
-        var dbPlace = await PlaceRepository.GetByIdAsync(Content.Id, CurrentUser.Id);
-
-        if (dbPlace is null)
-        {
-            await PlaceRepository.AddAsync(Content);
-        }
-        else
-        {
-            await PlaceRepository.UpdateAsync(Content);
-        }
-        await Dialog.CloseAsync(Content);
+        e.Items = Tags.Where(i => i.StartsWith(e.Text, StringComparison.OrdinalIgnoreCase))
+                      .Union([e.Text])
+                      .Distinct(StringComparer.OrdinalIgnoreCase)
+                      .OrderBy(i => i);
     }
+
 
 
     private async Task HandleGpxUploaded(GpxUploadResult result)

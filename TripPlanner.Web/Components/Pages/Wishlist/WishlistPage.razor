@@ -13,6 +13,7 @@
 @inject IGpxRepository GpxRepository
 @inject GpxService GpxService
 @inject UserService UserService
+@inject IDialogService DialogService
 
 @rendermode InteractiveServer
 
@@ -70,7 +71,7 @@
     }
     else
     {
-        <WishlistPlacesGrid CanEdit="true" Places="FilteredPlaces" OnEditPlace="EditPlace" OnDeletePlace="DeletePlace" />
+        <WishlistPlacesGrid CanEdit="true" Places="FilteredPlaces" OnEditPlace="EditPlace" OnDeletePlace="DeletePlace" OnNotesPlace="OpenNotes" />
     }
 </FluentStack>
 
@@ -157,6 +158,8 @@
         <FluentButton Appearance="Appearance.Neutral" OnClick="@(() => HideAddDialog = true)">Cancel</FluentButton>
     </FluentDialogFooter>
 </FluentDialog>
+
+<FluentDialogProvider />
 
 @code {
 
@@ -260,6 +263,18 @@
         HideAddDialog = false;
     }
 
+    private async Task OpenNotes(Place place)
+    {
+        var panel = await DialogService.ShowPanelAsync<PlaceNotesDrawer>(place, new DialogParameters()
+        {
+            Title = $"Notes: {place.Name}",
+            Width = "min(95vw, 1000px)",
+            PreventDismissOnOverlayClick = false,
+        });
+
+        await panel.Result;
+    }
+
     private async Task DeletePlace(string placeId)
     {
         await PlaceRepository.DeleteAsync(placeId);
@@ -334,4 +349,6 @@
             EditingPlace.GpxTrackId = null;
         }
     }
+
+
 }
