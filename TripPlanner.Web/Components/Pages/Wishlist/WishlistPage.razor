@@ -42,6 +42,9 @@
             
             <FluentCheckbox @bind-Value="@FilterHasGpxValue" Label="Has GPX Track" />
             
+            <FluentDatePicker Label="Visit Date From" @bind-Value="@FilterDateFrom" Style="min-width: 180px;" />
+            <FluentDatePicker Label="Visit Date To" @bind-Value="@FilterDateTo" Style="min-width: 180px;" />
+            
             <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size20.Filter())" OnClick="@ApplyFilters">
                 Apply Filters
             </FluentButton>
@@ -91,6 +94,19 @@
                 
                 <FluentTextField @bind-Value="@EditingPlace.LatitudeString" Label="Latitude" Style="width: 100%;" />
                 <FluentTextField @bind-Value="@EditingPlace.LongitudeString" Label="Longitude" Style="width: 100%;" />
+
+                <FluentStack Orientation="Orientation.Horizontal" Width="100%" Style="gap: 8px;">
+                    <FluentDatePicker Label="Visit Date" Value="@EditingPlace.VisitDate" ValueChanged="@(d => EditingPlace.VisitDate = d.HasValue ? d.Value.Date + (EditingPlace.VisitDate?.TimeOfDay ?? TimeSpan.Zero) : null)" Style="flex: 1;" />
+                    <FluentTimePicker Label="Visit Time" Value="@EditingPlace.VisitDate" ValueChanged="@(t => EditingPlace.VisitDate = t.HasValue ? (EditingPlace.VisitDate?.Date ?? DateTime.Today) + t.Value.TimeOfDay : null)" Style="flex: 1;" />
+                </FluentStack>
+                <FluentStack Orientation="Orientation.Horizontal" Width="100%" Style="gap: 8px;">
+                    <FluentDatePicker Label="Visit Date End" Value="@EditingPlace.VisitDateEnd" ValueChanged="@(d => EditingPlace.VisitDateEnd = d.HasValue ? d.Value.Date + (EditingPlace.VisitDateEnd?.TimeOfDay ?? TimeSpan.Zero) : null)" Style="flex: 1;" />
+                    <FluentTimePicker Label="Visit Time End" Value="@EditingPlace.VisitDateEnd" ValueChanged="@(t => EditingPlace.VisitDateEnd = t.HasValue ? (EditingPlace.VisitDateEnd?.Date ?? DateTime.Today) + t.Value.TimeOfDay : null)" Style="flex: 1;" />
+                </FluentStack>
+                @if (EditingPlace.VisitDate.HasValue && EditingPlace.VisitDateEnd.HasValue && EditingPlace.VisitDateEnd < EditingPlace.VisitDate)
+                {
+                    <FluentLabel Color="Color.Error" Style="font-size: 0.875em;">Visit end date must be on or after the start date.</FluentLabel>
+                }
 
                 
                 <FluentTextField @bind-Value="@NewTag" Label="Add Tags" Placeholder="Type and press Enter"
@@ -147,7 +163,9 @@
     private IQueryable<Place>? Places { get; set; }
     private IQueryable<Place>? FilteredPlaces => Places?
         .Where(p => !FilterCategory.HasValue || p.Category == FilterCategory.Value)
-        .Where(p => !FilterHasGpx.GetValueOrDefault(false) || p.GpxTrackId != null);
+        .Where(p => !FilterHasGpx.GetValueOrDefault(false) || p.GpxTrackId != null)
+        .Where(p => FilterDateFrom == null || (p.VisitDate.HasValue && p.VisitDate.Value >= FilterDateFrom.Value))
+        .Where(p => FilterDateTo == null || (p.VisitDate.HasValue && p.VisitDate.Value <= FilterDateTo.Value));
 
     private List<GpxTrack> GpxTracks { get; set; } = new();
     private bool IsLoading { get; set; } = true;
@@ -157,6 +175,8 @@
     private string FilterCategoryString { get; set; } = string.Empty;
     private bool? FilterHasGpx { get; set; }
     private bool FilterHasGpxValue { get; set; }
+    private DateTime? FilterDateFrom { get; set; }
+    private DateTime? FilterDateTo { get; set; }
     private string NewTag { get; set; } = string.Empty;
     private string _selectedCategoryString = string.Empty;
 
@@ -207,6 +227,8 @@
         FilterCategoryString = string.Empty;
         FilterHasGpx = null;
         FilterHasGpxValue = false;
+        FilterDateFrom = null;
+        FilterDateTo = null;
         await LoadPlaces();
     }
 
@@ -229,6 +251,8 @@
             Longitude = place.Longitude,
             Tags = new List<string>(place.Tags),
             GpxTrackId = place.GpxTrackId,
+            VisitDate = place.VisitDate,
+            VisitDateEnd = place.VisitDateEnd,
             CreatedAt = place.CreatedAt,
             UpdatedAt = place.UpdatedAt
         };
