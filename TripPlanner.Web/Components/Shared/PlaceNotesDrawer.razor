@@ -1,0 +1,131 @@
+@implements IDialogContentComponent<Place>
+@implements IAsyncDisposable
+
+@using TripPlanner.Web.Models
+@using TripPlanner.Web.Repositories
+
+@inject IPlaceRepository PlaceRepository
+@inject IJSRuntime JS
+
+<FluentDialogHeader ShowDismiss="true">
+    <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" Gap="8px">
+        <FluentIcon Value="@(new Icons.Regular.Size20.NoteEdit())" Color="Color.Accent" />
+        <FluentLabel Typo="Typography.PaneHeader">Notes: @Content?.Name</FluentLabel>
+    </FluentStack>
+</FluentDialogHeader>
+
+<FluentDialogBody Style="display: flex; flex-direction: column; overflow: hidden; padding: 12px; gap: 8px;">
+    <div style="display: flex; flex: 1; gap: 12px; overflow: hidden; min-height: 500px;">
+        <div style="flex: 1; display: flex; flex-direction: column; min-width: 0;">
+            <FluentLabel Style="margin-bottom: 4px;">Markdown</FluentLabel>
+            <textarea id="@_editorId"
+                      @oninput="OnEditorInput"
+                      placeholder="Write notes in Markdown...&#10;&#10;Mermaid example:&#10;```mermaid&#10;graph TD&#10;  A[Start] --&gt; B[End]&#10;```&#10;&#10;Paste images from the clipboard directly into the editor."
+                      style="flex: 1; width: 100%; font-family: monospace; font-size: 13px; line-height: 1.5; padding: 10px; border: 1px solid var(--neutral-stroke-rest); border-radius: 4px; resize: none; background: var(--neutral-layer-2); color: var(--neutral-foreground-rest); outline-color: var(--accent-fill-rest);"></textarea>
+        </div>
+        <div style="flex: 1; display: flex; flex-direction: column; min-width: 0;">
+            <FluentLabel Style="margin-bottom: 4px;">Preview</FluentLabel>
+            <div id="@_previewId"
+                 class="notes-preview"
+                 style="flex: 1; overflow-y: auto; padding: 12px; border: 1px solid var(--neutral-stroke-rest); border-radius: 4px; background: var(--neutral-layer-1); color: var(--neutral-foreground-rest);">
+            </div>
+        </div>
+    </div>
+    @if (!string.IsNullOrEmpty(_saveMessage))
+    {
+        <FluentLabel Color="@_saveMessageColor">@_saveMessage</FluentLabel>
+    }
+</FluentDialogBody>
+
+<FluentDialogFooter>
+    <FluentButton Appearance="Appearance.Accent" OnClick="@SaveAsync" IconStart="@(new Icons.Regular.Size16.Save())">Save</FluentButton>
+    <FluentButton Appearance="Appearance.Neutral" OnClick="@CloseAsync">Close</FluentButton>
+</FluentDialogFooter>
+
+@code {
+    [Parameter]
+    public Place Content { get; set; } = default!;
+
+    [CascadingParameter]
+    public FluentDialog Dialog { get; set; } = default!;
+
+    private readonly string _editorId = $"notes-editor-{Guid.NewGuid():N}";
+    private readonly string _previewId = $"notes-preview-{Guid.NewGuid():N}";
+    private string _notes = string.Empty;
+    private string? _saveMessage;
+    private Color _saveMessageColor = Color.Success;
+    private DotNetObjectReference<PlaceNotesDrawer>? _dotNetRef;
+    private bool _jsInitialized;
+    private CancellationTokenSource? _saveMsgCts;
+
+    protected override void OnParametersSet()
+    {
+        _notes = Content?.Notes ?? string.Empty;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _dotNetRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("notesEditor.init", _editorId, _dotNetRef);
+            await JS.InvokeVoidAsync("notesEditor.setValue", _editorId, _notes);
+            _jsInitialized = true;
+            await JS.InvokeVoidAsync("notesEditor.renderPreview", _previewId, _notes);
+        }
+    }
+
+    private async Task OnEditorInput(ChangeEventArgs e)
+    {
+        _notes = e.Value?.ToString() ?? string.Empty;
+        await JS.InvokeVoidAsync("notesEditor.renderPreview", _previewId, _notes);
+    }
+
+    [JSInvokable]
+    public async Task InsertImageAtCursor(string dataUrl)
+    {
+        var imageMarkdown = $"\n![Pasted Image]({dataUrl})\n";
+        await JS.InvokeVoidAsync("notesEditor.insertAtCursor", _editorId, imageMarkdown);
+        _notes = await JS.InvokeAsync<string>("notesEditor.getValue", _editorId);
+        await JS.InvokeVoidAsync("notesEditor.renderPreview", _previewId, _notes);
+    }
+
+    private async Task SaveAsync()
+    {
+        if (Content is null) return;
+        Content.Notes = _notes;
+        await PlaceRepository.UpdateAsync(Content);
+
+        _saveMsgCts?.Cancel();
+        _saveMsgCts = new CancellationTokenSource();
+        var cts = _saveMsgCts;
+
+        _saveMessage = "Saved!";
+        _saveMessageColor = Color.Success;
+        StateHasChanged();
+
+        try
+        {
+            await Task.Delay(2000, cts.Token);
+            _saveMessage = null;
+            StateHasChanged();
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    private async Task CloseAsync()
+    {
+        await Dialog.CloseAsync(Content);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _saveMsgCts?.Cancel();
+        _saveMsgCts?.Dispose();
+        if (_jsInitialized)
+        {
+            await JS.InvokeVoidAsync("notesEditor.dispose", _editorId);
+        }
+        _dotNetRef?.Dispose();
+    }
+}

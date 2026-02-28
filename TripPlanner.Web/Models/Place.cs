@@ -27,8 +27,7 @@ public class Place
     public string? TripId { get; set; }
     public Trip? Trip { get; set; }
 
-
-
+    public string? Notes { get; set; }
     public DateTime? VisitDate { get; set; }
     public DateTime? VisitDateEnd { get; set; }
 

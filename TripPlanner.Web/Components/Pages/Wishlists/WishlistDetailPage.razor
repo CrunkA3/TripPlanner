@@ -68,7 +68,7 @@ else
         }
         else
         {
-            <WishlistPlacesGrid Places="places" CanEdit="@canEdit" OnEditPlace="EditPlace" OnDeletePlace="DeletePlace" />
+            <WishlistPlacesGrid Places="places" CanEdit="@canEdit" OnEditPlace="EditPlace" OnDeletePlace="DeletePlace" OnNotesPlace="OpenNotes" />
         }
     </FluentStack>
 }
@@ -153,6 +153,18 @@ else
         {
             StateHasChanged();
         }
+    }
+
+    private async Task OpenNotes(Place place)
+    {
+        var panel = await DialogService.ShowPanelAsync<PlaceNotesDrawer>(place, new DialogParameters()
+        {
+            Title = $"Notes: {place.Name}",
+            Width = "min(95vw, 1000px)",
+            PreventDismissOnOverlayClick = false,
+        });
+
+        await panel.Result;
     }
 
     private async Task DeletePlace(string placeId)

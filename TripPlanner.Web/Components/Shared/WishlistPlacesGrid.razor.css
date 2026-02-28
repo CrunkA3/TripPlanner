@@ -81,6 +81,12 @@
     right: 8px;
 }
 
+.place-card-notes-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+}
+
 .place-card-body {
     flex: 1;
     display: flex;
