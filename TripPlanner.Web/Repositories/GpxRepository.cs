@@ -18,6 +18,21 @@ public class GpxRepository : IGpxRepository
         return await _context.GpxTracks.Include(t => t.Points.OrderBy(x => x.Order)).ToListAsync();
     }
 
+
+    public async Task<List<GpxTrack>> GetByTripIdAsync(string tripId)
+    {
+        var trackIds = _context.Trips.Where(t => t.Id == tripId)
+            .Include(t => t.Days).ThenInclude(d => d.Places).ThenInclude(p => p.Place)
+            .SelectMany(t => t.Days.SelectMany(d => d.Places.Select(p => p.Place)))
+            .Where(p => p != null && !string.IsNullOrEmpty(p.GpxTrackId))
+            .Select(p => p!.GpxTrackId);
+
+        return await _context.GpxTracks
+            .Where(x => trackIds.Any(trackId => x.Id == trackId))
+            .Include(t => t.Points.OrderBy(x => x.Order))
+            .ToListAsync();
+    }
+
     public async Task<GpxTrack?> GetByIdAsync(string id)
     {
         return await _context.GpxTracks.FindAsync(id);
