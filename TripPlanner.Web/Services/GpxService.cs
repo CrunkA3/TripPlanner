@@ -1,5 +1,6 @@
 using System.Xml.Linq;
 using TripPlanner.Web.Models;
+using System.Globalization;
 
 namespace TripPlanner.Web.Services;
 
@@ -9,7 +10,7 @@ public class GpxService
     {
         var doc = XDocument.Parse(gpxContent);
         var ns = doc.Root?.Name.Namespace ?? XNamespace.None;
-        
+
         var track = new GpxTrack
         {
             Name = fileName
@@ -23,19 +24,22 @@ public class GpxService
         }
 
         var trackPoints = doc.Descendants(ns + "trkpt").ToList();
+        var order = 0;
         foreach (var trkpt in trackPoints)
         {
-            var lat = double.Parse(trkpt.Attribute("lat")?.Value ?? "0", System.Globalization.CultureInfo.InvariantCulture);
-            var lon = double.Parse(trkpt.Attribute("lon")?.Value ?? "0", System.Globalization.CultureInfo.InvariantCulture);
+            var lat = double.Parse(trkpt.Attribute("lat")?.Value ?? "0", CultureInfo.InvariantCulture);
+            var lon = double.Parse(trkpt.Attribute("lon")?.Value ?? "0", CultureInfo.InvariantCulture);
             var ele = trkpt.Element(ns + "ele");
             var time = trkpt.Element(ns + "time");
+            order++;
 
             track.Points.Add(new GpxPoint
             {
+                Order = order,
                 Latitude = lat,
                 Longitude = lon,
-                Elevation = ele != null ? double.Parse(ele.Value) : null,
-                Time = time != null ? DateTime.Parse(time.Value) : null
+                Elevation = ele != null ? double.Parse(ele.Value, CultureInfo.InvariantCulture) : null,
+                Time = time != null ? DateTime.Parse(time.Value, CultureInfo.InvariantCulture) : null
             });
         }
 

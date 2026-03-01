@@ -296,10 +296,11 @@
         }
     }
 
-    private void RemoveGpxTrack()
+    private async Task RemoveGpxTrack()
     {
-        if (Content != null)
+        if (Content != null && !string.IsNullOrEmpty(Content.GpxTrackId))
         {
+            await GpxRepository.DeleteAsync(Content.GpxTrackId);
             Content.GpxTrackId = null;
         }
     }

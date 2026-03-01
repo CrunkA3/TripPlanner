@@ -53,7 +53,7 @@ builder.Services.AddHttpClient();
 // Register TripPlanner repositories (EF Core)
 builder.Services.AddScoped<IPlaceRepository, PlaceRepository>();
 builder.Services.AddScoped<ITripRepository, EfTripRepository>();
-builder.Services.AddScoped<IGpxRepository, EfGpxRepository>();
+builder.Services.AddScoped<IGpxRepository, GpxRepository>();
 builder.Services.AddScoped<IWishlistRepository, WishlistRepository>();
 
 // Register services

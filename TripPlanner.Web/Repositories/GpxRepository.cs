@@ -4,18 +4,18 @@ using TripPlanner.Web.Models;
 
 namespace TripPlanner.Web.Repositories;
 
-public class EfGpxRepository : IGpxRepository
+public class GpxRepository : IGpxRepository
 {
     private readonly ApplicationDbContext _context;
 
-    public EfGpxRepository(ApplicationDbContext context)
+    public GpxRepository(ApplicationDbContext context)
     {
         _context = context;
     }
 
     public async Task<List<GpxTrack>> GetAllAsync()
     {
-        return await _context.GpxTracks.ToListAsync();
+        return await _context.GpxTracks.Include(t => t.Points.OrderBy(x => x.Order)).ToListAsync();
     }
 
     public async Task<GpxTrack?> GetByIdAsync(string id)
