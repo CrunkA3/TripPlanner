@@ -9,6 +9,7 @@
 
 @inject ITripRepository TripRepository
 @inject IPlaceRepository PlaceRepository
+@inject IGpxRepository GpxRepository
 @inject UserService UserService
 @inject IDialogService DialogService
 @inject IJSRuntime JSRuntime
@@ -276,6 +277,7 @@
     public string TripId { get; set; } = string.Empty;
 
     private List<Place> AllPlaces { get; set; } = new();
+    private List<GpxTrack> GpxTracks { get; set; } = new();
 
     private Trip? PlanningTrip;
 
@@ -337,6 +339,7 @@
         {
             await JSRuntime.InvokeVoidAsync("mapInterop.clearMarkers");
             await JSRuntime.InvokeVoidAsync("mapInterop.clearRoutes");
+            await JSRuntime.InvokeVoidAsync("mapInterop.clearGpxTracks");
 
 
             // Add home location marker
@@ -443,13 +446,16 @@
                 }
             }
 
-            // if (orderedPlaces.Count > 1)
-            // {
-            //     var coordinates = orderedPlaces
-            //         .Select(tp => new { latitude = tp.Place!.Latitude, longitude = tp.Place.Longitude })
-            //         .ToList();
-            //     await JSRuntime.InvokeVoidAsync("mapInterop.addRoute", coordinates, "#FF5722", 3);
-            // }
+
+            // Add GPX tracks
+            foreach (var gpxTrack in GpxTracks)
+            {
+                if (gpxTrack.Points.Any())
+                {
+                    var points = gpxTrack.Points.Select(p => new { latitude = p.Latitude, longitude = p.Longitude }).ToList();
+                    await JSRuntime.InvokeVoidAsync("mapInterop.addGpxTrack", points, "#9C27B0");
+                }
+            }
 
             await JSRuntime.InvokeVoidAsync("mapInterop.fitBounds");
         }
@@ -478,11 +484,7 @@
     private async Task LoadData()
     {
         IsLoading = true;
-
-
-        PlanningTrip = await TripRepository.GetByIdAsync(TripId);
-
-        
+                
         CurrentUser = await UserService.GetCurrentUserAsync();
         if (CurrentUser is not null)
         {
@@ -490,6 +492,9 @@
             var tripPlaces = await PlaceRepository.GetAllForTripAsync(TripId);
             AllPlaces = wishListPlaces.UnionBy(tripPlaces, p => p.Id).ToList();
         }
+
+        PlanningTrip = await TripRepository.GetByIdAsync(TripId);
+        GpxTracks = await GpxRepository.GetByTripIdAsync(TripId);
 
         // Load place details for all trips
         if (PlanningTrip != null)
