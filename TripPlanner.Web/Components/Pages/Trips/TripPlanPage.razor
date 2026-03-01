@@ -643,7 +643,7 @@
 
     private async Task OpenAddPlaceDialog()
     {
-        var dialog = await DialogService.ShowDialogAsync<TripAddPlaceDialog>(new Place() { TripId = TripId }, new DialogParameters()
+        var dialog = await DialogService.ShowDialogAsync<PlaceDialog>(new Place() { TripId = TripId }, new DialogParameters()
         {
             PreventDismissOnOverlayClick = true,
             PreventScroll = true,
@@ -662,8 +662,9 @@
 
     private async Task OpenEditPlaceDialog(Place place)
     {
-        var dialog = await DialogService.ShowDialogAsync<TripAddPlaceDialog>(place, new DialogParameters()
+        var dialog = await DialogService.ShowDialogAsync<PlaceDialog>(place, new DialogParameters()
         {
+            Title = "Edit Place",
             PreventDismissOnOverlayClick = true,
             PreventScroll = true,
             TrapFocus = true

@@ -121,7 +121,7 @@ else
 
     private async Task ShowAddPlaceDialog()
     {
-        var dialog = await DialogService.ShowDialogAsync<WishlistAddPlaceDialog>(new Place() { WishlistId = WishlistId }, new DialogParameters()
+        var dialog = await DialogService.ShowDialogAsync<PlaceDialog>(new Place() { WishlistId = WishlistId }, new DialogParameters()
         {
             PreventDismissOnOverlayClick = true,
             PreventScroll = true,
@@ -140,7 +140,7 @@ else
 
     private async Task EditPlace(Place place)
     {
-        var dialog = await DialogService.ShowDialogAsync<WishlistAddPlaceDialog>(place, new DialogParameters()
+        var dialog = await DialogService.ShowDialogAsync<PlaceDialog>(place, new DialogParameters()
         {
             Title = "Edit Place",
             PreventDismissOnOverlayClick = true,
