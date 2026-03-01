@@ -285,6 +285,8 @@
 
                 // Link it to the place
                 Content.GpxTrackId = gpxTrack.Id;
+                Content.Latitude = gpxTrack.Points.FirstOrDefault()?.Latitude ?? Content.Latitude;
+                Content.Longitude = gpxTrack.Points.FirstOrDefault()?.Longitude ?? Content.Longitude;
 
                 // Reload GPX tracks
                 await LoadGpxTracks();
