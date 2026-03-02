@@ -512,18 +512,22 @@
             return;
 
         var day = PlanningTrip.Days.FirstOrDefault(d => d.Id == dayId);
-        if (day != null)
+        var placeToRemove = day?.Places.FirstOrDefault(p => p.PlaceId == placeId);
+        var placeName = placeToRemove?.Place?.Name ?? "this place";
+        var dialog = await DialogService.ShowDialogAsync<ConfirmDialog>(
+            new ConfirmDialogContent($"Are you sure you want to remove \"{placeName}\" from this day?", "Remove"),
+            new DialogParameters { Title = "Confirm Remove", PreventDismissOnOverlayClick = true });
+        var result = await dialog.Result;
+        if (result.Cancelled) return;
+
+        if (placeToRemove != null)
         {
-            var placeToRemove = day.Places.FirstOrDefault(p => p.PlaceId == placeId);
-            if (placeToRemove != null)
+            day!.Places.Remove(placeToRemove);
+            // Reorder remaining places
+            var order = 1;
+            foreach (var p in day.Places.OrderBy(p => p.Order))
             {
-                day.Places.Remove(placeToRemove);
-                // Reorder remaining places
-                var order = 1;
-                foreach (var p in day.Places.OrderBy(p => p.Order))
-                {
-                    p.Order = order++;
-                }
+                p.Order = order++;
             }
         }
         await UpdateMapContent();
@@ -744,6 +748,14 @@
 
     private async Task DeleteAccommodation(string accommodationId)
     {
+        var acc = PlanningTrip?.Accommodations.FirstOrDefault(a => a.Id == accommodationId);
+        var name = acc?.Name ?? "this accommodation";
+        var dialog = await DialogService.ShowDialogAsync<ConfirmDialog>(
+            new ConfirmDialogContent($"Are you sure you want to delete \"{name}\"?"),
+            new DialogParameters { Title = "Confirm Delete", PreventDismissOnOverlayClick = true });
+        var result = await dialog.Result;
+        if (result.Cancelled) return;
+
         await TripRepository.DeleteAccommodationAsync(accommodationId);
         PlanningTrip?.Accommodations.RemoveAll(a => a.Id == accommodationId);
         StateHasChanged();

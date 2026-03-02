@@ -11,6 +11,7 @@
 @inject IWishlistRepository WishlistRepository
 @inject UserService UserService
 @inject NavigationManager NavigationManager
+@inject IDialogService DialogService
 
 @rendermode InteractiveServer
 
@@ -125,6 +126,8 @@ else
     </FluentStack>
 </FluentDialog>
 
+<FluentDialogProvider />
+
 @code {
     private List<Wishlist>? wishlists;
     private string? currentUserId;
@@ -198,6 +201,14 @@ else
 
     private async Task DeleteWishlist(string id)
     {
+        var wishlist = wishlists?.FirstOrDefault(w => w.Id == id);
+        var name = wishlist?.Name ?? "this wishlist";
+        var dialog = await DialogService.ShowDialogAsync<ConfirmDialog>(
+            new ConfirmDialogContent($"Are you sure you want to delete \"{name}\"?"),
+            new DialogParameters { Title = "Confirm Delete", PreventDismissOnOverlayClick = true });
+        var result = await dialog.Result;
+        if (result.Cancelled) return;
+
         await WishlistRepository.DeleteAsync(id);
         await LoadWishlists();
     }

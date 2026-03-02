@@ -306,6 +306,14 @@
 
     private async Task DeletePlace(string placeId)
     {
+        var place = Places?.FirstOrDefault(p => p.Id == placeId);
+        var name = place?.Name ?? "this place";
+        var dialog = await DialogService.ShowDialogAsync<ConfirmDialog>(
+            new ConfirmDialogContent($"Are you sure you want to delete \"{name}\"?"),
+            new DialogParameters { Title = "Confirm Delete", PreventDismissOnOverlayClick = true });
+        var result = await dialog.Result;
+        if (result.Cancelled) return;
+
         await PlaceRepository.DeleteAsync(placeId);
         await LoadPlaces();
     }

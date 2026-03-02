@@ -12,6 +12,7 @@
 @inject RoutingService RoutingService
 @inject UserService UserService
 @inject NavigationManager Navigation
+@inject IDialogService DialogService
 
 @rendermode InteractiveServer
 
@@ -170,6 +171,8 @@
 </FluentDialog>
 
 
+<FluentDialogProvider />
+
 @code {
     private List<Trip> Trips { get; set; } = new();
     private List<Place> AllPlaces { get; set; } = new();
@@ -285,6 +288,12 @@
 
     private async Task DeleteTrip(Trip trip)
     {
+        var dialog = await DialogService.ShowDialogAsync<ConfirmDialog>(
+            new ConfirmDialogContent($"Are you sure you want to delete the trip \"{trip.Name}\"?"),
+            new DialogParameters { Title = "Confirm Delete", PreventDismissOnOverlayClick = true });
+        var result = await dialog.Result;
+        if (result.Cancelled) return;
+
         await TripRepository.DeleteAsync(trip.Id);
         await LoadData();
     }

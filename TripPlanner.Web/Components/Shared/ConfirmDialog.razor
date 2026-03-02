@@ -1,0 +1,21 @@
+@implements IDialogContentComponent<ConfirmDialogContent>
+
+<FluentDialogBody>
+    <FluentLabel>@Content.Message</FluentLabel>
+</FluentDialogBody>
+
+<FluentDialogFooter>
+    <FluentButton Appearance="Appearance.Accent" OnClick="@ConfirmAsync">@Content.ConfirmText</FluentButton>
+    <FluentButton Appearance="Appearance.Neutral" OnClick="@CancelAsync">Cancel</FluentButton>
+</FluentDialogFooter>
+
+@code {
+    [Parameter]
+    public ConfirmDialogContent Content { get; set; } = default!;
+
+    [CascadingParameter]
+    public FluentDialog Dialog { get; set; } = default!;
+
+    private async Task ConfirmAsync() => await Dialog.CloseAsync(Content);
+    private async Task CancelAsync() => await Dialog.CancelAsync();
+}
