@@ -360,3 +360,23 @@ table {
 .cookie-consent a {
     color: var(--accent-foreground-rest);
 }
+
+/* ── Responsive display utilities ──────────────────────────────────────── */
+
+.md-and-down {
+    display: block;
+}
+
+.lg-and-up {
+    display: none;
+}
+
+@media (min-width: 960px) {
+    .md-and-down {
+        display: none;
+    }
+
+    .lg-and-up {
+        display: block;
+    }
+}

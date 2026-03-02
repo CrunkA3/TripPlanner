@@ -202,22 +202,20 @@
     @if (PlanningTrip != null)
     {
         <FluentGridItem xs="12" lg="6" xl="3">
-            @if (_isSmallScreen)
-            {
+            <div class="md-and-down">
                 <FluentTabs>
                     <FluentTab Label="Places">@placesSection</FluentTab>
                     <FluentTab Label="Days">@daysSection</FluentTab>
                     <FluentTab Label="Accommodations">@accommodationsSection</FluentTab>
                 </FluentTabs>
-            }
-            else
-            {
+            </div>
+            <div class="lg-and-up">
                 <FluentGrid>
                     <FluentGridItem xs="12" lg="6">@placesSection</FluentGridItem>
                     <FluentGridItem xs="12" lg="6">@daysSection</FluentGridItem>
                     <FluentGridItem xs="12">@accommodationsSection</FluentGridItem>
                 </FluentGrid>
-            }
+            </div>
         </FluentGridItem>
     }
     <FluentGridItem xs="12" lg="6" xl="9">
@@ -286,8 +284,6 @@
     private bool IsLoading { get; set; } = true;
     private bool MapInitialized { get; set; }
     private ApplicationUser? CurrentUser { get; set; }
-    private bool _isSmallScreen;
-    private DotNetObjectReference<TripPlanPage>? _dotNetRef;
 
     [Parameter]
     public string TripId { get; set; } = string.Empty;
@@ -329,22 +325,8 @@
     {
         if (firstRender)
         {
-            _dotNetRef = DotNetObjectReference.Create(this);
-            _isSmallScreen = await JSRuntime.InvokeAsync<bool>("responsiveHelper.isSmallScreen");
-            await JSRuntime.InvokeVoidAsync("responsiveHelper.registerResizeCallback", _dotNetRef);
             await InitializeMap();
             await UpdateMapContent();
-            StateHasChanged();
-        }
-    }
-
-    [JSInvokable]
-    public async Task UpdateScreenSize(bool isSmallScreen)
-    {
-        if (_isSmallScreen != isSmallScreen)
-        {
-            _isSmallScreen = isSmallScreen;
-            await InvokeAsync(StateHasChanged);
         }
     }
 
@@ -780,12 +762,6 @@
 
     public async ValueTask DisposeAsync()
     {
-        try
-        {
-            await JSRuntime.InvokeVoidAsync("responsiveHelper.unregisterResizeCallback");
-        }
-        catch { }
-        _dotNetRef?.Dispose();
         if (MapInitialized)
         {
             try
