@@ -10,5 +10,6 @@ public enum PlaceCategory
     Accommodation,
     Shopping,
     Entertainment,
+    Race,
     Other
 }
