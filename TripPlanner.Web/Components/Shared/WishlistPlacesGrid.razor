@@ -44,6 +44,21 @@
                         <FluentLabel Typo="Typography.Body" Class="place-card-description">@place.Description</FluentLabel>
                     }
 
+                    @if (!string.IsNullOrWhiteSpace(place.Url))
+                    {
+                        <div class="place-card-location">
+                            <FluentIcon Icon="Icons.Regular.Size12.Link" />
+                            @if (IsSafeUrl(place.Url))
+                            {
+                                <a href="@place.Url" target="_blank" rel="noopener noreferrer" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">@place.Url</a>
+                            }
+                            else
+                            {
+                                <span>@place.Url</span>
+                            }
+                        </div>
+                    }
+
                     <div class="place-card-badges">
                         <FluentBadge BackgroundColor="@IPlaceRepository.GetCategoryColor(place.Category)" Color="white">@place.Category</FluentBadge>
                         @if (place.Wishlist is not null)
@@ -147,6 +162,11 @@
         place.Images.FirstOrDefault() is { } img &&
         img.ImageData.Length > 0 &&
         System.Text.RegularExpressions.Regex.IsMatch(img.ImageContentType, @"^image/[a-zA-Z0-9\-\+\.]+$");
+
+    private static bool IsSafeUrl(string? url) =>
+        !string.IsNullOrWhiteSpace(url) &&
+        Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
+        (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
 
     private bool CanShowPlaceActions(Place place) =>
         CanEdit &&
