@@ -1,0 +1,11 @@
+{
+  "name": "tripplanner-screenshots",
+  "version": "1.0.0",
+  "description": "Takes screenshots of the TripPlanner application using Playwright",
+  "scripts": {
+    "screenshots": "node take-screenshots.js"
+  },
+  "dependencies": {
+    "playwright": "^1.50.0"
+  }
+}

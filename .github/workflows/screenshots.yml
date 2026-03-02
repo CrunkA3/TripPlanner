@@ -1,0 +1,68 @@
+name: Application Screenshots
+
+on:
+  workflow_dispatch:
+  release:
+    types:
+      - published
+
+permissions:
+  contents: write
+
+jobs:
+  screenshots:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Start application with Docker Compose
+        run: docker compose up -d --build
+
+      - name: Wait for application to be ready
+        run: |
+          echo "Waiting for the application to start..."
+          for i in $(seq 1 36); do
+            if curl -sf --max-time 5 http://localhost:8980 > /dev/null 2>&1; then
+              echo "Application is ready after $((i * 10))s"
+              exit 0
+            fi
+            echo "  Attempt $i/36 – not ready yet, retrying in 10s..."
+            sleep 10
+          done
+          echo "Application did not become ready in 6 minutes. Container logs:"
+          docker compose logs web
+          exit 1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: scripts
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: scripts
+        run: npx playwright install chromium --with-deps
+
+      - name: Take screenshots
+        working-directory: scripts
+        env:
+          APP_URL: http://localhost:8980
+          SCREENSHOTS_DIR: ${{ github.workspace }}/assets/screenshots
+        run: node take-screenshots.js
+
+      - name: Commit and push screenshots
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add assets/screenshots/
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: update application screenshots [skip ci]"
+            git push
+          else
+            echo "No screenshot changes to commit"
+          fi
