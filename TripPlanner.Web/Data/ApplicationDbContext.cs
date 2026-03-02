@@ -10,6 +10,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
     public DbSet<Wishlist> Wishlists { get; set; }
     public DbSet<Place> Places { get; set; }
+    public DbSet<PlaceImage> PlaceImages { get; set; }
     public DbSet<Trip> Trips { get; set; }
     public DbSet<TripDay> TripDays { get; set; }
     public DbSet<TripPlace> TripPlaces { get; set; }
@@ -50,6 +51,13 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .WithMany(w => w.Places)
             .HasForeignKey(p => p.WishlistId)
             .OnDelete(DeleteBehavior.SetNull);
+
+        // Configure PlaceImage relationship
+        modelBuilder.Entity<PlaceImage>()
+            .HasOne(pi => pi.Place)
+            .WithMany(p => p.Images)
+            .HasForeignKey(pi => pi.PlaceId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         // Configure Trip
         modelBuilder.Entity<Trip>()

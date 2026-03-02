@@ -144,8 +144,9 @@
     }
 
     private bool HasValidImage(Place place) =>
-        place.ImageData != null && place.ImageContentType != null &&
-        System.Text.RegularExpressions.Regex.IsMatch(place.ImageContentType, @"^image/[a-zA-Z0-9\-\+\.]+$");
+        place.Images.FirstOrDefault() is { } img &&
+        img.ImageData.Length > 0 &&
+        System.Text.RegularExpressions.Regex.IsMatch(img.ImageContentType, @"^image/[a-zA-Z0-9\-\+\.]+$");
 
     private bool CanShowPlaceActions(Place place) =>
         CanEdit &&
@@ -157,7 +158,9 @@
     {
         if (!_imageSrcCache.TryGetValue(place.Id, out var src))
         {
-            src = $"data:{place.ImageContentType};base64,{Convert.ToBase64String(place.ImageData!)}";
+            var img = place.Images.OrderBy(i => i.SortOrder).FirstOrDefault();
+            if (img is null) return string.Empty;
+            src = $"data:{img.ImageContentType};base64,{Convert.ToBase64String(img.ImageData)}";
             _imageSrcCache[place.Id] = src;
         }
         return src;
