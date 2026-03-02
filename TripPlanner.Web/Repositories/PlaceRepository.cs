@@ -27,6 +27,7 @@ public class PlaceRepository : IPlaceRepository
 
         var query = _context.Places
             .Include(p => p.Wishlist)
+            .Include(p => p.Images)
             .Where(p => p.Wishlist != null && (
                             userWishlists.Any(swl => swl.WishlistId == p.WishlistId) ||
                             tripPlaces.Any(placeId => placeId == p.Id)))
@@ -42,6 +43,7 @@ public class PlaceRepository : IPlaceRepository
             .Where(p => p.WishlistId != null)
             .Include(p => p.Wishlist)
             .ThenInclude(wl => wl!.SharedWith)
+            .Include(p => p.Images)
             .ToListAsync();
     }
 
@@ -50,6 +52,7 @@ public class PlaceRepository : IPlaceRepository
         return await _context.Places
             .Where(p => p.TripId == tripId)
             .Include(p => p.Wishlist)
+            .Include(p => p.Images)
             .ToListAsync();
     }
 
@@ -57,6 +60,7 @@ public class PlaceRepository : IPlaceRepository
     {
         return await _context.Places
             .Include(p => p.Wishlist)
+            .Include(p => p.Images)
             .FirstOrDefaultAsync(p => p.Id == id);
     }
 
@@ -70,6 +74,30 @@ public class PlaceRepository : IPlaceRepository
     public async Task<Place> UpdateAsync(Place place)
     {
         place.UpdatedAt = DateTime.UtcNow;
+
+        // Sync images: load existing, add new, update existing, remove deleted
+        var existingImages = await _context.PlaceImages
+            .Where(pi => pi.PlaceId == place.Id)
+            .ToListAsync();
+
+        var newImageIds = place.Images.Select(i => i.Id).ToHashSet();
+        var toRemove = existingImages.Where(ei => !newImageIds.Contains(ei.Id)).ToList();
+        _context.PlaceImages.RemoveRange(toRemove);
+
+        var existingImageIds = existingImages.Select(i => i.Id).ToHashSet();
+        foreach (var img in place.Images)
+        {
+            img.PlaceId = place.Id;
+            if (!existingImageIds.Contains(img.Id))
+            {
+                _context.PlaceImages.Add(img);
+            }
+            else
+            {
+                _context.Entry(img).State = EntityState.Modified;
+            }
+        }
+
         _context.Entry(place).CurrentValues.SetValues(place);
         await _context.SaveChangesAsync();
         return place;
@@ -116,6 +144,7 @@ public class PlaceRepository : IPlaceRepository
     {
         return await _context.Places
             .Where(p => p.WishlistId == wishlistId)
+            .Include(p => p.Images)
             .ToListAsync();
     }
 

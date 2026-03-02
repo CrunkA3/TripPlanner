@@ -13,9 +13,8 @@ public class Place
     public List<string> Tags { get; set; } = new();
     public string? GpxTrackId { get; set; }
 
-    // Image storage
-    public byte[]? ImageData { get; set; }
-    public string? ImageContentType { get; set; }
+    // Images (multiple)
+    public List<PlaceImage> Images { get; set; } = new();
 
 
     // Wishlist association
