@@ -361,7 +361,7 @@
             // Add markers for scheduled places
             foreach (var tp in orderedPlaces)
             {
-                var color = GetCategoryColor(tp.Place!.Category);
+                var color = IPlaceRepository.GetCategoryColor(tp.Place!.Category);
                 await JSRuntime.InvokeVoidAsync("mapInterop.addMarker",
                     tp.PlaceId, tp.Place.Latitude, tp.Place.Longitude,
                     tp.Place.Name, tp.Place.Category.ToString(), color);
@@ -465,21 +465,6 @@
         }
     }
 
-    private string GetCategoryColor(PlaceCategory category)
-    {
-        return category switch
-        {
-            PlaceCategory.Viewpoint => "#4285F4",
-            PlaceCategory.Museum => "#EA4335",
-            PlaceCategory.Restaurant => "#FBBC04",
-            PlaceCategory.Nature => "#34A853",
-            PlaceCategory.Activity => "#00ACC1",
-            PlaceCategory.Accommodation => "#9C27B0",
-            PlaceCategory.Shopping => "#FF6F00",
-            PlaceCategory.Entertainment => "#E91E63",
-            _ => "#757575"
-        };
-    }
 
     private async Task LoadData()
     {

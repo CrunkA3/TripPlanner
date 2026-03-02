@@ -291,7 +291,7 @@
             {
                 foreach (var place in Places)
                 {
-                    var color = GetCategoryColor(place.Category);
+                    var color = IPlaceRepository.GetCategoryColor(place.Category);
                     await JSRuntime.InvokeVoidAsync("mapInterop.addMarker",
                         place.Id, place.Latitude, place.Longitude,
                         place.Name, place.Category.ToString(), color);
@@ -344,23 +344,6 @@
             Console.WriteLine($"Error updating map content: {ex.Message}");
         }
     }
-
-    private string GetCategoryColor(PlaceCategory category)
-    {
-        return category switch
-        {
-            PlaceCategory.Viewpoint => "#4285F4",
-            PlaceCategory.Museum => "#EA4335",
-            PlaceCategory.Restaurant => "#FBBC04",
-            PlaceCategory.Nature => "#34A853",
-            PlaceCategory.Activity => "#00ACC1",
-            PlaceCategory.Accommodation => "#9C27B0",
-            PlaceCategory.Shopping => "#FF6F00",
-            PlaceCategory.Entertainment => "#E91E63",
-            _ => "#757575"
-        };
-    }
-
 
 
     [JSInvokable]
