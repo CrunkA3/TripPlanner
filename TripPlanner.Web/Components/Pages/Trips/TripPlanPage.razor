@@ -13,6 +13,7 @@
 @inject UserService UserService
 @inject IDialogService DialogService
 @inject IJSRuntime JSRuntime
+@inject WeatherService WeatherService
 
 @implements IAsyncDisposable
 
@@ -88,6 +89,12 @@
                                             {
                                                 <FluentLabel Style="font-size: 0.875em;">
                                                     - @day.Date.Value.ToString("MMM dd, yyyy")
+                                                </FluentLabel>
+                                            }
+                                            @if (day.Date.HasValue && WeatherByDayId.TryGetValue(day.Id, out var dayWeather))
+                                            {
+                                                <FluentLabel Style="font-size: 0.875em;" title="@dayWeather.GetDescription()">
+                                                    @dayWeather.GetSummary()
                                                 </FluentLabel>
                                             }
                                             <FluentSpacer />
@@ -283,6 +290,8 @@
 
     private Trip? PlanningTrip;
 
+    private Dictionary<string, DailyWeather> WeatherByDayId { get; set; } = new();
+
 
 
 
@@ -309,6 +318,7 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadData();
+        await LoadWeatherForTrip();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -501,6 +511,41 @@
         }
 
         IsLoading = false;
+    }
+
+    private async Task LoadWeatherForTrip()
+    {
+        if (PlanningTrip == null) return;
+
+        WeatherByDayId.Clear();
+
+        var daysWithLocation = PlanningTrip.Days
+            .Where(day => day.Date.HasValue)
+            .Select(day =>
+            {
+                var firstPlace = day.Places
+                    .OrderBy(p => p.Order)
+                    .Select(p => p.Place)
+                    .FirstOrDefault(p => p != null);
+                return (day.Id, day.Date!.Value, firstPlace);
+            })
+            .Where(x => x.firstPlace != null)
+            .ToList();
+
+        var tasks = daysWithLocation.Select(async x =>
+        {
+            var date = DateOnly.FromDateTime(x.Value);
+            var weather = await WeatherService.GetWeatherForDateAsync(
+                x.firstPlace!.Latitude, x.firstPlace.Longitude, date);
+            return (x.Id, weather);
+        });
+
+        var results = await Task.WhenAll(tasks);
+        foreach (var (id, weather) in results)
+        {
+            if (weather != null)
+                WeatherByDayId[id] = weather;
+        }
     }
 
 
