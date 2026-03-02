@@ -19,100 +19,119 @@
 <FluentDialogBody>
     @if (Content != null)
     {
-        <FluentStack Orientation="Orientation.Vertical">
-            @if (string.IsNullOrEmpty(Content.WishlistId) && string.IsNullOrEmpty(Content.TripId))
-            {
-                <FluentSelect TOption="Wishlist"
-                              @bind-SelectdOption="SelectedWishlist"
-                              Label="Wishlist"
-                              Items="Wishlists"
-                              OptionValue="@(wl => wl.Id)"
-                              OptionText="@(wl => wl.Name)"
-                              Required />
-            }
-            <FluentTextField @bind-Value="@Content.Name" Label="Name" Required Style="width: 100%;" />
-            <FluentTextArea @bind-Value="@Content.Description" Label="Description" Rows="3" Style="width: 100%;" />
-            <FluentSelect TOption="string" Value="@_newPlaceCategoryString" Label="Category" Style="width: 100%;" ValueChanged="@OnNewPlaceCategoryChanged">
-                @foreach (var category in Enum.GetValues<PlaceCategory>())
-                {
-                    <FluentOption TOption="string" Value="@category.ToString()">@category.ToString()</FluentOption>
-                }
-            </FluentSelect>
-
-            <FluentAutocomplete TOption="string" Label="Tags" OnOptionsSearch="@OnTagSearchAsync" @bind-SelectedOptions="@SelectedTags" />
-
-            <FluentNumberField @bind-Value="@Content.Latitude" Label="Latitude" Step="0.0001" Style="width: 100%;" />
-            <FluentNumberField @bind-Value="@Content.Longitude" Label="Longitude" Step="0.0001" Style="width: 100%;" />
-
-            <FluentDatePicker Label="Start" Value="@Content.VisitDate" ValueChanged="@(d => Content.VisitDate = d.HasValue ? d.Value.Date + (Content.VisitDate?.TimeOfDay ?? TimeSpan.Zero) : null)" Style="flex: 1;" />
-            <FluentTimePicker Label="Start Time" Value="@Content.VisitDate" ValueChanged="@(t => Content.VisitDate = t.HasValue ? (Content.VisitDate?.Date ?? DateTime.Today) + t.Value.TimeOfDay : null)" Style="flex: 1;" />
-            <FluentDatePicker Label="End" Value="@Content.VisitDateEnd" ValueChanged="@(d => Content.VisitDateEnd = d.HasValue ? d.Value.Date + (Content.VisitDateEnd?.TimeOfDay ?? TimeSpan.Zero) : null)" Style="flex: 1;" />
-            <FluentTimePicker Label="End Time" Value="@Content.VisitDateEnd" ValueChanged="@(t => Content.VisitDateEnd = t.HasValue ? (Content.VisitDateEnd?.Date ?? DateTime.Today) + t.Value.TimeOfDay : null)" Style="flex: 1;" />
-
-            @if (Content.VisitDate.HasValue && Content.VisitDateEnd.HasValue && Content.VisitDateEnd < Content.VisitDate)
-            {
-                <FluentLabel Color="Color.Error" Style="font-size: 0.875em;">Visit end date must be on or after the start date.</FluentLabel>
-            }
-
-
-            <FluentDivider Role="DividerRole.Separator" />
-            <FluentLabel Style="margin-top: 8px;">Images</FluentLabel>
-            @if (Content.Images.Any())
-            {
-                <FluentStack Orientation="Orientation.Horizontal" Style="flex-wrap: wrap; gap: 8px;">
-                    @foreach (var img in Content.Images.OrderBy(i => i.SortOrder))
+        <FluentTabs>
+            <FluentTab Label="Details" Icon="@(new Icons.Regular.Size16.Info())">
+                <FluentStack Orientation="Orientation.Vertical" Style="padding: 8px 0;">
+                    @if (string.IsNullOrEmpty(Content.WishlistId) && string.IsNullOrEmpty(Content.TripId))
                     {
-                        <div style="position: relative; display: inline-block;">
-                            <img src="@GetImageSrc(img)" alt="Place image" style="width: 120px; height: 90px; object-fit: cover; border-radius: 4px;" />
-                            <FluentButton Appearance="Appearance.Lightweight"
-                                          Style="position: absolute; top: 2px; right: 2px; padding: 2px; min-width: unset;"
-                                          OnClick="@(() => RemoveImage(img))">
-                                <FluentIcon Value="@(new Icons.Regular.Size12.Dismiss())" />
-                            </FluentButton>
-                        </div>
+                        <FluentSelect TOption="Wishlist"
+                                      @bind-SelectdOption="SelectedWishlist"
+                                      Label="Wishlist"
+                                      Items="Wishlists"
+                                      OptionValue="@(wl => wl.Id)"
+                                      OptionText="@(wl => wl.Name)"
+                                      Required />
+                    }
+                    <FluentTextField @bind-Value="@Content.Name" Label="Name" Required Style="width: 100%;" />
+                    <FluentTextArea @bind-Value="@Content.Description" Label="Description" Rows="3" Style="width: 100%;" />
+                    <FluentSelect TOption="string" Value="@_newPlaceCategoryString" Label="Category" Style="width: 100%;" ValueChanged="@OnNewPlaceCategoryChanged">
+                        @foreach (var category in Enum.GetValues<PlaceCategory>())
+                        {
+                            <FluentOption TOption="string" Value="@category.ToString()">@category.ToString()</FluentOption>
+                        }
+                    </FluentSelect>
+                    <FluentAutocomplete TOption="string" Label="Tags" OnOptionsSearch="@OnTagSearchAsync" @bind-SelectedOptions="@SelectedTags" />
+                    <FluentStack Orientation="Orientation.Horizontal" Style="width: 100%; gap: 8px;">
+                        <FluentNumberField @bind-Value="@Content.Latitude" Label="Latitude" Step="0.0001" Style="flex: 1;" />
+                        <FluentNumberField @bind-Value="@Content.Longitude" Label="Longitude" Step="0.0001" Style="flex: 1;" />
+                    </FluentStack>
+                </FluentStack>
+            </FluentTab>
+
+            <FluentTab Label="Schedule" Icon="@(new Icons.Regular.Size16.CalendarLtr())">
+                <FluentStack Orientation="Orientation.Vertical" Style="padding: 8px 0;">
+                    <FluentStack Orientation="Orientation.Horizontal" Style="width: 100%; gap: 8px;">
+                        <FluentDatePicker Label="Start Date" Value="@Content.VisitDate" ValueChanged="@(d => Content.VisitDate = d.HasValue ? d.Value.Date + (Content.VisitDate?.TimeOfDay ?? TimeSpan.Zero) : null)" Style="flex: 1;" />
+                        <FluentTimePicker Label="Start Time" Value="@Content.VisitDate" ValueChanged="@(t => Content.VisitDate = t.HasValue ? (Content.VisitDate?.Date ?? DateTime.Today) + t.Value.TimeOfDay : null)" Style="flex: 1;" />
+                    </FluentStack>
+                    <FluentStack Orientation="Orientation.Horizontal" Style="width: 100%; gap: 8px;">
+                        <FluentDatePicker Label="End Date" Value="@Content.VisitDateEnd" ValueChanged="@(d => Content.VisitDateEnd = d.HasValue ? d.Value.Date + (Content.VisitDateEnd?.TimeOfDay ?? TimeSpan.Zero) : null)" Style="flex: 1;" />
+                        <FluentTimePicker Label="End Time" Value="@Content.VisitDateEnd" ValueChanged="@(t => Content.VisitDateEnd = t.HasValue ? (Content.VisitDateEnd?.Date ?? DateTime.Today) + t.Value.TimeOfDay : null)" Style="flex: 1;" />
+                    </FluentStack>
+                    @if (Content.VisitDate.HasValue && Content.VisitDateEnd.HasValue && Content.VisitDateEnd < Content.VisitDate)
+                    {
+                        <FluentLabel Color="Color.Error" Style="font-size: 0.875em;">Visit end date must be on or after the start date.</FluentLabel>
                     }
                 </FluentStack>
-            }
-            <FluentStack Orientation="Orientation.Horizontal" Style="width: 100%; gap: 8px;">
-                <FluentTextField @bind-Value="@_imageUrl" Label="Image URL" Style="flex: 1;" Placeholder="https://example.com/image.jpg" />
-                <FluentButton Appearance="Appearance.Lightweight" OnClick="@DownloadImageFromUrl" Style="align-self: flex-end;">Download</FluentButton>
-            </FluentStack>
-            @if (!string.IsNullOrEmpty(_imageError))
-            {
-                <FluentLabel Color="Color.Error">@_imageError</FluentLabel>
-            }
-            <FluentLabel Style="font-size: 0.875em; color: var(--neutral-foreground-hint);">Or upload from device:</FluentLabel>
-            <InputFile id="@_fileInputId" OnChange="@HandleFileSelected" accept="image/*" style="display: none;" multiple />
-            <FluentButton Appearance="Appearance.Outline" OnClick="@TriggerFileInput">Browse</FluentButton>
+            </FluentTab>
 
-            <FluentDivider Role="DividerRole.Presentation" />
-
-            <FluentLabel Typo="Typography.Subject">GPX Track (Optional)</FluentLabel>
-            @if (!string.IsNullOrEmpty(Content.GpxTrackId))
-            {
-                var gpxTrack = GpxTracks.FirstOrDefault(g => g.Id == Content.GpxTrackId);
-                @if (gpxTrack != null)
-                {
-                    <FluentCard>
-                        <FluentStack Orientation="Orientation.Horizontal">
-                            <FluentIcon Icon="Icons.Regular.Size20.Location" Color="Color.Accent" />
-                            <FluentStack Orientation="Orientation.Vertical" Style="flex: 1;">
-                                <FluentLabel Weight="FontWeight.Bold">@gpxTrack.Name</FluentLabel>
-                                <FluentLabel Style="font-size: 0.875em;">
-                                    Distance: @gpxTrack.TotalDistance.ToString("F2") km | Points: @gpxTrack.Points.Count
-                                </FluentLabel>
-                            </FluentStack>
-                            <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size16.Delete())" OnClick="@RemoveGpxTrack">
-                            </FluentButton>
+            <FluentTab Label="Images" Icon="@(new Icons.Regular.Size16.Image())">
+                <FluentStack Orientation="Orientation.Vertical" Style="padding: 8px 0;">
+                    @if (Content.Images.Any())
+                    {
+                        <FluentStack Orientation="Orientation.Horizontal" Style="flex-wrap: wrap; gap: 8px;">
+                            @foreach (var img in Content.Images.OrderBy(i => i.SortOrder))
+                            {
+                                <div style="position: relative; display: inline-block;">
+                                    <img src="@GetImageSrc(img)" alt="Place image" style="width: 120px; height: 90px; object-fit: cover; border-radius: 4px;" />
+                                    <FluentButton Appearance="Appearance.Lightweight"
+                                                  Style="position: absolute; top: 2px; right: 2px; padding: 2px; min-width: unset;"
+                                                  OnClick="@(() => RemoveImage(img))">
+                                        <FluentIcon Value="@(new Icons.Regular.Size12.Dismiss())" />
+                                    </FluentButton>
+                                </div>
+                            }
                         </FluentStack>
-                    </FluentCard>
-                }
-            }
-            else
-            {
-                <GpxFileUpload OnFileUploaded="@HandleGpxUploaded" />
-            }
-        </FluentStack>
+                    }
+                    else
+                    {
+                        <FluentLabel Style="font-size: 0.875em; color: var(--neutral-foreground-hint);">No images yet. Add one below.</FluentLabel>
+                    }
+                    <FluentDivider Role="DividerRole.Separator" />
+                    <FluentStack Orientation="Orientation.Horizontal" Style="width: 100%; gap: 8px;">
+                        <FluentTextField @bind-Value="@_imageUrl" Label="Image URL" Style="flex: 1;" Placeholder="https://example.com/image.jpg" />
+                        <FluentButton Appearance="Appearance.Lightweight" OnClick="@DownloadImageFromUrl" Style="align-self: flex-end;">Download</FluentButton>
+                    </FluentStack>
+                    @if (!string.IsNullOrEmpty(_imageError))
+                    {
+                        <FluentLabel Color="Color.Error">@_imageError</FluentLabel>
+                    }
+                    <FluentLabel Style="font-size: 0.875em; color: var(--neutral-foreground-hint);">Or upload from device:</FluentLabel>
+                    <InputFile id="@_fileInputId" OnChange="@HandleFileSelected" accept="image/*" style="display: none;" multiple />
+                    <FluentButton Appearance="Appearance.Outline" OnClick="@TriggerFileInput">Browse</FluentButton>
+                </FluentStack>
+            </FluentTab>
+
+            <FluentTab Label="GPX" Icon="@(new Icons.Regular.Size16.Location())">
+                <FluentStack Orientation="Orientation.Vertical" Style="padding: 8px 0;">
+                    @if (!string.IsNullOrEmpty(Content.GpxTrackId))
+                    {
+                        var gpxTrack = GpxTracks.FirstOrDefault(g => g.Id == Content.GpxTrackId);
+                        @if (gpxTrack != null)
+                        {
+                            <FluentCard>
+                                <FluentStack Orientation="Orientation.Horizontal">
+                                    <FluentIcon Icon="Icons.Regular.Size20.Location" Color="Color.Accent" />
+                                    <FluentStack Orientation="Orientation.Vertical" Style="flex: 1;">
+                                        <FluentLabel Weight="FontWeight.Bold">@gpxTrack.Name</FluentLabel>
+                                        <FluentLabel Style="font-size: 0.875em;">
+                                            Distance: @gpxTrack.TotalDistance.ToString("F2") km | Points: @gpxTrack.Points.Count
+                                        </FluentLabel>
+                                    </FluentStack>
+                                    <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size16.Delete())" OnClick="@RemoveGpxTrack">
+                                    </FluentButton>
+                                </FluentStack>
+                            </FluentCard>
+                        }
+                    }
+                    else
+                    {
+                        <FluentLabel Style="font-size: 0.875em; color: var(--neutral-foreground-hint);">No GPX track attached. Upload one below.</FluentLabel>
+                        <GpxFileUpload OnFileUploaded="@HandleGpxUploaded" />
+                    }
+                </FluentStack>
+            </FluentTab>
+        </FluentTabs>
     }
 </FluentDialogBody>
 <FluentDialogFooter>
