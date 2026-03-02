@@ -5,6 +5,7 @@
 @using TripPlanner.Web.Services
 @using static TripPlanner.Web.Components.Shared.GpxFileUpload
 
+@inject IWishlistRepository WishlistRepository
 @inject IPlaceRepository PlaceRepository
 @inject IGpxRepository GpxRepository
 @inject IHttpClientFactory HttpClientFactory
@@ -19,6 +20,16 @@
     @if (Content != null)
     {
         <FluentStack Orientation="Orientation.Vertical">
+            @if (string.IsNullOrEmpty(Content.WishlistId) && string.IsNullOrEmpty(Content.TripId))
+            {
+                <FluentSelect TOption="Wishlist"
+                              @bind-SelectdOption="SelectedWishlist"
+                              Label="Wishlist"
+                              Items="Wishlists"
+                              OptionValue="@(wl => wl.Id)"
+                              OptionText="@(wl => wl.Name)"
+                              Required />
+            }
             <FluentTextField @bind-Value="@Content.Name" Label="Name" Required Style="width: 100%;" />
             <FluentTextArea @bind-Value="@Content.Description" Label="Description" Rows="3" Style="width: 100%;" />
             <FluentSelect TOption="string" Value="@_newPlaceCategoryString" Label="Category" Style="width: 100%;" ValueChanged="@OnNewPlaceCategoryChanged">
@@ -118,6 +129,9 @@
     [CascadingParameter]
     public FluentDialog Dialog { get; set; } = default!;
 
+    private List<Wishlist>? Wishlists { get; set; }
+    private Wishlist? SelectedWishlist { get; set; }
+
     private List<GpxTrack> GpxTracks { get; set; } = new();
     private IEnumerable<string> Tags { get; set; } = new List<string>() { "hiking", "kids", "water", "easy", "hard" };
     private IEnumerable<string> SelectedTags { get; set; } = Array.Empty<string>();
@@ -139,6 +153,7 @@
         CurrentUser = await UserService.GetCurrentUserAsync();
         SelectedTags = Content.Tags;
         await LoadGpxTracks();
+        await LoadWishlists();
     }
 
     protected override void OnParametersSet()
@@ -150,6 +165,16 @@
     {
         GpxTracks = await GpxRepository.GetAllAsync();
     }
+
+    private async Task LoadWishlists()
+    {
+        if (CurrentUser is null) return;
+
+        Wishlists = await WishlistRepository.GetAllByUserAsync(CurrentUser.Id);
+    }
+
+
+
 
     private void OnNewPlaceCategoryChanged(string value)
     {
@@ -256,6 +281,19 @@
 
         if (Content == null || string.IsNullOrWhiteSpace(Content.Name))
             return;
+
+        if (string.IsNullOrEmpty(Content.WishlistId) && string.IsNullOrEmpty(Content.TripId))
+        {
+            if (SelectedWishlist != null)
+            {
+                Content.WishlistId = SelectedWishlist.Id;
+            }
+            else
+            {
+                return;
+            }
+        }
+
 
         var dbPlace = await PlaceRepository.GetByIdAsync(Content.Id, CurrentUser.Id);
 

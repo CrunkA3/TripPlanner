@@ -1,4 +1,4 @@
-@page "/wishlist"
+@page "/places"
 
 @using Microsoft.AspNetCore.Authorization
 @using TripPlanner.Web.Models
@@ -9,6 +9,7 @@
 
 @attribute [Authorize]
 
+@inject IWishlistRepository WishlistRepository
 @inject IPlaceRepository PlaceRepository
 @inject IGpxRepository GpxRepository
 @inject GpxService GpxService
@@ -83,6 +84,16 @@
         @if (EditingPlace != null)
         {
             <FluentStack Orientation="Orientation.Vertical">
+                @if (string.IsNullOrEmpty(EditingPlace.WishlistId) && string.IsNullOrEmpty(EditingPlace.TripId))
+                {
+                    <FluentSelect TOption="Wishlist"
+                                  @bind-SelectdOption="SelectedWishlist"
+                                  Label="Wishlist"
+                                  Items="Wishlists"
+                                  OptionValue="@(wl => wl.Id)"
+                                  OptionText="@(wl => wl.Name)"
+                                  Required />
+                }
                 <FluentTextField @bind-Value="@EditingPlace.Name" Label="Name" Required Style="width: 100%;" />
                 <FluentTextArea @bind-Value="@EditingPlace.Description" Label="Description" Rows="3" Style="width: 100%;" />
                 
@@ -162,6 +173,8 @@
 <FluentDialogProvider />
 
 @code {
+    private List<Wishlist>? Wishlists { get; set; }
+    private Wishlist? SelectedWishlist { get; set; }
 
     private IQueryable<Place>? Places { get; set; }
     private IQueryable<Place>? FilteredPlaces => Places?
@@ -216,6 +229,13 @@
         GpxTracks = await GpxRepository.GetAllAsync();
     }
 
+    private async Task LoadWishlists()
+    {
+        if (CurrentUser is null) return;
+
+        Wishlists = await WishlistRepository.GetAllByUserAsync(CurrentUser.Id);
+    }
+
     private async Task ApplyFilters()
     {
         IsLoading = true;
@@ -235,32 +255,41 @@
         await LoadPlaces();
     }
 
-    private void CreateNewPlace()
+    private async Task CreateNewPlace()
     {
-        EditingPlace = new Place();
-        _selectedCategoryString = EditingPlace.Category.ToString();
-        HideAddDialog = false;
+        var dialog = await DialogService.ShowDialogAsync<PlaceDialog>(new Place(), new DialogParameters()
+        {
+            PreventDismissOnOverlayClick = true,
+            PreventScroll = true,
+            TrapFocus = true
+        });
+
+        var result = await dialog.Result;
+
+        if (!result.Cancelled && result.Data is not null)
+        {
+            
+            await LoadPlaces();
+            StateHasChanged();
+        }
     }
 
-    private void EditPlace(Place place)
+    private async Task EditPlace(Place place)
     {
-        EditingPlace = new Place
+        var dialog = await DialogService.ShowDialogAsync<PlaceDialog>(place, new DialogParameters()
         {
-            Id = place.Id,
-            Name = place.Name,
-            Description = place.Description,
-            Category = place.Category,
-            Latitude = place.Latitude,
-            Longitude = place.Longitude,
-            Tags = new List<string>(place.Tags),
-            GpxTrackId = place.GpxTrackId,
-            VisitDate = place.VisitDate,
-            VisitDateEnd = place.VisitDateEnd,
-            CreatedAt = place.CreatedAt,
-            UpdatedAt = place.UpdatedAt
-        };
-        _selectedCategoryString = EditingPlace.Category.ToString();
-        HideAddDialog = false;
+            Title = "Edit Place",
+            PreventDismissOnOverlayClick = true,
+            PreventScroll = true,
+            TrapFocus = true
+        });
+
+        var result = await dialog.Result;
+
+        if (!result.Cancelled && result.Data is not null)
+        {
+            StateHasChanged();
+        }
     }
 
     private async Task OpenNotes(Place place)
@@ -284,6 +313,17 @@
     private async Task SavePlace()
     {
         if (EditingPlace == null) return;
+        if (string.IsNullOrEmpty(EditingPlace.WishlistId) && string.IsNullOrEmpty(EditingPlace.TripId))
+        {
+            if (SelectedWishlist != null)
+            {
+                EditingPlace.WishlistId = SelectedWishlist.Id;
+            }
+            else
+            {
+                return;
+            }
+        }
 
         if (string.IsNullOrEmpty(EditingPlace.Id) || (Places is not null && !Places.Any(p => p.Id == EditingPlace.Id)))
         {
