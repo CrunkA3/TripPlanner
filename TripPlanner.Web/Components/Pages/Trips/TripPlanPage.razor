@@ -18,6 +18,8 @@
 
 @rendermode InteractiveServer
 
+<PageTitle>Trip Planner - @(PlanningTrip?.Name ?? TripId)</PageTitle>
+
 <FluentGrid Spacing="3">
     @if (PlanningTrip != null)
     {
