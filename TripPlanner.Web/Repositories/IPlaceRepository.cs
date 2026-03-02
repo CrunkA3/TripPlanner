@@ -59,6 +59,7 @@ public interface IPlaceRepository
         PlaceCategory.Accommodation => new Icons.Regular.Size32.BuildingHome(),
         PlaceCategory.Shopping => new Icons.Regular.Size32.ShoppingBag(),
         PlaceCategory.Entertainment => new Icons.Regular.Size32.StarEmphasis(),
+        PlaceCategory.Race => new Icons.Regular.Size32.Flag(),
         _ => new Icons.Regular.Size32.LocationArrow(),
     };
 }
