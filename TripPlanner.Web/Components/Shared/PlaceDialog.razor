@@ -34,6 +34,11 @@
                     }
                     <FluentTextField @bind-Value="@Content.Name" Label="Name" Required Style="width: 100%;" />
                     <FluentTextArea @bind-Value="@Content.Description" Label="Description" Rows="3" Style="width: 100%;" />
+                    <FluentTextField @bind-Value="@Content.Url" Label="Link (URL)" Style="width: 100%;" Placeholder="https://example.com" />
+                    @if (!string.IsNullOrEmpty(_urlError))
+                    {
+                        <FluentLabel Color="Color.Error" Style="font-size: 0.875em;">@_urlError</FluentLabel>
+                    }
                     <FluentSelect TOption="string" Value="@_newPlaceCategoryString" Label="Category" Style="width: 100%;" ValueChanged="@OnNewPlaceCategoryChanged">
                         @foreach (var category in Enum.GetValues<PlaceCategory>())
                         {
@@ -157,6 +162,7 @@
 
     private string _imageUrl = string.Empty;
     private string? _imageError;
+    private string? _urlError;
     private string _fileInputId = $"img-upload-{Guid.NewGuid():N}";
     private const long MaxImageSizeBytes = 5 * 1024 * 1024;
     private const int MaxImageCount = 10;
@@ -300,6 +306,17 @@
 
         if (Content == null || string.IsNullOrWhiteSpace(Content.Name))
             return;
+
+        _urlError = null;
+        if (!string.IsNullOrWhiteSpace(Content.Url))
+        {
+            if (!Uri.TryCreate(Content.Url, UriKind.Absolute, out var uri) ||
+                (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+            {
+                _urlError = "Please enter a valid http or https URL.";
+                return;
+            }
+        }
 
         if (string.IsNullOrEmpty(Content.WishlistId) && string.IsNullOrEmpty(Content.TripId))
         {
