@@ -45,6 +45,7 @@ public interface IPlaceRepository
         PlaceCategory.Accommodation => "place-cat-accommodation",
         PlaceCategory.Shopping => "place-cat-shopping",
         PlaceCategory.Entertainment => "place-cat-entertainment",
+        PlaceCategory.Race => "place-cat-race",
         _ => "place-cat-other",
     };
 
