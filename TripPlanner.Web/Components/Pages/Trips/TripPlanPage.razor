@@ -519,23 +519,32 @@
 
         WeatherByDayId.Clear();
 
-        foreach (var day in PlanningTrip.Days)
+        var daysWithLocation = PlanningTrip.Days
+            .Where(day => day.Date.HasValue)
+            .Select(day =>
+            {
+                var firstPlace = day.Places
+                    .OrderBy(p => p.Order)
+                    .Select(p => p.Place)
+                    .FirstOrDefault(p => p != null);
+                return (day.Id, day.Date!.Value, firstPlace);
+            })
+            .Where(x => x.firstPlace != null)
+            .ToList();
+
+        var tasks = daysWithLocation.Select(async x =>
         {
-            if (!day.Date.HasValue) continue;
-
-            var date = DateOnly.FromDateTime(day.Date.Value);
-            // Use coordinates of the first place in the day, or trip's first place
-            var firstPlace = day.Places
-                .OrderBy(p => p.Order)
-                .Select(p => p.Place)
-                .FirstOrDefault(p => p != null);
-
-            if (firstPlace == null) continue;
-
+            var date = DateOnly.FromDateTime(x.Value);
             var weather = await WeatherService.GetWeatherForDateAsync(
-                firstPlace.Latitude, firstPlace.Longitude, date);
+                x.firstPlace!.Latitude, x.firstPlace.Longitude, date);
+            return (x.Id, weather);
+        });
+
+        var results = await Task.WhenAll(tasks);
+        foreach (var (id, weather) in results)
+        {
             if (weather != null)
-                WeatherByDayId[day.Id] = weather;
+                WeatherByDayId[id] = weather;
         }
     }
 

@@ -323,13 +323,20 @@
             .Concat(SelectedTripPlaces
                 .Where(tp => tp.Place != null)
                 .Select(tp => (id: tp.Place!.Id, lat: tp.Place.Latitude, lon: tp.Place.Longitude)))
-            .DistinctBy(x => x.id);
+            .DistinctBy(x => x.id)
+            .ToList();
 
-        foreach (var loc in allLocations)
+        var tasks = allLocations.Select(async loc =>
         {
             var weather = await WeatherService.GetWeatherForDateAsync(loc.lat, loc.lon, targetDate);
+            return (loc.id, weather);
+        });
+
+        var results = await Task.WhenAll(tasks);
+        foreach (var (id, weather) in results)
+        {
             if (weather != null)
-                WeatherByPlaceId[loc.id] = weather;
+                WeatherByPlaceId[id] = weather;
         }
 
         StateHasChanged();

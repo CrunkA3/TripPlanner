@@ -1,11 +1,12 @@
+using System.Collections.Concurrent;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 
 namespace TripPlanner.Web.Services;
 
-public class WeatherService(IHttpClientFactory httpClientFactory)
+public class WeatherService(IHttpClientFactory httpClientFactory, ILogger<WeatherService> logger)
 {
-    private readonly Dictionary<string, WeatherForecast> _cache = new();
+    private readonly ConcurrentDictionary<string, WeatherForecast> _cache = new();
 
     public async Task<WeatherForecast?> GetForecastAsync(double latitude, double longitude)
     {
@@ -15,8 +16,8 @@ public class WeatherService(IHttpClientFactory httpClientFactory)
 
         try
         {
-            var client = httpClientFactory.CreateClient();
-            var url = $"https://api.open-meteo.com/v1/forecast" +
+            var client = httpClientFactory.CreateClient("OpenMeteo");
+            var url = $"v1/forecast" +
                       $"?latitude={latitude.ToString("F4", System.Globalization.CultureInfo.InvariantCulture)}" +
                       $"&longitude={longitude.ToString("F4", System.Globalization.CultureInfo.InvariantCulture)}" +
                       "&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weathercode" +
@@ -44,8 +45,9 @@ public class WeatherService(IHttpClientFactory httpClientFactory)
             _cache[key] = forecast;
             return forecast;
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogWarning(ex, "Failed to fetch weather forecast for {Latitude},{Longitude}", latitude, longitude);
             return null;
         }
     }
