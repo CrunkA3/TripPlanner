@@ -160,8 +160,8 @@ async function main() {
     // ── 6. Wishlists page (empty) ──────────────────────────────────────────
     console.log('\n[6] Wishlists page');
     await page.goto(`${BASE_URL}/wishlists`, { waitUntil: 'domcontentloaded' });
-    await page.waitForSelector('fluent-button', { timeout: 15000 });
-    await page.waitForTimeout(1500);
+    await page.waitForSelector('#blazor-interactive', { state: 'attached', timeout: 15000 });
+    await page.waitForTimeout(500);
     await screenshot(page, '03-wishlists-empty.png', 'Wishlists page – empty');
 
     // ── 7. Create a wishlist ───────────────────────────────────────────────
@@ -208,8 +208,8 @@ async function main() {
     // ── 9. Trips page (empty) ──────────────────────────────────────────────
     console.log('\n[9] Trips page');
     await page.goto(`${BASE_URL}/trips`, { waitUntil: 'domcontentloaded' });
-    await page.waitForSelector('fluent-button', { timeout: 15000 });
-    await page.waitForTimeout(1500);
+    await page.waitForSelector('#blazor-interactive', { state: 'attached', timeout: 15000 });
+    await page.waitForTimeout(500);
     await screenshot(page, '07-trips-empty.png', 'Trips page – empty');
 
     // ── 10. Create a trip ─────────────────────────────────────────────────
