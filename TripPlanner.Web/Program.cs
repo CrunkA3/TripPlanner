@@ -60,6 +60,7 @@ builder.Services.AddScoped<IWishlistRepository, WishlistRepository>();
 builder.Services.AddScoped<GpxService>();
 builder.Services.AddScoped<RoutingService>();
 builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<WeatherService>();
 
 
 var app = builder.Build();

@@ -13,6 +13,7 @@
 @inject IJSRuntime JSRuntime
 @inject UserService UserService
 @inject IDialogService DialogService
+@inject WeatherService WeatherService
 
 @attribute [Authorize]
 
@@ -34,6 +35,15 @@
             @foreach (var trip in Trips)
             {
                 <FluentOption TOption="string" Value="@trip.Id">@trip.Name</FluentOption>
+            }
+        </FluentSelect>
+        <FluentSelect TOption="string" Value="@SelectedWeatherDayStr" ValueChanged="@OnWeatherDayChanged" Label="Weather Day" Style="min-width: 160px;">
+            @for (int i = 0; i < 7; i++)
+            {
+                var day = i;
+                var date = DateTime.Today.AddDays(day);
+                var label = day == 0 ? "Today" : day == 1 ? "Tomorrow" : date.ToString("ddd, MMM d");
+                <FluentOption TOption="string" Value="@day.ToString()">@label</FluentOption>
             }
         </FluentSelect>
         <FluentButton Appearance="Appearance.Outline" IconStart="@(new Icons.Regular.Size20.ArrowSync())" OnClick="@LoadMapData">
@@ -81,11 +91,12 @@
                         @if (Places.Any())
                         {
                             <FluentAccordionItem Heading="Wishlist Places" Expanded="true">
-                                @if (isLandscape)
+                                    @if (isLandscape)
                                 {
                                     <FluentStack Orientation="Orientation.Vertical">
                                         @foreach (var place in Places)
                                         {
+                                            var weather = WeatherByPlaceId.GetValueOrDefault(place.Id);
                                             <FluentCard>
                                                 <FluentStack Orientation="Orientation.Vertical">
                                                     <FluentLabel Weight="FontWeight.Bold">@place.Name</FluentLabel>
@@ -93,6 +104,12 @@
                                                     <FluentLabel Style="font-size: 0.875em;">
                                                         @place.Latitude.ToString("F4"), @place.Longitude.ToString("F4")
                                                     </FluentLabel>
+                                                    @if (weather != null)
+                                                    {
+                                                        <FluentLabel Style="font-size: 0.875em;" title="@weather.GetDescription()">
+                                                            @weather.GetSummary()
+                                                        </FluentLabel>
+                                                    }
                                                 </FluentStack>
                                             </FluentCard>
                                         }
@@ -103,6 +120,7 @@
                                     <FluentHorizontalScroll Speed="600" Easing=ScrollEasing.EaseInOut>
                                         @foreach (var place in Places)
                                         {
+                                            var weather = WeatherByPlaceId.GetValueOrDefault(place.Id);
                                             <FluentCard Style="height:150px;width: 150px;">
                                                 <FluentStack Orientation="Orientation.Vertical">
                                                     <FluentLabel Weight="FontWeight.Bold">@place.Name</FluentLabel>
@@ -110,6 +128,12 @@
                                                     <FluentLabel Style="font-size: 0.875em;">
                                                         @place.Latitude.ToString("F4"), @place.Longitude.ToString("F4")
                                                     </FluentLabel>
+                                                    @if (weather != null)
+                                                    {
+                                                        <FluentLabel Style="font-size: 0.875em;" title="@weather.GetDescription()">
+                                                            @weather.GetSummary()
+                                                        </FluentLabel>
+                                                    }
                                                 </FluentStack>
                                             </FluentCard>
                                         }
@@ -126,6 +150,7 @@
                                     {
                                         @if (tripPlace.Place != null)
                                         {
+                                            var weather = WeatherByPlaceId.GetValueOrDefault(tripPlace.Place.Id);
                                             <FluentCard>
                                                 <FluentStack Orientation="Orientation.Vertical">
                                                     <FluentLabel Weight="FontWeight.Bold">@tripPlace.Place.Name</FluentLabel>
@@ -139,6 +164,12 @@
                                                     <FluentLabel Style="font-size: 0.875em;">
                                                         @tripPlace.Place.Latitude.ToString("F4"), @tripPlace.Place.Longitude.ToString("F4")
                                                     </FluentLabel>
+                                                    @if (weather != null)
+                                                    {
+                                                        <FluentLabel Style="font-size: 0.875em;" title="@weather.GetDescription()">
+                                                            @weather.GetSummary()
+                                                        </FluentLabel>
+                                                    }
                                                 </FluentStack>
                                             </FluentCard>
                                         }
@@ -179,13 +210,16 @@
     private bool MapInitialized { get; set; }
     private ApplicationUser? CurrentUser { get; set; }
     private DotNetObjectReference<MapPage>? _dotNetRef;
+    private int SelectedWeatherDay { get; set; } = 0;
+    private string SelectedWeatherDayStr { get; set; } = "0";
+    private Dictionary<string, DailyWeather> WeatherByPlaceId { get; set; } = new();
 
     private bool isLandscape = true;
 
     protected override async Task OnInitializedAsync()
     {
         await LoadMapData();
-
+        await LoadWeather();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -270,6 +304,35 @@
         {
             await UpdateMapContent();
         }
+    }
+
+    private async Task OnWeatherDayChanged(string value)
+    {
+        SelectedWeatherDayStr = value;
+        SelectedWeatherDay = int.TryParse(value, out var d) ? d : 0;
+        await LoadWeather();
+    }
+
+    private async Task LoadWeather()
+    {
+        var targetDate = DateOnly.FromDateTime(DateTime.Today.AddDays(SelectedWeatherDay));
+        WeatherByPlaceId.Clear();
+
+        var allLocations = Places
+            .Select(p => (id: p.Id, lat: p.Latitude, lon: p.Longitude))
+            .Concat(SelectedTripPlaces
+                .Where(tp => tp.Place != null)
+                .Select(tp => (id: tp.Place!.Id, lat: tp.Place.Latitude, lon: tp.Place.Longitude)))
+            .DistinctBy(x => x.id);
+
+        foreach (var loc in allLocations)
+        {
+            var weather = await WeatherService.GetWeatherForDateAsync(loc.lat, loc.lon, targetDate);
+            if (weather != null)
+                WeatherByPlaceId[loc.id] = weather;
+        }
+
+        StateHasChanged();
     }
 
     private async Task UpdateMapContent()
