@@ -5,12 +5,14 @@
 @using TripPlanner.Web.Repositories
 @using TripPlanner.Web.Services
 @using Microsoft.JSInterop
+@using TripPlanner.Web.Components.Shared
 
 @inject IPlaceRepository PlaceRepository
 @inject ITripRepository TripRepository
 @inject IGpxRepository GpxRepository
 @inject IJSRuntime JSRuntime
 @inject UserService UserService
+@inject IDialogService DialogService
 
 @attribute [Authorize]
 
@@ -176,6 +178,7 @@
     private bool ShowGpxTracks { get; set; } = true;
     private bool MapInitialized { get; set; }
     private ApplicationUser? CurrentUser { get; set; }
+    private DotNetObjectReference<MapPage>? _dotNetRef;
 
     private bool isLandscape = true;
 
@@ -216,6 +219,8 @@
                 zoom = 10;
             }
             await JSRuntime.InvokeVoidAsync("mapInterop.initializeMap", "map", centerLat, centerLng, zoom);
+            _dotNetRef = DotNetObjectReference.Create(this);
+            await JSRuntime.InvokeVoidAsync("mapInterop.setDotNetRef", _dotNetRef);
             MapInitialized = true;
         }
         catch (Exception ex)
@@ -354,8 +359,23 @@
         await UpdateMapContent();
     }
 
+    [JSInvokable]
+    public async Task OnViewPlace(string placeId)
+    {
+        var place = Places.FirstOrDefault(p => p.Id == placeId)
+            ?? SelectedTripPlaces.FirstOrDefault(tp => tp.PlaceId == placeId)?.Place;
+        if (place is null) return;
+
+        await DialogService.ShowDialogAsync<PlaceDialog>(place, new DialogParameters()
+        {
+            Title = place.Name,
+            Width = "600px"
+        });
+    }
+
     public async ValueTask DisposeAsync()
     {
+        _dotNetRef?.Dispose();
         if (MapInitialized)
         {
             try
