@@ -1,0 +1,107 @@
+﻿@using TripPlanner.Web.Models
+<FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Stretch" VerticalGap="6">
+    <FluentButton Appearance="Appearance.Accent" OnClick="async (e) => await OnSaveTripPlan.InvokeAsync()">Save Plan</FluentButton>
+    <FluentStack Orientation="Orientation.Vertical" VerticalGap="6">
+        @foreach (var day in PlanningTrip!.Days.OrderBy(d => d.DayNumber))
+        {
+            <FluentCard class="drop-zone"
+                        @ondragover:preventDefault
+                        @ondragenter="@(async (e) => await OnHandleDragEnter.InvokeAsync(day.Id))"
+                        @ondragleave="@(async (e) => await OnHandleDragLeave.InvokeAsync())"
+                        @ondrop="@(async (e) => await OnHandleDrop.InvokeAsync(day.Id))"
+                        Style="@(CurrentDropTarget == day.Id ? "background-color: var(--neutral-layer-2); border: 2px dashed var(--accent-fill-rest);" : "")">
+                <FluentStack Orientation="Orientation.Vertical">
+                    <FluentStack Orientation="Orientation.Horizontal">
+                        <FluentLabel Typo="Typography.Subject" Weight="FontWeight.Bold">
+                            Day @day.DayNumber
+                        </FluentLabel>
+                        @if (day.Date.HasValue)
+                        {
+                            <FluentLabel Style="font-size: 0.875em;">
+                                - @day.Date.Value.ToString("MMM dd, yyyy")
+                            </FluentLabel>
+                        }
+                        <FluentSpacer />
+                        <FluentLabel Style="font-size: 0.875em;">
+                            @day.Places.Count places
+                        </FluentLabel>
+                    </FluentStack>
+                    <FluentDivider Role="DividerRole.Presentation" />
+                    @if (!day.Places.Any())
+                    {
+                        <FluentLabel Style="font-size: 0.875em; text-align: center; padding: 24px; color: var(--neutral-foreground-hint);">
+                            Drop places here to schedule
+                        </FluentLabel>
+                    }
+                    else
+                    {
+                        <FluentStack Orientation="Orientation.Vertical" VerticalGap="8">
+                            @foreach (var tripPlace in day.Places.OrderBy(p => p.Order))
+                            {
+                                <FluentCard class="draggable"
+                                            draggable="true"
+                                            @ondragstart="@(async (e) => await OnHandleDragStart.InvokeAsync((tripPlace.PlaceId, day.Id, tripPlace.Order)))"
+                                            @ondragend="async (e) => await OnHandleDragEnd.InvokeAsync()"
+                                            Style="cursor: move; padding: 8px;">
+                                    <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" HorizontalGap="3">
+                                        <FluentIcon Value="@(new Icons.Regular.Size16.Navigation())" />
+                                        <FluentLabel Weight="FontWeight.Bold" Style="flex: 1;overflow: hidden;text-overflow: ellipsis;" @ondblclick="@(async () => await OnEditPlaceClick.InvokeAsync(tripPlace.Place!))">@(tripPlace.Place?.Name ?? "Unknown")</FluentLabel>
+                                        <input type="time"
+                                               value="@(tripPlace.ScheduledTime.HasValue? tripPlace.ScheduledTime.Value.ToString("HH:mm") : "")"
+                                               @onchange="@(async (e) => await OnUpdateScheduledTime.InvokeAsync((tripPlace, e.Value?.ToString(), day.Date)))"
+                                               style="border: 1px solid var(--neutral-stroke-rest); border-radius: 4px; padding: 2px 4px; font-size: 0.875em; background: transparent;" />
+                                        <FluentButton Appearance="Appearance.Lightweight"
+                                                      OnClick="@(async () => await OnRemovePlaceFromDay.InvokeAsync((day.Id, tripPlace.PlaceId)))"
+                                                      Style="padding: 4px;">
+                                            <FluentIcon Value="@(new Icons.Regular.Size12.Dismiss())" />
+                                        </FluentButton>
+                                    </FluentStack>
+                                </FluentCard>
+                            }
+                        </FluentStack>
+                    }
+                </FluentStack>
+            </FluentCard>
+        }
+    </FluentStack>
+</FluentStack>
+
+
+
+@code {
+    [Parameter, EditorRequired]
+    public Trip? PlanningTrip { get; set; }
+
+    [Parameter, EditorRequired]
+    public string? CurrentDropTarget { get; set; }
+
+    
+    [Parameter, EditorRequired]
+    public EventCallback<(string PlaceId, string? FromDayId, int FromOrder)> OnHandleDragStart { get; set; }
+    
+    [Parameter, EditorRequired]
+    public EventCallback OnHandleDragEnd { get; set; }
+    
+    [Parameter, EditorRequired]
+    public EventCallback<Place> OnEditPlaceClick { get; set; }
+
+    [Parameter, EditorRequired]
+    public EventCallback<string> OnHandleDragEnter { get; set; }
+
+    [Parameter, EditorRequired]
+    public EventCallback OnHandleDragLeave { get; set; }
+
+    [Parameter, EditorRequired]
+    public EventCallback<string> OnHandleDrop { get; set; }
+
+    [Parameter, EditorRequired]
+    public EventCallback OnSaveTripPlan { get; set; }
+
+    [Parameter, EditorRequired]
+    public EventCallback<(TripPlace tripPlace, string? timeString, DateTime? date)> OnUpdateScheduledTime { get; set; }
+
+    [Parameter, EditorRequired]
+    public EventCallback<(string dayId, string placeId)> OnRemovePlaceFromDay { get; set; }
+
+
+}

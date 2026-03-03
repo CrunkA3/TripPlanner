@@ -1,0 +1,50 @@
+﻿@implements IDialogContentComponent<TripPlanPanelDays.TripPlanPanelDaysContent>
+
+@using TripPlanner.Web.Models
+
+<FluentDialogBody>
+    @if (Content is not null)
+    {
+        <TripPlanSectionDays PlanningTrip="Content.PlanningTrip"
+                             CurrentDropTarget="Content.CurrentDropTarget"
+                             OnHandleDragStart="Content.OnHandleDragStart"
+                             OnHandleDragEnd="Content.OnHandleDragEnd"
+                             OnHandleDragEnter="Content.OnHandleDragEnter"
+                             OnHandleDragLeave="Content.OnHandleDragLeave"
+                             OnHandleDrop="Content.OnHandleDrop"
+                             OnUpdateScheduledTime="Content.OnUpdateScheduledTime"
+                             OnRemovePlaceFromDay="Content.OnRemovePlaceFromDay"
+                             OnEditPlaceClick="Content.OnEditPlaceClick"
+                             OnSaveTripPlan="Content.OnSaveTripPlan" />
+    }
+</FluentDialogBody>
+
+@code {
+    [Parameter]
+    public TripPlanPanelDaysContent Content { get; set; } = default!;
+
+    public class TripPlanPanelDaysContent
+    {
+        public required Trip? PlanningTrip { get; set; }
+
+        public required string? CurrentDropTarget { get; set; }
+            
+        public required EventCallback<(string PlaceId, string? FromDayId, int FromOrder)> OnHandleDragStart { get; set; }
+    
+        public required EventCallback OnHandleDragEnd { get; set; }
+    
+        public required EventCallback<Place> OnEditPlaceClick { get; set; }
+
+        public required EventCallback<string> OnHandleDragEnter { get; set; }
+
+        public required EventCallback OnHandleDragLeave { get; set; }
+
+        public required EventCallback<string> OnHandleDrop { get; set; }
+
+        public required EventCallback OnSaveTripPlan { get; set; }
+
+        public required EventCallback<(TripPlace tripPlace, string? timeString, DateTime? date)> OnUpdateScheduledTime { get; set; }
+
+        public required EventCallback<(string dayId, string placeId)> OnRemovePlaceFromDay { get; set; }
+    }
+}

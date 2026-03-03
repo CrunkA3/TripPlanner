@@ -1,0 +1,29 @@
+﻿@implements IDialogContentComponent<TripPlanPanelAccommodations.TripPlanPanelAccommodationsContent>
+
+@using TripPlanner.Web.Models
+
+<FluentDialogBody>
+    @if (Content is not null)
+    {
+        <TripPlanSectionAccomodations PlanningTrip="Content.PlanningTrip"
+                                      OnOpenAddAccommodationDialog="Content.OnOpenAddAccommodationDialog"
+                                      OnOpenEditAccommodationDialog="Content.OnOpenEditAccommodationDialog"
+                                      OnDeleteAccommodation="Content.OnDeleteAccommodation" />
+    }
+</FluentDialogBody>
+
+@code {
+    [Parameter]
+    public TripPlanPanelAccommodationsContent Content { get; set; } = default!;
+
+    public class TripPlanPanelAccommodationsContent
+    {
+        public required Trip? PlanningTrip { get; set; }
+    
+        public required EventCallback<Accommodation> OnOpenEditAccommodationDialog { get; set; }
+    
+        public required EventCallback<string> OnDeleteAccommodation { get; set; }
+    
+        public required EventCallback OnOpenAddAccommodationDialog { get; set; }
+    }
+}

@@ -1,0 +1,35 @@
+﻿@implements IDialogContentComponent<TripPlanPanelPlaces.TripPlanPanelPlacesContent>
+
+@using TripPlanner.Web.Models
+
+<FluentDialogBody>
+    @if (Content is not null)
+    {
+        <TripPlanSectionPlaces PlanningTrip="Content.PlanningTrip"
+                               Places="Content.Places"
+                               OnHandleDragStart="Content.OnHandleDragStart"
+                               OnHandleDragEnd="Content.OnHandleDragEnd"
+                               OnAddPlaceClick="Content.OnAddPlaceClick"
+                               OnEditPlaceClick="Content.OnEditPlaceClick" />      
+    }
+</FluentDialogBody>
+
+@code {
+    [Parameter]
+    public TripPlanPanelPlacesContent Content { get; set; } = default!;
+
+    public class TripPlanPanelPlacesContent
+    {
+        public required IEnumerable<Place> Places { get; set; }
+
+        public required Trip? PlanningTrip { get; set; }
+    
+        public required EventCallback<string> OnHandleDragStart { get; set; }
+    
+        public required EventCallback OnHandleDragEnd { get; set; }
+
+        public required EventCallback OnAddPlaceClick { get; set; }
+
+        public required EventCallback<Place> OnEditPlaceClick { get; set; }
+    }
+}
