@@ -57,17 +57,23 @@ async function fillByLabel(page, label, value) {
  * Sets the value of a name-bound form field (used in static-SSR forms such as
  * Account/Register and Account/Login) via JavaScript so the server-side POST
  * picks it up.
+ *
+ * Fluent UI components (e.g. fluent-text-field) are custom web elements whose
+ * visible host element is NOT an HTMLInputElement.  The actual <input> lives
+ * inside the component's shadow DOM.  We pierce the shadow root so that the
+ * native HTMLInputElement setter is always called on a real input element,
+ * preventing the "Illegal invocation" TypeError.
  */
 async function setFormFieldByName(page, name, value) {
   await page.evaluate(({ n, v }) => {
-    const el = document.querySelector(`[name="${n}"]`);
-    if (!el) return;
-    const proto = Object.getPrototypeOf(el);
-    const descriptor =
-      Object.getOwnPropertyDescriptor(proto, 'value') ||
-      Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value');
-    if (descriptor && descriptor.set) {
-      descriptor.set.call(el, v);
+    const host = document.querySelector(`[name="${n}"]`);
+    if (!host) return;
+    // Resolve the real input: for web components the native <input> is in the
+    // shadow DOM; for plain HTML inputs the host element itself is the input.
+    const el = (host.shadowRoot && host.shadowRoot.querySelector('input')) || host;
+    const nativeDescriptor = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value');
+    if (nativeDescriptor && nativeDescriptor.set && el instanceof window.HTMLInputElement) {
+      nativeDescriptor.set.call(el, v);
     } else {
       el.value = v;
     }
@@ -101,13 +107,14 @@ async function main() {
     await setFormFieldByName(page, 'Input.Password', TEST_PASSWORD);
     await setFormFieldByName(page, 'Input.ConfirmPassword', TEST_PASSWORD);
 
-    // Accept privacy policy
+    // Accept privacy policy – fluent-checkbox keeps its native <input> in shadow DOM
     await page.evaluate(() => {
-      const cb = document.querySelector('[name="Input.AcceptPrivacyPolicy"]');
-      if (cb) {
-        cb.checked = true;
-        cb.dispatchEvent(new Event('change', { bubbles: true }));
-      }
+      const host = document.querySelector('[name="Input.AcceptPrivacyPolicy"]');
+      if (!host) return;
+      const cb = (host.shadowRoot && host.shadowRoot.querySelector('input[type="checkbox"]')) || host;
+      cb.checked = true;
+      cb.dispatchEvent(new Event('input', { bubbles: true }));
+      cb.dispatchEvent(new Event('change', { bubbles: true }));
     });
 
     // Submit via the button click (triggers browser validation + Blazor anti-forgery)
@@ -153,8 +160,8 @@ async function main() {
     // ── 6. Wishlists page (empty) ──────────────────────────────────────────
     console.log('\n[6] Wishlists page');
     await page.goto(`${BASE_URL}/wishlists`, { waitUntil: 'domcontentloaded' });
-    await page.waitForSelector('fluent-button', { timeout: 15000 });
-    await page.waitForTimeout(1500);
+    await page.waitForSelector('#blazor-interactive', { state: 'attached', timeout: 15000 });
+    await page.waitForTimeout(500);
     await screenshot(page, '03-wishlists-empty.png', 'Wishlists page – empty');
 
     // ── 7. Create a wishlist ───────────────────────────────────────────────
@@ -201,8 +208,8 @@ async function main() {
     // ── 9. Trips page (empty) ──────────────────────────────────────────────
     console.log('\n[9] Trips page');
     await page.goto(`${BASE_URL}/trips`, { waitUntil: 'domcontentloaded' });
-    await page.waitForSelector('fluent-button', { timeout: 15000 });
-    await page.waitForTimeout(1500);
+    await page.waitForSelector('#blazor-interactive', { state: 'attached', timeout: 15000 });
+    await page.waitForTimeout(500);
     await screenshot(page, '07-trips-empty.png', 'Trips page – empty');
 
     // ── 10. Create a trip ─────────────────────────────────────────────────

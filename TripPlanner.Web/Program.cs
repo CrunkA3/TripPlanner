@@ -49,6 +49,11 @@ builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSe
 
 // Register HttpClient for image URL downloads
 builder.Services.AddHttpClient();
+builder.Services.AddHttpClient("OpenMeteo", client =>
+{
+    client.BaseAddress = new Uri("https://api.open-meteo.com/");
+    client.Timeout = TimeSpan.FromSeconds(10);
+});
 
 // Register TripPlanner repositories (EF Core)
 builder.Services.AddScoped<IPlaceRepository, PlaceRepository>();
@@ -60,6 +65,7 @@ builder.Services.AddScoped<IWishlistRepository, WishlistRepository>();
 builder.Services.AddScoped<GpxService>();
 builder.Services.AddScoped<RoutingService>();
 builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<WeatherService>();
 
 
 var app = builder.Build();

@@ -13,6 +13,7 @@
 @inject UserService UserService
 @inject IDialogService DialogService
 @inject IJSRuntime JSRuntime
+@inject WeatherService WeatherService
 
 @implements IAsyncDisposable
 
@@ -139,6 +140,8 @@
 
     private Trip? PlanningTrip;
 
+    private Dictionary<string, DailyWeather> WeatherByDayId { get; set; } = new();
+
 
 
 
@@ -165,6 +168,7 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadData();
+        await LoadWeatherForTrip();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -359,6 +363,41 @@
         IsLoading = false;
     }
 
+    private async Task LoadWeatherForTrip()
+    {
+        if (PlanningTrip == null) return;
+
+        WeatherByDayId.Clear();
+
+        var daysWithLocation = PlanningTrip.Days
+            .Where(day => day.Date.HasValue)
+            .Select(day =>
+            {
+                var firstPlace = day.Places
+                    .OrderBy(p => p.Order)
+                    .Select(p => p.Place)
+                    .FirstOrDefault(p => p != null);
+                return (day.Id, day.Date!.Value, firstPlace);
+            })
+            .Where(x => x.firstPlace != null)
+            .ToList();
+
+        var tasks = daysWithLocation.Select(async x =>
+        {
+            var date = DateOnly.FromDateTime(x.Value);
+            var weather = await WeatherService.GetWeatherForDateAsync(
+                x.firstPlace!.Latitude, x.firstPlace.Longitude, date);
+            return (x.Id, weather);
+        });
+
+        var results = await Task.WhenAll(tasks);
+        foreach (var (id, weather) in results)
+        {
+            if (weather != null)
+                WeatherByDayId[id] = weather;
+        }
+    }
+
 
 
 
@@ -368,18 +407,22 @@
             return;
 
         var day = PlanningTrip.Days.FirstOrDefault(d => d.Id == dayId);
-        if (day != null)
+        var placeToRemove = day?.Places.FirstOrDefault(p => p.PlaceId == placeId);
+        var placeName = placeToRemove?.Place?.Name ?? "this place";
+        var dialog = await DialogService.ShowDialogAsync<ConfirmDialog>(
+            new ConfirmDialogContent($"Are you sure you want to remove \"{placeName}\" from this day?", "Remove"),
+            new DialogParameters { Title = "Confirm Remove", PreventDismissOnOverlayClick = true });
+        var result = await dialog.Result;
+        if (result.Cancelled) return;
+
+        if (placeToRemove != null)
         {
-            var placeToRemove = day.Places.FirstOrDefault(p => p.PlaceId == placeId);
-            if (placeToRemove != null)
+            day!.Places.Remove(placeToRemove);
+            // Reorder remaining places
+            var order = 1;
+            foreach (var p in day.Places.OrderBy(p => p.Order))
             {
-                day.Places.Remove(placeToRemove);
-                // Reorder remaining places
-                var order = 1;
-                foreach (var p in day.Places.OrderBy(p => p.Order))
-                {
-                    p.Order = order++;
-                }
+                p.Order = order++;
             }
         }
         await UpdateMapContent();
@@ -664,6 +707,14 @@
 
     private async Task DeleteAccommodation(string accommodationId)
     {
+        var acc = PlanningTrip?.Accommodations.FirstOrDefault(a => a.Id == accommodationId);
+        var name = acc?.Name ?? "this accommodation";
+        var dialog = await DialogService.ShowDialogAsync<ConfirmDialog>(
+            new ConfirmDialogContent($"Are you sure you want to delete \"{name}\"?"),
+            new DialogParameters { Title = "Confirm Delete", PreventDismissOnOverlayClick = true });
+        var result = await dialog.Result;
+        if (result.Cancelled) return;
+
         await TripRepository.DeleteAccommodationAsync(accommodationId);
         PlanningTrip?.Accommodations.RemoveAll(a => a.Id == accommodationId);
         StateHasChanged();

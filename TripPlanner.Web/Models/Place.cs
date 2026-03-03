@@ -27,6 +27,7 @@ public class Place
     public Trip? Trip { get; set; }
 
     public string? Notes { get; set; }
+    public string? Url { get; set; }
     public DateTime? VisitDate { get; set; }
     public DateTime? VisitDateEnd { get; set; }
 

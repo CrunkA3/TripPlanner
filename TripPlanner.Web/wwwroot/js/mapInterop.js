@@ -5,6 +5,17 @@ window.mapInterop = {
     gpxTracks: [],
     homeMarker: null,
     mapClickHandler: null,
+    dotNetRef: null,
+
+    setDotNetRef: function (dotNetRef) {
+        this.dotNetRef = dotNetRef;
+    },
+
+    onViewPlace: function (placeId) {
+        if (this.dotNetRef) {
+            this.dotNetRef.invokeMethodAsync('OnViewPlace', placeId);
+        }
+    },
 
     initializeMap: function (containerId, lat, lng, zoom) {
         var self = this;
@@ -84,6 +95,12 @@ window.mapInterop = {
         this.markers.push({ id: id, marker: marker, lngLat: [lng, lat] });
     },
 
+    escapeHtml: function (text) {
+        var div = document.createElement('div');
+        div.appendChild(document.createTextNode(String(text)));
+        return div.innerHTML;
+    },
+
     addMarker: function (id, lat, lng, name, category, color) {
         if (!this.map) return;
         var el = document.createElement('div');
@@ -95,8 +112,19 @@ window.mapInterop = {
         el.style.boxShadow = '0 0 4px rgba(0,0,0,0.4)';
         el.style.cursor = 'pointer';
 
+        var safeId = this.escapeHtml(id);
+        var safeName = this.escapeHtml(name);
+        var safeCategory = this.escapeHtml(category);
+        var popupHtml =
+            '<div style="min-width:120px">' +
+            '<b>' + safeName + '</b><br><span style="font-size:0.85em">' + safeCategory + '</span>' +
+            '<br><button onclick="window.mapInterop.onViewPlace(\'' + safeId + '\')" ' +
+            'style="margin-top:6px;padding:2px 10px;font-size:0.8em;cursor:pointer;border:1px solid #888;border-radius:3px;background:#fff;">' +
+            '&#128269; Details</button>' +
+            '</div>';
+
         var popup = new maplibregl.Popup({ offset: 10 })
-            .setHTML('<b>' + name + '</b><br>' + category);
+            .setHTML(popupHtml);
 
         var marker = new maplibregl.Marker({ element: el })
             .setLngLat([lng, lat])
