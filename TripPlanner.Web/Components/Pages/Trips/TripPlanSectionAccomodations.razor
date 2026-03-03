@@ -1,0 +1,82 @@
+﻿@using TripPlanner.Web.Models
+<FluentCard Style="min-height: 100px;">
+    <FluentStack Orientation="Orientation.Horizontal" Style="margin-bottom: 8px;">
+        <FluentLabel Typo="Typography.Subject" Weight="FontWeight.Bold">Accommodations</FluentLabel>
+        <FluentSpacer />
+        <FluentButton Appearance="Appearance.Accent" IconStart="@(new Icons.Regular.Size20.Add())" OnClick="async () => await OnOpenAddAccommodationDialog.InvokeAsync()" Style="padding: 4px 8px; font-size: 0.8em;">
+            New
+        </FluentButton>
+    </FluentStack>
+    @if (PlanningTrip?.Accommodations.Count == 0)
+    {
+        <FluentLabel Style="font-size: 0.875em; color: var(--neutral-foreground-hint);">No accommodations added yet.</FluentLabel>
+    }
+    else
+    {
+        <FluentStack Orientation="Orientation.Vertical" Style="gap: 8px;">
+            @foreach (var acc in PlanningTrip!.Accommodations.OrderBy(a => a.PlannedCheckIn))
+            {
+                <FluentCard Style="padding: 10px;">
+                    <FluentStack Orientation="Orientation.Vertical">
+                        <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                            <FluentLabel Weight="FontWeight.Bold">@acc.Name</FluentLabel>
+                            <FluentSpacer />
+                            <FluentButton Appearance="Appearance.Lightweight" OnClick="async () => await OnOpenEditAccommodationDialog.InvokeAsync(acc)" Style="padding: 4px;" title="Edit">
+                                <FluentIcon Value="@(new Icons.Regular.Size16.Edit())" />
+                            </FluentButton>
+                            <FluentButton Appearance="Appearance.Lightweight" OnClick="async () => await OnDeleteAccommodation.InvokeAsync(acc.Id)" Style="padding: 4px;" title="Delete">
+                                <FluentIcon Value="@(new Icons.Regular.Size16.Delete())" />
+                            </FluentButton>
+                        </FluentStack>
+                        @if (!string.IsNullOrEmpty(acc.Address))
+                        {
+                            <FluentLabel Style="font-size: 0.8em;">📍 @acc.Address</FluentLabel>
+                        }
+                        @if (!string.IsNullOrEmpty(acc.Link))
+                        {
+                            <FluentLabel Style="font-size: 0.8em;">🔗 <a href="@acc.Link" target="_blank" rel="noopener noreferrer">@acc.Link</a></FluentLabel>
+                        }
+                        @if (acc.PlannedCheckIn.HasValue)
+                        {
+                            <FluentLabel Style="font-size: 0.8em;">🏨 Check-in: @acc.PlannedCheckIn.Value.ToString("dd.MM.yyyy HH:mm")</FluentLabel>
+                        }
+                        @if (acc.PlannedCheckOut.HasValue)
+                        {
+                            <FluentLabel Style="font-size: 0.8em;">🚪 Check-out: @acc.PlannedCheckOut.Value.ToString("dd.MM.yyyy HH:mm")</FluentLabel>
+                        }
+                        @if (acc.EarliestCheckIn.HasValue || acc.LatestCheckOut.HasValue)
+                        {
+                            <FluentLabel Style="font-size: 0.8em; color: var(--neutral-foreground-hint);">
+                                Earliest:
+                                @if (acc.EarliestCheckIn.HasValue)
+                                {
+                                    <text> Check-in @acc.EarliestCheckIn.Value.ToString("HH:mm")</text>
+                                }
+                                @if (acc.LatestCheckOut.HasValue)
+                                {
+                                    <text> / Latest Check-out @acc.LatestCheckOut.Value.ToString("HH:mm")</text>
+                                }
+                            </FluentLabel>
+                        }
+                    </FluentStack>
+                </FluentCard>
+            }
+        </FluentStack>
+    }
+</FluentCard>
+
+
+@code {
+    [Parameter, EditorRequired]
+    public Trip? PlanningTrip { get; set; }
+
+    
+    [Parameter, EditorRequired]
+    public EventCallback<Accommodation> OnOpenEditAccommodationDialog { get; set; }
+    
+    [Parameter, EditorRequired]
+    public EventCallback<string> OnDeleteAccommodation { get; set; }
+    
+    [Parameter, EditorRequired]
+    public EventCallback OnOpenAddAccommodationDialog { get; set; }
+}
