@@ -25,11 +25,13 @@
                     @if (string.IsNullOrEmpty(Content.WishlistId) && string.IsNullOrEmpty(Content.TripId))
                     {
                         <FluentSelect TOption="Wishlist"
-                                      @bind-SelectdOption="SelectedWishlist"
+                                      Placeholder="Select wishlist..."
                                       Label="Wishlist"
                                       Items="Wishlists"
                                       OptionValue="@(wl => wl.Id)"
                                       OptionText="@(wl => wl.Name)"
+                                      Style="width: 100%;"
+                                      @bind-Value="SelectedWishlistId"
                                       Required />
                     }
                     <FluentTextField @bind-Value="@Content.Name" Label="Name" Required Style="width: 100%;" />
@@ -154,7 +156,7 @@
     public FluentDialog Dialog { get; set; } = default!;
 
     private List<Wishlist>? Wishlists { get; set; }
-    private Wishlist? SelectedWishlist { get; set; }
+    string? SelectedWishlistId { get; set; }
 
     private List<GpxTrack> GpxTracks { get; set; } = new();
     private IEnumerable<string> Tags { get; set; } = new List<string>() { "hiking", "kids", "water", "easy", "hard" };
@@ -320,9 +322,9 @@
 
         if (string.IsNullOrEmpty(Content.WishlistId) && string.IsNullOrEmpty(Content.TripId))
         {
-            if (SelectedWishlist != null)
+            if (!string.IsNullOrEmpty(SelectedWishlistId))
             {
-                Content.WishlistId = SelectedWishlist.Id;
+                Content.WishlistId = SelectedWishlistId;
             }
             else
             {

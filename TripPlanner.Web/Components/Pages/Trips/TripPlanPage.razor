@@ -22,7 +22,7 @@
 <PageTitle>Trip Planner - @(PlanningTrip?.Name ?? TripId)</PageTitle>
 
 
-<FluentGrid Spacing="3">
+<FluentGrid Spacing="3" Id="trip-plan-grid">
     @if (PlanningTrip != null)
     {
         <FluentGridItem xs="12" HiddenWhen="GridItemHidden.LgAndUp">
@@ -36,12 +36,14 @@
         <FluentGridItem xs="12" lg="6" xl="3" HiddenWhen="GridItemHidden.MdAndDown">
             <FluentGrid>
                 <FluentGridItem xs="12" lg="6">
-                    <TripPlanSectionPlaces PlanningTrip="PlanningTrip"
-                                           Places="AllPlaces"
-                                           OnHandleDragStart="(placeId) => HandleDragStart(placeId, null, -1)"
-                                           OnHandleDragEnd="() => HandleDragEnd()"
-                                           OnAddPlaceClick="() => OpenAddPlaceDialog()"
-                                           OnEditPlaceClick="(place) => OpenEditPlaceDialog(place)" />
+                    <FluentCard Style="min-height: 500px;">
+                        <TripPlanSectionPlaces PlanningTrip="PlanningTrip"
+                                               Places="AllPlaces"
+                                               OnHandleDragStart="(placeId) => HandleDragStart(placeId, null, -1)"
+                                               OnHandleDragEnd="() => HandleDragEnd()"
+                                               OnAddPlaceClick="() => OpenAddPlaceDialog()"
+                                               OnEditPlaceClick="(place) => OpenEditPlaceDialog(place)" />
+                    </FluentCard>
                 </FluentGridItem>
                 <FluentGridItem xs="12" lg="6">
                     <TripPlanSectionDays PlanningTrip="PlanningTrip"
