@@ -22,55 +22,53 @@
 <PageTitle>Trip Planner - @(PlanningTrip?.Name ?? TripId)</PageTitle>
 
 
-<FluentGrid Spacing="3">
+@* <FluentStack Orientation="Orientation.Vertical">
+ *@    <div class="hide-lg-up">
+<FluentStack Orientation="Orientation.Horizontal">
+    <FluentButton OnClick="ShowPanelPlaces">Places</FluentButton>
+    <FluentButton OnClick="ShowPanelDays">Days</FluentButton>
+    <FluentButton OnClick="ShowPanelAccommodations">Accommodations</FluentButton>
+</FluentStack>
+</div>
+
+<FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Stretch" VerticalGap="3">
+
     @if (PlanningTrip != null)
     {
-        <FluentGridItem xs="12" HiddenWhen="GridItemHidden.LgAndUp">
+        <FluentStack Orientation="Orientation.Vertical" Class="hide-md-down" Style="flex-basis:25%;">
             <FluentStack Orientation="Orientation.Horizontal">
-                <FluentButton OnClick="ShowPanelPlaces">Places</FluentButton>
-                <FluentButton OnClick="ShowPanelDays">Days</FluentButton>
-                <FluentButton OnClick="ShowPanelAccommodations">Accommodations</FluentButton>
+                <TripPlanSectionPlaces PlanningTrip="PlanningTrip"
+                                       Places="AllPlaces"
+                                       OnHandleDragStart="(placeId) => HandleDragStart(placeId, null, -1)"
+                                       OnHandleDragEnd="() => HandleDragEnd()"
+                                       OnAddPlaceClick="() => OpenAddPlaceDialog()"
+                                       OnEditPlaceClick="(place) => OpenEditPlaceDialog(place)" />
+                <TripPlanSectionDays PlanningTrip="PlanningTrip"
+                                     CurrentDropTarget="CurrentDropTarget"
+                                     OnHandleDragStart="(args) => HandleDragStart(args.PlaceId, args.FromDayId, args.FromOrder)"
+                                     OnHandleDragEnd="HandleDragEnd"
+                                     OnHandleDragEnter="(dayId) => HandleDragEnter(dayId)"
+                                     OnHandleDragLeave="() => HandleDragLeave()"
+                                     OnHandleDrop="(dayId) => HandleDrop(dayId)"
+                                     OnUpdateScheduledTime="(args) => UpdateScheduledTime(args.tripPlace, args.timeString, args.date)"
+                                     OnRemovePlaceFromDay="(args) => RemovePlaceFromDay(args.dayId, args.placeId)"
+                                     OnEditPlaceClick="OpenEditPlaceDialog"
+                                     OnSaveTripPlan="SaveTripPlan" />
             </FluentStack>
-        </FluentGridItem>
+            <FluentDivider />
+            <TripPlanSectionAccomodations PlanningTrip="PlanningTrip"
+                                          OnOpenAddAccommodationDialog="() => OpenAddAccommodationDialog()"
+                                          OnOpenEditAccommodationDialog="(acc) => OpenEditAccommodationDialog(acc)"
+                                          OnDeleteAccommodation="async (accId) => await DeleteAccommodation(accId)" />
 
-        <FluentGridItem xs="12" lg="6" xl="3" HiddenWhen="GridItemHidden.MdAndDown">
-            <FluentGrid>
-                <FluentGridItem xs="12" lg="6">
-                    <TripPlanSectionPlaces PlanningTrip="PlanningTrip"
-                                           Places="AllPlaces"
-                                           OnHandleDragStart="(placeId) => HandleDragStart(placeId, null, -1)"
-                                           OnHandleDragEnd="() => HandleDragEnd()"
-                                           OnAddPlaceClick="() => OpenAddPlaceDialog()"
-                                           OnEditPlaceClick="(place) => OpenEditPlaceDialog(place)" />
-                </FluentGridItem>
-                <FluentGridItem xs="12" lg="6">
-                    <TripPlanSectionDays PlanningTrip="PlanningTrip"
-                                         CurrentDropTarget="CurrentDropTarget"
-                                         OnHandleDragStart="(args) => HandleDragStart(args.PlaceId, args.FromDayId, args.FromOrder)"
-                                         OnHandleDragEnd="HandleDragEnd"
-                                         OnHandleDragEnter="(dayId) => HandleDragEnter(dayId)"
-                                         OnHandleDragLeave="() => HandleDragLeave()"
-                                         OnHandleDrop="(dayId) => HandleDrop(dayId)"
-                                         OnUpdateScheduledTime="(args) => UpdateScheduledTime(args.tripPlace, args.timeString, args.date)"
-                                         OnRemovePlaceFromDay="(args) => RemovePlaceFromDay(args.dayId, args.placeId)"
-                                         OnEditPlaceClick="OpenEditPlaceDialog"
-                                         OnSaveTripPlan="SaveTripPlan" />
-                </FluentGridItem>
-                <FluentGridItem xs="12">
-                    <TripPlanSectionAccomodations PlanningTrip="PlanningTrip"
-                                                  OnOpenAddAccommodationDialog="() => OpenAddAccommodationDialog()"
-                                                  OnOpenEditAccommodationDialog="(acc) => OpenEditAccommodationDialog(acc)"
-                                                  OnDeleteAccommodation="async (accId) => await DeleteAccommodation(accId)" />
-                </FluentGridItem>
-            </FluentGrid>
-        </FluentGridItem>
+        </FluentStack>
     }
-    <FluentGridItem xs="12" lg="6" xl="9">
-        <!-- Map -->
-        <div id="trip-map" style="width: 100%; height: 100%; border-radius: 4px; min-height:50vh"></div>
-    </FluentGridItem>
-</FluentGrid>
 
+    <!-- Map -->
+    <div id="trip-map" style="width: 100%; border-radius: 8px; min-height:50vh"></div>
+</FluentStack>
+@* </FluentStack>
+ *@
 
 <FluentDialog @bind-Hidden="@HideAccommodationDialog" Modal="true" TrapFocus="true">
     <FluentDialogHeader>
