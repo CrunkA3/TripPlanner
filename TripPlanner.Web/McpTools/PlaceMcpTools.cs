@@ -18,15 +18,11 @@ public class PlaceMcpTools(IPlaceRepository placeRepository, IHttpContextAccesso
     {
         if (UserId is null) return "Unauthorized.";
 
-        PlaceCategory? cat = null;
-        if (category is not null && Enum.TryParse<PlaceCategory>(category, true, out var parsed))
-            cat = parsed;
+        // Always retrieve places scoped to the current user first, then optionally filter by category
+        var places = await placeRepository.GetAllByUserAsync(UserId);
 
-        List<Models.Place> places;
-        if (cat.HasValue)
-            places = await placeRepository.FilterAsync(category: cat);
-        else
-            places = await placeRepository.GetAllByUserAsync(UserId);
+        if (category is not null && Enum.TryParse<PlaceCategory>(category, true, out var cat))
+            places = places.Where(p => p.Category == cat).ToList();
 
         var result = places.Select(p => new
         {

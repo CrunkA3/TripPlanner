@@ -30,9 +30,26 @@ public class McpApiKeyAuthHandler(
             return AuthenticateResult.Fail("Empty API key.");
 
         var hash = ComputeHash(apiKey);
+        var hashBytes = Convert.FromHexString(hash);
 
+        // Retrieve all non-null hashes and use constant-time comparison to prevent timing attacks
         var user = await userManager.Users
-            .FirstOrDefaultAsync(u => u.McpApiKeyHash == hash);
+            .Where(u => u.McpApiKeyHash != null)
+            .Select(u => new { u.Id, u.McpApiKeyHash, u.UserName, u.Email })
+            .ToListAsync()
+            .ContinueWith(t => t.Result.FirstOrDefault(u =>
+            {
+                if (u.McpApiKeyHash is null) return false;
+                try
+                {
+                    var storedBytes = Convert.FromHexString(u.McpApiKeyHash);
+                    return CryptographicOperations.FixedTimeEquals(hashBytes, storedBytes);
+                }
+                catch
+                {
+                    return false;
+                }
+            }));
 
         if (user == null)
             return AuthenticateResult.Fail("Invalid API key.");
