@@ -1,0 +1,742 @@
+﻿@page "/trips2/{tripId}"
+
+@using Microsoft.AspNetCore.Authorization
+@using TripPlanner.Web.Models
+@using TripPlanner.Web.Repositories
+@using TripPlanner.Web.Services
+
+@attribute [Authorize]
+
+@inject ITripRepository TripRepository
+@inject IPlaceRepository PlaceRepository
+@inject IGpxRepository GpxRepository
+@inject UserService UserService
+@inject IDialogService DialogService
+@inject IJSRuntime JSRuntime
+@inject WeatherService WeatherService
+
+@implements IAsyncDisposable
+
+@rendermode InteractiveServer
+
+<PageTitle>Trip Planner - @(PlanningTrip?.Name ?? TripId)</PageTitle>
+
+
+@* <FluentStack Orientation="Orientation.Vertical">
+ *@    <div class="hide-lg-up">
+<FluentStack Orientation="Orientation.Horizontal">
+    <FluentButton OnClick="ShowPanelPlaces">Places</FluentButton>
+    <FluentButton OnClick="ShowPanelDays">Days</FluentButton>
+    <FluentButton OnClick="ShowPanelAccommodations">Accommodations</FluentButton>
+</FluentStack>
+</div>
+
+<div class="hide-md-down" style="display: grid; grid-template-columns:40% 60%; gap:6px; height:100%; width:100%">
+    <div style="display: grid; grid-template-rows: calc(100% - 312px) 300px; gap:6px; height: 100%">
+
+        @if (PlanningTrip != null)
+        {
+            <div style="display: grid; grid-template-columns:50% 50%; gap:6px;">
+
+                <div style="height: 100%; overflow: auto;">
+                    <TripPlanSectionPlaces PlanningTrip="PlanningTrip"
+                                           Places="AllPlaces"
+                                           OnHandleDragStart="(placeId) => HandleDragStart(placeId, null, -1)"
+                                           OnHandleDragEnd="() => HandleDragEnd()"
+                                           OnAddPlaceClick="() => OpenAddPlaceDialog()"
+                                           OnEditPlaceClick="(place) => OpenEditPlaceDialog(place)" />
+                </div>
+                <div style="height: 100%; overflow: auto;">
+                    <TripPlanSectionDays PlanningTrip="PlanningTrip"
+                                         CurrentDropTarget="CurrentDropTarget"
+                                         OnHandleDragStart="(args) => HandleDragStart(args.PlaceId, args.FromDayId, args.FromOrder)"
+                                         OnHandleDragEnd="HandleDragEnd"
+                                         OnHandleDragEnter="(dayId) => HandleDragEnter(dayId)"
+                                         OnHandleDragLeave="() => HandleDragLeave()"
+                                         OnHandleDrop="(dayId) => HandleDrop(dayId)"
+                                         OnUpdateScheduledTime="(args) => UpdateScheduledTime(args.tripPlace, args.timeString, args.date)"
+                                         OnRemovePlaceFromDay="(args) => RemovePlaceFromDay(args.dayId, args.placeId)"
+                                         OnEditPlaceClick="OpenEditPlaceDialog"
+                                         OnSaveTripPlan="SaveTripPlan" />
+                </div>
+            </div>
+            <div style="height: auto; overflow: auto">
+                <TripPlanSectionAccomodations PlanningTrip="PlanningTrip"
+                                              OnOpenAddAccommodationDialog="() => OpenAddAccommodationDialog()"
+                                              OnOpenEditAccommodationDialog="(acc) => OpenEditAccommodationDialog(acc)"
+                                              OnDeleteAccommodation="async (accId) => await DeleteAccommodation(accId)" />
+
+            </div>
+        }
+    </div>
+
+    <!-- Map -->
+    <div id="trip-map" style="width: 100%; border-radius: 8px; min-height:50vh"></div>
+</div>
+
+
+
+
+
+<FluentDialog @bind-Hidden="@HideAccommodationDialog" Modal="true" TrapFocus="true">
+    <FluentDialogHeader>
+        <FluentLabel Typo="Typography.H4">@(IsEditingAccommodation ? "Edit Accommodation" : "Add Accommodation")</FluentLabel>
+    </FluentDialogHeader>
+    <FluentDialogBody>
+        @if (EditingAccommodation != null)
+        {
+            <FluentStack Orientation="Orientation.Vertical">
+                <FluentTextField @bind-Value="@EditingAccommodation.Name" Label="Name" Required Style="width: 100%;" />
+                <FluentTextField @bind-Value="@EditingAccommodation.Address" Label="Address" Style="width: 100%;" />
+                <FluentStack Orientation="Orientation.Vertical" Style="gap: 4px; width: 100%;">
+                    <FluentLabel>Planned Check-in</FluentLabel>
+                    <input type="datetime-local"
+                           value="@_plannedCheckInString"
+                           @onchange="@((e) => _plannedCheckInString = e.Value?.ToString() ?? string.Empty)"
+                           style="border: 1px solid var(--neutral-stroke-rest); border-radius: 4px; padding: 4px 8px; font-size: 0.875em; background: transparent; width: 100%;" />
+                </FluentStack>
+                <FluentStack Orientation="Orientation.Vertical" Style="gap: 4px; width: 100%;">
+                    <FluentLabel>Planned Check-out</FluentLabel>
+                    <input type="datetime-local"
+                           value="@_plannedCheckOutString"
+                           @onchange="@((e) => _plannedCheckOutString = e.Value?.ToString() ?? string.Empty)"
+                           style="border: 1px solid var(--neutral-stroke-rest); border-radius: 4px; padding: 4px 8px; font-size: 0.875em; background: transparent; width: 100%;" />
+                </FluentStack>
+                <FluentStack Orientation="Orientation.Vertical" Style="gap: 4px; width: 100%;">
+                    <FluentLabel>Earliest Check-in Time</FluentLabel>
+                    <input type="time"
+                           value="@_earliestCheckInString"
+                           @onchange="@((e) => _earliestCheckInString = e.Value?.ToString() ?? string.Empty)"
+                           style="border: 1px solid var(--neutral-stroke-rest); border-radius: 4px; padding: 4px 8px; font-size: 0.875em; background: transparent; width: 100%;" />
+                </FluentStack>
+                <FluentStack Orientation="Orientation.Vertical" Style="gap: 4px; width: 100%;">
+                    <FluentLabel>Latest Check-out Time</FluentLabel>
+                    <input type="time"
+                           value="@_latestCheckOutString"
+                           @onchange="@((e) => _latestCheckOutString = e.Value?.ToString() ?? string.Empty)"
+                           style="border: 1px solid var(--neutral-stroke-rest); border-radius: 4px; padding: 4px 8px; font-size: 0.875em; background: transparent; width: 100%;" />
+                </FluentStack>
+                <FluentNumberField @bind-Value="@EditingAccommodation.Latitude" Label="Latitude" Step="0.0001" Style="width: 100%;" />
+                <FluentNumberField @bind-Value="@EditingAccommodation.Longitude" Label="Longitude" Step="0.0001" Style="width: 100%;" />
+                <FluentTextField @bind-Value="@EditingAccommodation.Link" Label="Link" Style="width: 100%;" />
+                <FluentTextArea @bind-Value="@EditingAccommodation.Notes" Label="Notes" Rows="2" Style="width: 100%;" />
+            </FluentStack>
+        }
+    </FluentDialogBody>
+    <FluentDialogFooter>
+        <FluentButton Appearance="Appearance.Accent" OnClick="@SaveAccommodation">Save</FluentButton>
+        <FluentButton Appearance="Appearance.Neutral" OnClick="@(() => HideAccommodationDialog = true)">Cancel</FluentButton>
+    </FluentDialogFooter>
+</FluentDialog>
+
+
+
+<FluentDialogProvider />
+
+@code {
+    private bool IsLoading { get; set; } = true;
+    private bool MapInitialized { get; set; }
+    private ApplicationUser? CurrentUser { get; set; }
+
+    [Parameter]
+    public string TripId { get; set; } = string.Empty;
+
+    private List<Place> AllPlaces { get; set; } = new();
+    private List<GpxTrack> GpxTracks { get; set; } = new();
+
+    private Trip? PlanningTrip;
+
+    private Dictionary<string, DailyWeather> WeatherByDayId { get; set; } = new();
+
+
+
+
+    // Drag and drop state
+    private string? DraggedPlaceId { get; set; }
+    private string? DraggedFromDayId { get; set; }
+    private int DraggedFromOrder { get; set; }
+    private string? CurrentDropTarget { get; set; }
+
+
+    // Accommodation state
+    private bool HideAccommodationDialog { get; set; } = true;
+    private Accommodation? EditingAccommodation { get; set; }
+    private bool IsEditingAccommodation { get; set; }
+    private string _plannedCheckInString = string.Empty;
+    private string _plannedCheckOutString = string.Empty;
+    private string _earliestCheckInString = string.Empty;
+    private string _latestCheckOutString = string.Empty;
+
+
+
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+        await LoadWeatherForTrip();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await InitializeMap();
+            await UpdateMapContent();
+        }
+    }
+
+    private async Task InitializeMap()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("mapInterop.initializeMap", "trip-map", 48.8566, 2.3522, 4);
+            MapInitialized = true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error initializing map: {ex.Message}");
+        }
+    }
+
+    private async Task UpdateMapContent()
+    {
+        if (!MapInitialized || PlanningTrip == null) return;
+
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("mapInterop.clearMarkers");
+            await JSRuntime.InvokeVoidAsync("mapInterop.clearRoutes");
+            await JSRuntime.InvokeVoidAsync("mapInterop.clearGpxTracks");
+
+
+            // Add home location marker
+            if (CurrentUser?.HomeLatitude.HasValue == true && CurrentUser?.HomeLongitude.HasValue == true)
+            {
+                await JSRuntime.InvokeVoidAsync("mapInterop.addHomeMarker",
+                    CurrentUser.HomeLatitude.Value, CurrentUser.HomeLongitude.Value,
+                    CurrentUser.HomeLocationName ?? "Home");
+            }
+
+
+            // Collect all scheduled places in chronological order
+            var orderedPlaces = PlanningTrip.Days
+                .OrderBy(d => d.DayNumber)
+                .SelectMany(d => d.Places.OrderBy(p => p.Order))
+                .Where(tp => tp.Place != null)
+                .ToList();
+
+            // Add markers for scheduled places
+            foreach (var tp in orderedPlaces)
+            {
+                var color = IPlaceRepository.GetCategoryColor(tp.Place!.Category);
+                await JSRuntime.InvokeVoidAsync("mapInterop.addMarker",
+                    tp.PlaceId, tp.Place.Latitude, tp.Place.Longitude,
+                    tp.Place.Name, tp.Place.Category.ToString(), color);
+            }
+
+            // Add markers for unscheduled places (grey)
+            foreach (var place in AllPlaces)
+            {
+                bool isScheduled = PlanningTrip.Days.Any(d => d.Places.Any(p => p.PlaceId == place.Id));
+                if (!isScheduled)
+                {
+                    await JSRuntime.InvokeVoidAsync("mapInterop.addMarker",
+                        place.Id, place.Latitude, place.Longitude,
+                        place.Name, place.Category.ToString(), "#9E9E9E");
+                }
+            }
+
+
+
+            // Add accommodation markers
+            foreach (var acc in PlanningTrip.Accommodations)
+            {
+                if (acc.Latitude == 0 && acc.Longitude == 0) continue;
+                var checkInStr = acc.PlannedCheckIn.HasValue ? acc.PlannedCheckIn.Value.ToString("dd.MM.yyyy HH:mm") : null;
+                var checkOutStr = acc.PlannedCheckOut.HasValue ? acc.PlannedCheckOut.Value.ToString("dd.MM.yyyy HH:mm") : null;
+                await JSRuntime.InvokeVoidAsync("mapInterop.addAccommodationMarker",
+                    acc.Id, acc.Latitude, acc.Longitude, acc.Name, checkInStr, checkOutStr);
+            }
+
+
+
+
+            // Draw a line connecting all scheduled places chronologically
+            var placesByDay = PlanningTrip.Days
+                .OrderBy(d => d.DayNumber)
+                .ToList();
+
+            if (placesByDay.Count > 1)
+            {
+                foreach (var day in placesByDay)
+                {
+                    if (!day.Date.HasValue) continue;
+
+                    var currentPlaces = day.Places
+                        .Where(tp => tp.Place is not null)
+                        .Select(tp => (time: tp.ScheduledTime, order: tp.Order, tp.Place!.Latitude, tp.Place!.Longitude))
+                        .ToList();
+
+                    var wayPoints = currentPlaces.ToList();
+                    if (day.DayNumber == 1 && CurrentUser is not null && CurrentUser.HomeLatitude.HasValue && CurrentUser.HomeLongitude.HasValue)
+                    {
+                        wayPoints.Add((time: day.Date.Value.Date, order: -2, Latitude: CurrentUser.HomeLatitude.Value, Longitude: CurrentUser.HomeLongitude.Value));
+                    }
+
+                    foreach (var acc in PlanningTrip.Accommodations)
+                    {
+                        if (acc.PlannedCheckIn.HasValue && acc.PlannedCheckOut.HasValue)
+                        {
+                            var accTimeStart = acc.PlannedCheckIn.Value;
+                            var accTimeEnd = acc.PlannedCheckOut.Value;
+                            var dayStart = day.Date.Value.Date;
+                            var dayEnd = day.Date.Value.Date.AddDays(1).AddTicks(-1);
+
+                            if (accTimeStart <= dayEnd && accTimeEnd >= dayStart)
+                            {
+                                wayPoints.Add((time: accTimeStart, order: -1, Latitude: acc.Latitude, Longitude: acc.Longitude));
+                                wayPoints.Add((time: accTimeEnd, order: 99, Latitude: acc.Latitude, Longitude: acc.Longitude));
+                            }
+                        }
+                    }
+
+                    if (wayPoints.Count > 1)
+                    {
+                        var coordinates = wayPoints
+                            .OrderBy(p => p.time)
+                            .ThenBy(p => p.order)
+                            .Select(p => new { latitude = p.Latitude, longitude = p.Longitude })
+                            .ToList();
+                        await JSRuntime.InvokeVoidAsync("mapInterop.addRoute", coordinates, "#FF5722", 3);
+                    }
+
+                }
+            }
+
+
+            // Add GPX tracks
+            foreach (var gpxTrack in GpxTracks)
+            {
+                if (gpxTrack.Points.Any())
+                {
+                    var points = gpxTrack.Points.Select(p => new { latitude = p.Latitude, longitude = p.Longitude }).ToList();
+                    await JSRuntime.InvokeVoidAsync("mapInterop.addGpxTrack", points, "#9C27B0");
+                }
+            }
+
+            await JSRuntime.InvokeVoidAsync("mapInterop.fitBounds");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error updating map content: {ex.Message}");
+        }
+    }
+
+
+    private async Task LoadData()
+    {
+        IsLoading = true;
+
+        CurrentUser = await UserService.GetCurrentUserAsync();
+        if (CurrentUser is not null)
+        {
+            var wishListPlaces = await PlaceRepository.GetAllWithAnyWishlistAsync(CurrentUser.Id);
+            var tripPlaces = await PlaceRepository.GetAllForTripAsync(TripId);
+            AllPlaces = wishListPlaces.UnionBy(tripPlaces, p => p.Id).ToList();
+        }
+
+        PlanningTrip = await TripRepository.GetByIdAsync(TripId);
+        GpxTracks = await GpxRepository.GetByTripIdAsync(TripId);
+
+        // Load place details for all trips
+        if (PlanningTrip != null)
+        {
+            foreach (var day in PlanningTrip.Days)
+            {
+                foreach (var tripPlace in day.Places)
+                {
+                    tripPlace.Place = AllPlaces.FirstOrDefault(p => p.Id == tripPlace.PlaceId);
+                }
+            }
+
+            foreach (var tripPlace in PlanningTrip.UnscheduledPlaces)
+            {
+                tripPlace.Place = AllPlaces.FirstOrDefault(p => p.Id == tripPlace.PlaceId);
+            }
+        }
+
+        IsLoading = false;
+    }
+
+    private async Task LoadWeatherForTrip()
+    {
+        if (PlanningTrip == null) return;
+
+        WeatherByDayId.Clear();
+
+        var daysWithLocation = PlanningTrip.Days
+            .Where(day => day.Date.HasValue)
+            .Select(day =>
+            {
+                var firstPlace = day.Places
+                    .OrderBy(p => p.Order)
+                    .Select(p => p.Place)
+                    .FirstOrDefault(p => p != null);
+                return (day.Id, day.Date!.Value, firstPlace);
+            })
+            .Where(x => x.firstPlace != null)
+            .ToList();
+
+        var tasks = daysWithLocation.Select(async x =>
+        {
+            var date = DateOnly.FromDateTime(x.Value);
+            var weather = await WeatherService.GetWeatherForDateAsync(
+                x.firstPlace!.Latitude, x.firstPlace.Longitude, date);
+            return (x.Id, weather);
+        });
+
+        var results = await Task.WhenAll(tasks);
+        foreach (var (id, weather) in results)
+        {
+            if (weather != null)
+                WeatherByDayId[id] = weather;
+        }
+    }
+
+
+
+
+    private async Task RemovePlaceFromDay(string dayId, string placeId)
+    {
+        if (PlanningTrip == null)
+            return;
+
+        var day = PlanningTrip.Days.FirstOrDefault(d => d.Id == dayId);
+        var placeToRemove = day?.Places.FirstOrDefault(p => p.PlaceId == placeId);
+        var placeName = placeToRemove?.Place?.Name ?? "this place";
+        var dialog = await DialogService.ShowDialogAsync<ConfirmDialog>(
+            new ConfirmDialogContent($"Are you sure you want to remove \"{placeName}\" from this day?", "Remove"),
+            new DialogParameters { Title = "Confirm Remove", PreventDismissOnOverlayClick = true });
+        var result = await dialog.Result;
+        if (result.Cancelled) return;
+
+        if (placeToRemove != null)
+        {
+            day!.Places.Remove(placeToRemove);
+            // Reorder remaining places
+            var order = 1;
+            foreach (var p in day.Places.OrderBy(p => p.Order))
+            {
+                p.Order = order++;
+            }
+        }
+        await UpdateMapContent();
+    }
+
+    private async Task SaveTripPlan()
+    {
+        if (PlanningTrip == null)
+            return;
+
+        PlanningTrip.UpdatedAt = DateTime.UtcNow;
+        await TripRepository.UpdateAsync(PlanningTrip);
+
+        PlanningTrip = null;
+        await LoadData();
+        await UpdateMapContent();
+    }
+
+
+
+    // Drag and drop handlers
+    private void HandleDragStart(string placeId, string? fromDayId, int fromOrder)
+    {
+        DraggedPlaceId = placeId;
+        DraggedFromDayId = fromDayId;
+        DraggedFromOrder = fromOrder;
+    }
+
+    private void HandleDragEnd()
+    {
+        // Keep the state until drop completes
+    }
+
+    private void HandleDragEnter(string dayId)
+    {
+        CurrentDropTarget = dayId;
+    }
+
+    private void HandleDragLeave()
+    {
+        CurrentDropTarget = null;
+    }
+
+    private async Task HandleDrop(string toDayId)
+    {
+        CurrentDropTarget = null;
+
+        if (PlanningTrip == null || string.IsNullOrEmpty(DraggedPlaceId))
+            return;
+
+        var toDay = PlanningTrip.Days.FirstOrDefault(d => d.Id == toDayId);
+        if (toDay == null)
+            return;
+
+        // Remove from source if it was in a day
+        if (!string.IsNullOrEmpty(DraggedFromDayId))
+        {
+            var fromDay = PlanningTrip.Days.FirstOrDefault(d => d.Id == DraggedFromDayId);
+            if (fromDay != null)
+            {
+                var placeToMove = fromDay.Places.FirstOrDefault(p => p.PlaceId == DraggedPlaceId);
+                if (placeToMove != null)
+                {
+                    fromDay.Places.Remove(placeToMove);
+                    // Reorder remaining places
+                    var order = 1;
+                    foreach (var p in fromDay.Places.OrderBy(p => p.Order))
+                    {
+                        p.Order = order++;
+                    }
+                }
+            }
+        }
+
+        // Add to target day
+        var place = AllPlaces.FirstOrDefault(p => p.Id == DraggedPlaceId);
+        if (place != null)
+        {
+            var newOrder = toDay.Places.Any() ? toDay.Places.Max(p => p.Order) + 1 : 1;
+            toDay.Places.Add(new TripPlace
+            {
+                PlaceId = place.Id,
+                Order = newOrder,
+                Place = place
+            });
+        }
+
+        // Clear drag state
+        DraggedPlaceId = null;
+        DraggedFromDayId = null;
+        DraggedFromOrder = -1;
+
+        StateHasChanged();
+        await UpdateMapContent();
+    }
+
+    private void UpdateScheduledTime(TripPlace tripPlace, string? timeString, DateTime? dayDate)
+    {
+        if (string.IsNullOrEmpty(timeString))
+        {
+            tripPlace.ScheduledTime = null;
+        }
+        else if (TimeOnly.TryParse(timeString, out var time))
+        {
+            var baseDate = dayDate?.Date ?? DateTime.Today;
+            tripPlace.ScheduledTime = baseDate.Add(time.ToTimeSpan());
+        }
+    }
+
+    private async Task OpenAddPlaceDialog()
+    {
+        var dialog = await DialogService.ShowDialogAsync<PlaceDialog>(new Place() { TripId = TripId }, new DialogParameters()
+        {
+            PreventDismissOnOverlayClick = true,
+            PreventScroll = true,
+            TrapFocus = true
+        });
+
+        var result = await dialog.Result;
+
+        if (!result.Cancelled && result.Data is not null)
+        {
+            AllPlaces.Add((Place)result.Data);
+            StateHasChanged();
+            await UpdateMapContent();
+        }
+    }
+
+    private async Task OpenEditPlaceDialog(Place place)
+    {
+        var dialog = await DialogService.ShowDialogAsync<PlaceDialog>(place, new DialogParameters()
+        {
+            Title = "Edit Place",
+            PreventDismissOnOverlayClick = true,
+            PreventScroll = true,
+            TrapFocus = true
+        });
+
+        var result = await dialog.Result;
+
+        if (!result.Cancelled && result.Data is not null)
+        {
+            StateHasChanged();
+            await UpdateMapContent();
+        }
+    }
+
+    private async Task ShowPanelPlaces()
+    {
+        var content = new TripPlanPanelPlaces.TripPlanPanelPlacesContent()
+        {
+            PlanningTrip = PlanningTrip,
+            Places = AllPlaces,
+            OnAddPlaceClick = EventCallback.Factory.Create(this, () => OpenAddPlaceDialog()),
+            OnEditPlaceClick = EventCallback.Factory.Create<Place>(this, (place) => OpenEditPlaceDialog(place)),
+            OnHandleDragStart = EventCallback.Factory.Create<string>(this, (placeId) => HandleDragStart(placeId, null, -1)),
+            OnHandleDragEnd = EventCallback.Factory.Create(this, () => HandleDragEnd())
+        };
+
+        await DialogService.ShowPanelAsync<TripPlanPanelPlaces>(content, new DialogParameters<TripPlanPanelPlaces.TripPlanPanelPlacesContent>()
+        {
+            Alignment = HorizontalAlignment.Right,
+            Title = "Places",
+            PrimaryActionEnabled = false,
+            SecondaryActionEnabled = false
+        });
+    }
+
+    private async Task ShowPanelDays()
+    {
+        var content = new TripPlanPanelDays.TripPlanPanelDaysContent()
+        {
+            PlanningTrip = PlanningTrip,
+            OnEditPlaceClick = EventCallback.Factory.Create<Place>(this, (place) => OpenEditPlaceDialog(place)),
+            OnHandleDragStart = EventCallback.Factory.Create<(string placeId, string? fromDayId, int fromOrder)>(this, (args) => HandleDragStart(args.placeId, args.fromDayId, args.fromOrder)),
+            OnHandleDragEnd = EventCallback.Factory.Create(this, () => HandleDragEnd()),
+            OnHandleDragEnter = EventCallback.Factory.Create<string>(this, (dayId) => HandleDragEnter(dayId)),
+            OnHandleDragLeave = EventCallback.Factory.Create(this, () => HandleDragLeave()),
+            OnHandleDrop = EventCallback.Factory.Create<string>(this, (dayId) => HandleDrop(dayId)),
+            OnUpdateScheduledTime = EventCallback.Factory.Create<(TripPlace tripPlace, string? timeString, DateTime? date)>(this, (args) => UpdateScheduledTime(args.tripPlace, args.timeString, args.date)),
+            OnRemovePlaceFromDay = EventCallback.Factory.Create<(string dayId, string placeId)>(this, (args) => RemovePlaceFromDay(args.dayId, args.placeId)),
+            OnSaveTripPlan = EventCallback.Factory.Create(this, () => SaveTripPlan()),
+            CurrentDropTarget = CurrentDropTarget
+        };
+
+        await DialogService.ShowPanelAsync<TripPlanPanelDays>(content, new DialogParameters<TripPlanPanelDays.TripPlanPanelDaysContent>()
+        {
+            Alignment = HorizontalAlignment.Right,
+            Title = "Trip Days",
+            PrimaryActionEnabled = false,
+            SecondaryActionEnabled = false,
+        });
+    }
+
+    private async Task ShowPanelAccommodations()
+    {
+        var content = new TripPlanPanelAccommodations.TripPlanPanelAccommodationsContent()
+        {
+            PlanningTrip = PlanningTrip,
+            OnDeleteAccommodation = EventCallback.Factory.Create<string>(this, (accId) => DeleteAccommodation(accId)),
+            OnOpenEditAccommodationDialog = EventCallback.Factory.Create<Accommodation>(this, (acc) => OpenEditAccommodationDialog(acc)),
+            OnOpenAddAccommodationDialog = EventCallback.Factory.Create(this, () => OpenAddAccommodationDialog()),
+        };
+
+        await DialogService.ShowPanelAsync<TripPlanPanelAccommodations>(content, new DialogParameters<TripPlanPanelAccommodations.TripPlanPanelAccommodationsContent>()
+        {
+            Alignment = HorizontalAlignment.Right,
+            Title = "Accommodations",
+            PrimaryActionEnabled = false,
+            SecondaryActionEnabled = false,
+        });
+    }
+
+    private void OpenAddAccommodationDialog()
+    {
+        EditingAccommodation = new Accommodation { TripId = TripId };
+        IsEditingAccommodation = false;
+        _plannedCheckInString = string.Empty;
+        _plannedCheckOutString = string.Empty;
+        _earliestCheckInString = string.Empty;
+        _latestCheckOutString = string.Empty;
+        HideAccommodationDialog = false;
+    }
+
+    private void OpenEditAccommodationDialog(Accommodation acc)
+    {
+        EditingAccommodation = new Accommodation
+        {
+            Id = acc.Id,
+            TripId = acc.TripId,
+            Name = acc.Name,
+            Address = acc.Address,
+            PlannedCheckIn = acc.PlannedCheckIn,
+            PlannedCheckOut = acc.PlannedCheckOut,
+            EarliestCheckIn = acc.EarliestCheckIn,
+            LatestCheckOut = acc.LatestCheckOut,
+            Latitude = acc.Latitude,
+            Longitude = acc.Longitude,
+            Link = acc.Link,
+            Notes = acc.Notes,
+            CreatedAt = acc.CreatedAt,
+            UpdatedAt = acc.UpdatedAt
+        };
+        IsEditingAccommodation = true;
+        _plannedCheckInString = acc.PlannedCheckIn.HasValue ? acc.PlannedCheckIn.Value.ToString("yyyy-MM-ddTHH:mm") : string.Empty;
+        _plannedCheckOutString = acc.PlannedCheckOut.HasValue ? acc.PlannedCheckOut.Value.ToString("yyyy-MM-ddTHH:mm") : string.Empty;
+        _earliestCheckInString = acc.EarliestCheckIn.HasValue ? acc.EarliestCheckIn.Value.ToString("HH:mm") : string.Empty;
+        _latestCheckOutString = acc.LatestCheckOut.HasValue ? acc.LatestCheckOut.Value.ToString("HH:mm") : string.Empty;
+        HideAccommodationDialog = false;
+    }
+
+    private async Task SaveAccommodation()
+    {
+        if (EditingAccommodation == null || string.IsNullOrWhiteSpace(EditingAccommodation.Name))
+            return;
+
+        EditingAccommodation.PlannedCheckIn = DateTime.TryParse(_plannedCheckInString, out var ci) ? ci : null;
+        EditingAccommodation.PlannedCheckOut = DateTime.TryParse(_plannedCheckOutString, out var co) ? co : null;
+        EditingAccommodation.EarliestCheckIn = TimeOnly.TryParse(_earliestCheckInString, out var eci) ? eci : null;
+        EditingAccommodation.LatestCheckOut = TimeOnly.TryParse(_latestCheckOutString, out var lco) ? lco : null;
+
+        if (IsEditingAccommodation)
+        {
+            await TripRepository.UpdateAccommodationAsync(EditingAccommodation);
+            if (PlanningTrip != null)
+            {
+                var idx = PlanningTrip.Accommodations.FindIndex(a => a.Id == EditingAccommodation.Id);
+                if (idx >= 0) PlanningTrip.Accommodations[idx] = EditingAccommodation;
+            }
+        }
+        else
+        {
+            await TripRepository.AddAccommodationAsync(EditingAccommodation);
+            PlanningTrip?.Accommodations.Add(EditingAccommodation);
+        }
+
+        HideAccommodationDialog = true;
+        EditingAccommodation = null;
+        StateHasChanged();
+        await UpdateMapContent();
+    }
+
+    private async Task DeleteAccommodation(string accommodationId)
+    {
+        var acc = PlanningTrip?.Accommodations.FirstOrDefault(a => a.Id == accommodationId);
+        var name = acc?.Name ?? "this accommodation";
+        var dialog = await DialogService.ShowDialogAsync<ConfirmDialog>(
+            new ConfirmDialogContent($"Are you sure you want to delete \"{name}\"?"),
+            new DialogParameters { Title = "Confirm Delete", PreventDismissOnOverlayClick = true });
+        var result = await dialog.Result;
+        if (result.Cancelled) return;
+
+        await TripRepository.DeleteAccommodationAsync(accommodationId);
+        PlanningTrip?.Accommodations.RemoveAll(a => a.Id == accommodationId);
+        StateHasChanged();
+        await UpdateMapContent();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (MapInitialized)
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("mapInterop.destroyMap");
+            }
+            catch { }
+        }
+    }
+
+}
