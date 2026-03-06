@@ -22,6 +22,37 @@ services:
       retries: 10
       start_period: 10s
 
+  # Local LLM (Ollama)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: tripplanner-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+    networks:
+      - tripplanner-network
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:11434/api/tags"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  # Pull the default LLM model on first startup (runs once)
+  # To use a different model, change OLLAMA_MODEL here and in the web service environment
+  ollama-model-init:
+    image: curlimages/curl:latest
+    container_name: tripplanner-ollama-init
+    depends_on:
+      ollama:
+        condition: service_healthy
+    networks:
+      - tripplanner-network
+    command: ["-sf", "-X", "POST", "http://ollama:11434/api/pull", "-d", "{\"name\":\"llama3.2\"}", "--max-time", "600"]
+    restart: "no"
+
   # TripPlanner Web Application
   web:
     build:
@@ -35,8 +66,12 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:8080
       - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=TripPlannerDb;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True;MultipleActiveResultSets=true
+      - Ollama__BaseUrl=http://ollama:11434
+      - Ollama__Model=llama3.2
     depends_on:
       sqlserver:
+        condition: service_healthy
+      ollama:
         condition: service_healthy
     networks:
       - tripplanner-network
@@ -48,3 +83,5 @@ networks:
 
 volumes:
   sqlserver-data:
+  ollama-models:
+

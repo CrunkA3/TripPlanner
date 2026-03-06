@@ -55,6 +55,21 @@ builder.Services.AddHttpClient("OpenMeteo", client =>
     client.Timeout = TimeSpan.FromSeconds(10);
 });
 
+// Register HttpClient for fetching web page content for AI analysis
+builder.Services.AddHttpClient("UrlFetch", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 TripPlanner/1.0");
+});
+
+// Register HttpClient for Ollama (local LLM)
+var ollamaBaseUrl = builder.Configuration["Ollama:BaseUrl"] ?? "http://localhost:11434";
+builder.Services.AddHttpClient("Ollama", client =>
+{
+    client.BaseAddress = new Uri(ollamaBaseUrl);
+    client.Timeout = TimeSpan.FromMinutes(3);
+});
+
 // Register TripPlanner repositories (EF Core)
 builder.Services.AddScoped<IPlaceRepository, PlaceRepository>();
 builder.Services.AddScoped<ITripRepository, EfTripRepository>();
@@ -66,6 +81,7 @@ builder.Services.AddScoped<GpxService>();
 builder.Services.AddScoped<RoutingService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<WeatherService>();
+builder.Services.AddScoped<IPlaceAnalysisService, OllamaPlaceAnalysisService>();
 
 
 var app = builder.Build();
