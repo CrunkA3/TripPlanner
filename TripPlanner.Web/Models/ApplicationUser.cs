@@ -12,6 +12,9 @@ public class ApplicationUser : IdentityUser
     public double? HomeLongitude { get; set; }
     public string? HomeLocationName { get; set; }
 
+    [MaxLength(64)]
+    public string? McpApiKeyHash { get; set; }
+
     // Navigation properties
     public List<Wishlist> Wishlists { get; set; } = new();
     public List<UserWishlist> SharedWishlists { get; set; } = new();

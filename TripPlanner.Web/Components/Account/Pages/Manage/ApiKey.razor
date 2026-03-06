@@ -1,0 +1,155 @@
+@page "/Account/Manage/ApiKey"
+
+@using Microsoft.AspNetCore.Identity
+@using TripPlanner.Web.Auth
+@using TripPlanner.Web.Models
+
+@inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager NavigationManager
+
+@rendermode InteractiveServer
+
+<PageTitle>MCP API Key</PageTitle>
+
+<h3>MCP API Key</h3>
+
+@if (!string.IsNullOrEmpty(statusMessage))
+{
+    <div class="@(statusMessage.StartsWith("Error") ? "alert alert-danger" : "alert alert-success")" role="alert">
+        @statusMessage
+    </div>
+}
+
+<p>
+    An MCP API key lets AI agents (such as Claude) connect to TripPlanner and manage your trips, wishlists, and places on your behalf.
+</p>
+
+@if (!string.IsNullOrEmpty(newlyGeneratedKey))
+{
+    <FluentMessageBar Intent="MessageIntent.Warning" Title="Save your API key now!" Style="margin-bottom: 1rem;">
+        This key is shown only once. Copy it and store it securely.
+        <br />
+        <code style="word-break: break-all; font-size: 0.9em;">@newlyGeneratedKey</code>
+    </FluentMessageBar>
+
+    <p>Configure your MCP client (e.g. Claude Desktop) with:</p>
+    <pre style="background: var(--neutral-fill-secondary-rest); padding: 1rem; border-radius: 4px; overflow-x: auto; font-size: 0.85em;">@GetClientConfig()</pre>
+}
+
+<FluentStack Orientation="Orientation.Vertical" Style="max-width: 600px;">
+
+    @if (hasKey && string.IsNullOrEmpty(newlyGeneratedKey))
+    {
+        <p>
+            <FluentIcon Value="@(new Icons.Regular.Size16.CheckmarkCircle())" Color="Color.Success" />
+            An API key is currently active for your account.
+        </p>
+
+        <p>Configure your MCP client (e.g. Claude Desktop) with:</p>
+        <pre style="background: var(--neutral-fill-secondary-rest); padding: 1rem; border-radius: 4px; overflow-x: auto; font-size: 0.85em;">@GetClientConfig()</pre>
+    }
+    else if (!hasKey && string.IsNullOrEmpty(newlyGeneratedKey))
+    {
+        <p>
+            <FluentIcon Value="@(new Icons.Regular.Size16.DismissCircle())" Color="Color.Error" />
+            No API key is currently configured.
+        </p>
+    }
+
+    <FluentStack Orientation="Orientation.Horizontal">
+        <FluentButton Appearance="Appearance.Accent" OnClick="@GenerateKey">
+            <FluentIcon Value="@(new Icons.Regular.Size16.Key())" />
+            @(hasKey ? "Regenerate API Key" : "Generate API Key")
+        </FluentButton>
+
+        @if (hasKey)
+        {
+            <FluentButton Appearance="Appearance.Outline" OnClick="@RevokeKey">
+                <FluentIcon Value="@(new Icons.Regular.Size16.Delete())" />
+                Revoke API Key
+            </FluentButton>
+        }
+    </FluentStack>
+
+    <p style="font-size: 0.875em; color: var(--neutral-foreground-hint);">
+        The MCP server endpoint is <code>@McpEndpointUrl</code>.
+        Anyone with this key can read and modify your data, so keep it secret.
+    </p>
+</FluentStack>
+
+@code {
+    private ApplicationUser? user;
+    private bool hasKey;
+    private string newlyGeneratedKey = string.Empty;
+    private string statusMessage = string.Empty;
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    private string McpEndpointUrl => $"{HttpContext.Request.Scheme}://{HttpContext.Request.Host}/mcp";
+
+    protected override async Task OnInitializedAsync()
+    {
+        user = await UserManager.GetUserAsync(HttpContext.User);
+        if (user is null) return;
+
+        hasKey = !string.IsNullOrEmpty(user.McpApiKeyHash);
+    }
+
+    private async Task GenerateKey()
+    {
+        if (user is null) return;
+
+        var plainKey = McpApiKeyAuthHandler.GenerateApiKey();
+        user.McpApiKeyHash = McpApiKeyAuthHandler.ComputeHash(plainKey);
+
+        var result = await UserManager.UpdateAsync(user);
+        if (result.Succeeded)
+        {
+            newlyGeneratedKey = plainKey;
+            hasKey = true;
+            statusMessage = "New API key generated.";
+        }
+        else
+        {
+            statusMessage = "Error: " + string.Join(", ", result.Errors.Select(e => e.Description));
+        }
+    }
+
+    private async Task RevokeKey()
+    {
+        if (user is null) return;
+
+        user.McpApiKeyHash = null;
+
+        var result = await UserManager.UpdateAsync(user);
+        if (result.Succeeded)
+        {
+            hasKey = false;
+            newlyGeneratedKey = string.Empty;
+            statusMessage = "API key revoked.";
+        }
+        else
+        {
+            statusMessage = "Error: " + string.Join(", ", result.Errors.Select(e => e.Description));
+        }
+    }
+
+    private string GetClientConfig()
+    {
+        var key = string.IsNullOrEmpty(newlyGeneratedKey) ? "<your-api-key>" : newlyGeneratedKey;
+        return $$"""
+{
+  "mcpServers": {
+    "tripplanner": {
+      "type": "http",
+      "url": "{{McpEndpointUrl}}",
+      "headers": {
+        "Authorization": "Bearer {{key}}"
+      }
+    }
+  }
+}
+""";
+    }
+}
