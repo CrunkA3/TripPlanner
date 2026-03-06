@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Identity;
 
 namespace TripPlanner.Web.Models;
@@ -5,6 +6,8 @@ namespace TripPlanner.Web.Models;
 // Add profile data for application users by adding properties to the ApplicationUser class
 public class ApplicationUser : IdentityUser
 {
+    [MaxLength(100)]
+    public string? DisplayName { get; set; }
     public double? HomeLatitude { get; set; }
     public double? HomeLongitude { get; set; }
     public string? HomeLocationName { get; set; }
