@@ -11,6 +11,7 @@
 @inject IHttpClientFactory HttpClientFactory
 @inject UserService UserService
 @inject GpxService GpxService
+@inject IPlaceAnalysisService PlaceAnalysisService
 
 
 <FluentDialogHeader>
@@ -34,13 +35,61 @@
                                       @bind-Value="SelectedWishlistId"
                                       Required />
                     }
-                    <FluentTextField @bind-Value="@Content.Name" Label="Name" Required Style="width: 100%;" />
-                    <FluentTextArea @bind-Value="@Content.Description" Label="Description" Rows="3" Style="width: 100%;" />
                     <FluentTextField @bind-Value="@Content.Url" Label="Link (URL)" Style="width: 100%;" Placeholder="https://example.com" />
                     @if (!string.IsNullOrEmpty(_urlError))
                     {
                         <FluentLabel Color="Color.Error" Style="font-size: 0.875em;">@_urlError</FluentLabel>
                     }
+                    <FluentStack Orientation="Orientation.Horizontal" Style="gap: 8px; align-items: center;">
+                        <FluentButton Appearance="Appearance.Outline"
+                                      OnClick="@AnalyzeUrl"
+                                      Disabled="@(string.IsNullOrWhiteSpace(Content.Url) || _isAnalyzing)"
+                                      Style="white-space: nowrap;">
+                            @if (_isAnalyzing)
+                            {
+                                <FluentProgress Circular Value="null" Width="14px" Style="margin-right: 4px;" />
+                            }
+                            @(_isAnalyzing ? "Analyzing…" : "✨ Analyze with AI")
+                        </FluentButton>
+                        @if (!string.IsNullOrEmpty(_analyzeError))
+                        {
+                            <FluentLabel Color="Color.Error" Style="font-size: 0.875em; flex: 1;">@_analyzeError</FluentLabel>
+                        }
+                    </FluentStack>
+                    @if (_suggestion != null)
+                    {
+                        <FluentCard Style="padding: 12px; background: var(--neutral-fill-rest); border: 1px solid var(--accent-fill-rest);">
+                            <FluentStack Orientation="Orientation.Vertical" Style="gap: 6px;">
+                                <FluentLabel Weight="FontWeight.Bold" Style="font-size: 0.95em;">AI Suggestion</FluentLabel>
+                                @if (!string.IsNullOrEmpty(_suggestion.Name))
+                                {
+                                    <FluentLabel Style="font-size: 0.875em;"><b>Name:</b> @_suggestion.Name</FluentLabel>
+                                }
+                                @if (!string.IsNullOrEmpty(_suggestion.Description))
+                                {
+                                    <FluentLabel Style="font-size: 0.875em;"><b>Description:</b> @_suggestion.Description</FluentLabel>
+                                }
+                                @if (!string.IsNullOrEmpty(_suggestion.Category))
+                                {
+                                    <FluentLabel Style="font-size: 0.875em;"><b>Category:</b> @_suggestion.Category</FluentLabel>
+                                }
+                                @if (_suggestion.Latitude.HasValue && _suggestion.Longitude.HasValue)
+                                {
+                                    <FluentLabel Style="font-size: 0.875em;"><b>Coordinates:</b> @_suggestion.Latitude.Value.ToString("F4"), @_suggestion.Longitude.Value.ToString("F4")</FluentLabel>
+                                }
+                                @if (_suggestion.Tags.Any())
+                                {
+                                    <FluentLabel Style="font-size: 0.875em;"><b>Tags:</b> @string.Join(", ", _suggestion.Tags)</FluentLabel>
+                                }
+                                <FluentStack Orientation="Orientation.Horizontal" Style="gap: 8px; margin-top: 4px;">
+                                    <FluentButton Appearance="Appearance.Accent" OnClick="@ApplySuggestion">Apply</FluentButton>
+                                    <FluentButton Appearance="Appearance.Neutral" OnClick="@(() => _suggestion = null)">Dismiss</FluentButton>
+                                </FluentStack>
+                            </FluentStack>
+                        </FluentCard>
+                    }
+                    <FluentTextField @bind-Value="@Content.Name" Label="Name" Required Style="width: 100%;" />
+                    <FluentTextArea @bind-Value="@Content.Description" Label="Description" Rows="3" Style="width: 100%;" />
                     <FluentSelect TOption="string" Value="@_newPlaceCategoryString" Label="Category" Style="width: 100%;" ValueChanged="@OnNewPlaceCategoryChanged">
                         @foreach (var category in Enum.GetValues<PlaceCategory>())
                         {
@@ -169,9 +218,14 @@
     private const long MaxImageSizeBytes = 5 * 1024 * 1024;
     private const int MaxImageCount = 10;
 
+    private bool _isAnalyzing = false;
+    private string? _analyzeError;
+    private PlaceSuggestion? _suggestion;
+
     private ApplicationUser? CurrentUser { get; set; }
 
     [Inject] private IJSRuntime JS { get; set; } = default!;
+    [Inject] private ILogger<PlaceDialog> Logger { get; set; } = default!;
 
 
 
@@ -403,6 +457,69 @@
     }
 
 
+
+    private async Task AnalyzeUrl()
+    {
+        if (string.IsNullOrWhiteSpace(Content.Url)) return;
+
+        if (!Uri.TryCreate(Content.Url, UriKind.Absolute, out var uri) ||
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        {
+            _analyzeError = "Please enter a valid http or https URL to analyze.";
+            return;
+        }
+
+        _isAnalyzing = true;
+        _analyzeError = null;
+        _suggestion = null;
+        StateHasChanged();
+
+        try
+        {
+            _suggestion = await PlaceAnalysisService.AnalyzeUrlAsync(Content.Url);
+            if (_suggestion == null)
+                _analyzeError = "The AI could not extract place information from this URL.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "URL analysis failed for: {Url}", Content.Url);
+            _analyzeError = "Failed to analyze the URL. Please check that the address is accessible and try again.";
+        }
+        finally
+        {
+            _isAnalyzing = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ApplySuggestion()
+    {
+        if (_suggestion == null || Content == null) return;
+
+        if (!string.IsNullOrEmpty(_suggestion.Name))
+            Content.Name = _suggestion.Name;
+
+        if (!string.IsNullOrEmpty(_suggestion.Description))
+            Content.Description = _suggestion.Description;
+
+        if (!string.IsNullOrEmpty(_suggestion.Category) &&
+            Enum.TryParse<PlaceCategory>(_suggestion.Category, ignoreCase: true, out var cat))
+        {
+            Content.Category = cat;
+            _newPlaceCategoryString = cat.ToString();
+        }
+
+        if (_suggestion.Latitude.HasValue)
+            Content.Latitude = _suggestion.Latitude.Value;
+
+        if (_suggestion.Longitude.HasValue)
+            Content.Longitude = _suggestion.Longitude.Value;
+
+        if (_suggestion.Tags.Count > 0)
+            SelectedTags = _suggestion.Tags;
+
+        _suggestion = null;
+    }
 
     
     private async Task CancelAsync()
