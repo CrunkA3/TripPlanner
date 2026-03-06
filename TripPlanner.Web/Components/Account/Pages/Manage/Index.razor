@@ -20,6 +20,8 @@
             <DataAnnotationsValidator />
             <FluentValidationSummary class="text-danger" role="alert" />
             <FluentTextField Value="@username" Placeholder="Please choose your username." Disabled Label="Username" Appearance=FluentInputAppearance.Filled Style="width: 100%" />
+            <FluentTextField Name="Input.DisplayName" @bind-Value="Input.DisplayName" Placeholder="Please enter your display name." Label="Display name" Style="width: 100%" />
+            <FluentValidationMessage For="() => Input.DisplayName" class="text-danger" />
             <FluentTextField Name="Input.PhoneNumber" @bind-Value="Input.PhoneNumber" Placeholder="Please enter your phone number." Label="Phone number" Style="width: 100%" />
             <FluentValidationMessage For="() => Input.PhoneNumber" class="text-danger" />
             <p style="margin-top: 10px; text-align: end;">
@@ -33,6 +35,7 @@
     private ApplicationUser? user;
     private string? username;
     private string? phoneNumber;
+    private string? displayName;
 
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
@@ -53,8 +56,10 @@
 
         username = await UserManager.GetUserNameAsync(user);
         phoneNumber = await UserManager.GetPhoneNumberAsync(user);
+        displayName = user.DisplayName;
 
         Input.PhoneNumber ??= phoneNumber;
+        Input.DisplayName ??= displayName;
     }
 
     private async Task OnValidSubmitAsync()
@@ -75,12 +80,27 @@
             }
         }
 
+        if (Input.DisplayName != displayName)
+        {
+            user.DisplayName = Input.DisplayName;
+            var updateResult = await UserManager.UpdateAsync(user);
+            if (!updateResult.Succeeded)
+            {
+                RedirectManager.RedirectToCurrentPageWithStatus("Error: Failed to set display name.", HttpContext);
+                return;
+            }
+        }
+
         await SignInManager.RefreshSignInAsync(user);
         RedirectManager.RedirectToCurrentPageWithStatus("Your profile has been updated", HttpContext);
     }
 
     private sealed class InputModel
     {
+        [MaxLength(100)]
+        [Display(Name = "Display name")]
+        public string? DisplayName { get; set; }
+
         [Phone]
         [Display(Name = "Phone number")]
         public string? PhoneNumber { get; set; }
