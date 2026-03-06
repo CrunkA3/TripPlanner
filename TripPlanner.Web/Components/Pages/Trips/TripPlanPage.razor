@@ -151,6 +151,8 @@
 
 
     // Accommodation state
+    private DotNetObjectReference<TripPlanPage>? _dotNetRef;
+
     private bool HideAccommodationDialog { get; set; } = true;
     private Accommodation? EditingAccommodation { get; set; }
     private bool IsEditingAccommodation { get; set; }
@@ -183,6 +185,8 @@
         try
         {
             await JSRuntime.InvokeVoidAsync("mapInterop.initializeMap", "trip-map", 48.8566, 2.3522, 4);
+            _dotNetRef = DotNetObjectReference.Create(this);
+            await JSRuntime.InvokeVoidAsync("mapInterop.setDotNetRef", _dotNetRef);
             MapInitialized = true;
         }
         catch (Exception ex)
@@ -719,8 +723,22 @@
         await UpdateMapContent();
     }
 
+    [JSInvokable]
+    public async Task OnViewPlace(string placeId)
+    {
+        var place = AllPlaces.FirstOrDefault(p => p.Id == placeId);
+        if (place is null) return;
+
+        await DialogService.ShowDialogAsync<PlaceDialog>(place, new DialogParameters()
+        {
+            Title = place.Name,
+            Width = "600px"
+        });
+    }
+
     public async ValueTask DisposeAsync()
     {
+        _dotNetRef?.Dispose();
         if (MapInitialized)
         {
             try
