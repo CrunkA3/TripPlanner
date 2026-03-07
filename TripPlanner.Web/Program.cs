@@ -116,6 +116,7 @@ builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<WeatherService>();
 builder.Services.AddScoped<IGeocodingService, NominatimGeocodingService>();
 builder.Services.AddScoped<IPlaceAnalysisService, OllamaPlaceAnalysisService>();
+builder.Services.AddScoped<OllamaChatService>();
 builder.Services.AddHostedService<UrlImportBackgroundService>();
 
 // Register HttpContextAccessor for MCP tools

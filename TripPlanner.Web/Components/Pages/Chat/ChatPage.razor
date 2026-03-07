@@ -1,0 +1,153 @@
+@page "/chat"
+
+@using Microsoft.AspNetCore.Authorization
+@using TripPlanner.Web.Services
+
+@attribute [Authorize]
+
+@rendermode InteractiveServer
+
+@inject OllamaChatService ChatService
+@inject UserService UserService
+@inject IJSRuntime JS
+
+<PageTitle>AI Assistant</PageTitle>
+
+<FluentStack Orientation="Orientation.Vertical" Style="height: calc(100vh - 140px); gap: 0;">
+    <FluentToolbar Style="flex-shrink: 0;">
+        <FluentIcon Value="@(new Icons.Regular.Size24.Bot())" Color="Color.Accent" />
+        <FluentLabel Typo="Typography.H3" Style="margin-left: 8px;">AI Trip Assistant</FluentLabel>
+        <FluentSpacer />
+        <FluentButton Appearance="Appearance.Lightweight"
+                      IconStart="@(new Icons.Regular.Size20.Delete())"
+                      OnClick="@ClearChat"
+                      Disabled="@(!ChatService.Messages.Any())">
+            Clear
+        </FluentButton>
+    </FluentToolbar>
+
+    <div id="chat-messages"
+         style="flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+        @if (!ChatService.Messages.Any() && !_isThinking)
+        {
+            <FluentStack Orientation="Orientation.Vertical"
+                         HorizontalAlignment="HorizontalAlignment.Center"
+                         VerticalAlignment="VerticalAlignment.Center"
+                         Style="flex: 1; opacity: 0.6;">
+                <FluentIcon Value="@(new Icons.Regular.Size48.Bot())" Color="Color.Neutral" />
+                <FluentLabel Typo="Typography.Body" Style="text-align: center;">
+                    Ask me anything about your trips, wishlists, or places.<br />
+                    I can list, create, update, and delete them for you.
+                </FluentLabel>
+            </FluentStack>
+        }
+
+        @foreach (var msg in ChatService.Messages)
+        {
+            @if (msg.Role == "user")
+            {
+                <div style="display: flex; justify-content: flex-end;">
+                    <FluentCard Style="max-width: 75%; background: var(--accent-fill-rest); color: var(--foreground-on-accent-rest); padding: 10px 14px; border-radius: 12px 12px 4px 12px;">
+                        <FluentLabel Style="color: inherit; white-space: pre-wrap; word-break: break-word;">@msg.Content</FluentLabel>
+                    </FluentCard>
+                </div>
+            }
+            else
+            {
+                <div style="display: flex; justify-content: flex-start;">
+                    <FluentCard Style="max-width: 85%; padding: 10px 14px; border-radius: 12px 12px 12px 4px;">
+                        <pre style="white-space: pre-wrap; font-family: inherit; margin: 0; word-break: break-word;">@msg.Content</pre>
+                    </FluentCard>
+                </div>
+            }
+        }
+
+        @if (_isThinking)
+        {
+            <div style="display: flex; justify-content: flex-start;">
+                <FluentCard Style="padding: 10px 14px; border-radius: 12px 12px 12px 4px;">
+                    <FluentStack Orientation="Orientation.Horizontal"
+                                 VerticalAlignment="VerticalAlignment.Center"
+                                 Style="gap: 8px;">
+                        <FluentProgressRing Width="18px" />
+                        <FluentLabel Style="font-style: italic; color: var(--neutral-foreground-hint);">Thinking…</FluentLabel>
+                    </FluentStack>
+                </FluentCard>
+            </div>
+        }
+    </div>
+
+    <FluentCard Style="flex-shrink: 0; padding: 8px; border-radius: 0; border-top: 1px solid var(--neutral-stroke-rest);">
+        <FluentStack Orientation="Orientation.Horizontal" Style="gap: 8px; align-items: flex-end;">
+            <FluentTextArea @bind-Value="@_userInput"
+                            Placeholder="Ask me about your trips, wishlists, or places…"
+                            Style="flex: 1; resize: none;"
+                            Rows="1"
+                            @onkeydown="@HandleKeyDown"
+                            @onkeydown:preventDefault="@(e => e.Key == "Enter" && !e.ShiftKey)"
+                            Disabled="@_isThinking" />
+            <FluentButton Appearance="Appearance.Accent"
+                          OnClick="@SendMessage"
+                          Disabled="@(_isThinking || string.IsNullOrWhiteSpace(_userInput))"
+                          IconStart="@(new Icons.Regular.Size20.Send())"
+                          Style="align-self: flex-end;">
+                Send
+            </FluentButton>
+        </FluentStack>
+    </FluentCard>
+</FluentStack>
+
+@code {
+    private string _userInput = string.Empty;
+    private bool _isThinking;
+    private Models.ApplicationUser? _currentUser;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _currentUser = await UserService.GetCurrentUserAsync();
+    }
+
+    private async Task SendMessage()
+    {
+        if (string.IsNullOrWhiteSpace(_userInput) || _currentUser is null || _isThinking) return;
+
+        var message = _userInput.Trim();
+        _userInput = string.Empty;
+        _isThinking = true;
+        StateHasChanged();
+
+        try
+        {
+            await ChatService.SendMessageAsync(message, _currentUser.Id);
+        }
+        finally
+        {
+            _isThinking = false;
+            StateHasChanged();
+            await ScrollToBottomAsync();
+        }
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey && !_isThinking)
+            await SendMessage();
+    }
+
+    private void ClearChat()
+    {
+        ChatService.Clear();
+    }
+
+    private async Task ScrollToBottomAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("chatInterop.scrollToBottom", "chat-messages");
+        }
+        catch
+        {
+            // Ignore JS interop errors (e.g. during prerendering)
+        }
+    }
+}
