@@ -1,0 +1,12 @@
+.ai-code-block {
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: monospace;
+    font-size: 0.8em;
+    background: var(--neutral-layer-2);
+    border: 1px solid var(--neutral-stroke-rest);
+    border-radius: 4px;
+    padding: 10px;
+    margin: 0;
+    overflow-x: auto;
+}

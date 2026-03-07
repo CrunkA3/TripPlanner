@@ -476,7 +476,7 @@
 
         try
         {
-            _suggestion = await PlaceAnalysisService.AnalyzeUrlAsync(Content.Url);
+            _suggestion = (await PlaceAnalysisService.AnalyzeUrlAsync(Content.Url))?.Suggestion;
             if (_suggestion == null)
                 _analyzeError = "The AI could not extract place information from this URL.";
         }
