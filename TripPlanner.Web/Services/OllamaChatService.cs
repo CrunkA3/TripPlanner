@@ -160,7 +160,9 @@ public class OllamaChatService(
                 "get_place" => await GetPlaceAsync(Str(args, "place_id")!, userId),
                 "create_place" => await CreatePlaceAsync(args, userId),
                 "update_place" => await UpdatePlaceAsync(args, userId),
-                "delete_place" => await DeletePlaceAsync(Str(args, "place_id")!, userId),
+                "delete_place" => Str(args, "place_id") is { } placeId && !string.IsNullOrWhiteSpace(placeId)
+                    ? await DeletePlaceAsync(placeId, userId)
+                    : "Missing required parameter: place_id",
                 _ => $"Unknown tool: {name}"
             };
         }
