@@ -107,6 +107,7 @@ builder.Services.AddScoped<IPlaceRepository, PlaceRepository>();
 builder.Services.AddScoped<ITripRepository, EfTripRepository>();
 builder.Services.AddScoped<IGpxRepository, GpxRepository>();
 builder.Services.AddScoped<IWishlistRepository, WishlistRepository>();
+builder.Services.AddScoped<IUrlImportJobRepository, UrlImportJobRepository>();
 
 // Register services
 builder.Services.AddScoped<GpxService>();
@@ -115,6 +116,7 @@ builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<WeatherService>();
 builder.Services.AddScoped<IGeocodingService, NominatimGeocodingService>();
 builder.Services.AddScoped<IPlaceAnalysisService, OllamaPlaceAnalysisService>();
+builder.Services.AddHostedService<UrlImportBackgroundService>();
 
 // Register HttpContextAccessor for MCP tools
 builder.Services.AddHttpContextAccessor();
