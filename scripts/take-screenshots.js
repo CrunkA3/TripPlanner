@@ -165,7 +165,7 @@ async function main() {
 
         // ── 7. Create a wishlist ───────────────────────────────────────────────
         console.log('\n[7] Create wishlist');
-        await page.locator('fluent-button:has-text("Create Wishlist")').click();
+        await page.locator('fluent-button:has-text("Create")').click();
         await page.waitForTimeout(1500);
 
         await fillByLabel(page, 'Name', 'Europe Dream Trip');
