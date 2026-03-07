@@ -60,8 +60,9 @@ public class OllamaPlaceAnalysisService : IPlaceAnalysisService
             - "name": string (the name of the place)
             - "description": string (a brief description in 2-3 sentences)
             - "category": string (one of: {categories})
-            - "latitude": number or null (geographic latitude if mentioned on the page)
-            - "longitude": number or null (geographic longitude if mentioned on the page)
+            - "address": string or null (the full postal address of the place if mentioned on the page, e.g. "Musterstraße 1, 12345 Berlin, Germany")
+            - "latitude": number or null (geographic latitude if explicitly mentioned on the page)
+            - "longitude": number or null (geographic longitude if explicitly mentioned on the page)
             - "tags": array of strings (2-5 relevant travel tags like "hiking", "family", "outdoor", etc.)
 
             Web page content:
@@ -100,16 +101,25 @@ public class OllamaPlaceAnalysisService : IPlaceAnalysisService
                 PropertyNameCaseInsensitive = true
             });
 
-            // Step 3: If the LLM did not return coordinates, use geocoding as a fallback
-            if (suggestion != null && (!suggestion.Latitude.HasValue || !suggestion.Longitude.HasValue)
-                && !string.IsNullOrWhiteSpace(suggestion.Name))
+            // Step 3: If the LLM did not return coordinates, geocode using the address found on the page.
+            // If no address was found either, fall back to the place name.
+            if (suggestion != null && (!suggestion.Latitude.HasValue || !suggestion.Longitude.HasValue))
             {
-                _logger.LogDebug("LLM did not return coordinates for '{Name}', attempting geocoding.", suggestion.Name);
-                var geoResult = await _geocodingService.GeocodeAsync(suggestion.Name, cancellationToken);
-                if (geoResult != null)
+                var hasAddress = !string.IsNullOrWhiteSpace(suggestion.Address);
+                var geocodeQuery = hasAddress ? suggestion.Address : suggestion.Name;
+
+                if (!string.IsNullOrWhiteSpace(geocodeQuery))
                 {
-                    suggestion.Latitude = geoResult.Latitude;
-                    suggestion.Longitude = geoResult.Longitude;
+                    _logger.LogDebug(
+                        "LLM did not return coordinates, geocoding using {Source}: '{Query}'.",
+                        hasAddress ? "address" : "place name",
+                        geocodeQuery);
+                    var geoResult = await _geocodingService.GeocodeAsync(geocodeQuery, cancellationToken);
+                    if (geoResult != null)
+                    {
+                        suggestion.Latitude = geoResult.Latitude;
+                        suggestion.Longitude = geoResult.Longitude;
+                    }
                 }
             }
 
