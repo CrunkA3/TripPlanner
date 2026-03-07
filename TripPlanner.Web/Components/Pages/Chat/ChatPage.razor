@@ -84,6 +84,7 @@
                             Style="flex: 1; resize: none;"
                             Rows="1"
                             @onkeydown="@HandleKeyDown"
+                            @onkeydown:preventDefault="@(e => e.Key == "Enter" && !e.ShiftKey)"
                             Disabled="@_isThinking" />
             <FluentButton Appearance="Appearance.Accent"
                           OnClick="@SendMessage"
