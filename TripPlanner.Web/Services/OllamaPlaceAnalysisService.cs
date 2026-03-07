@@ -79,6 +79,7 @@ public class OllamaPlaceAnalysisService : IPlaceAnalysisService
             var json = JsonSerializer.Serialize(requestBody);
             using var content = new StringContent(json, Encoding.UTF8, "application/json");
 
+            // ohne cancellation token, da sonst nach 30 Sekunden abgebrochen wird
             var ollamaResponse = await ollamaClient.PostAsync("/api/generate", content);
             ollamaResponse.EnsureSuccessStatusCode();
 
