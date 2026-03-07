@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Http.Resilience;
 using Microsoft.FluentUI.AspNetCore.Components;
 using TripPlanner.Web.Auth;
 using TripPlanner.Web.Components;
@@ -74,11 +75,23 @@ var ollamaBaseUrl = builder.Configuration.GetConnectionString("ollama")
     ?? builder.Configuration["OLLAMA_LLAMA3_2_URI"]
     ?? builder.Configuration["Ollama:BaseUrl"]
     ?? "http://localhost:11434";
+// Remove the default 30-second Polly pipeline added by Aspire's service defaults,
+// then add a replacement pipeline with timeouts appropriate for slow LLM inference.
+#pragma warning disable EXTEXP0001 // RemoveAllResilienceHandlers is experimental
 builder.Services.AddHttpClient("Ollama", client =>
 {
     client.BaseAddress = new Uri(ollamaBaseUrl);
     client.Timeout = TimeSpan.FromMinutes(3);
+})
+.RemoveAllResilienceHandlers()
+.AddStandardResilienceHandler(options =>
+{
+    options.TotalRequestTimeout.Timeout = TimeSpan.FromMinutes(3);
+    options.AttemptTimeout.Timeout = TimeSpan.FromMinutes(3);
+    // SamplingDuration must be at least twice the AttemptTimeout to pass validation.
+    options.CircuitBreaker.SamplingDuration = TimeSpan.FromMinutes(10);
 });
+#pragma warning restore EXTEXP0001
 
 // Register HttpClient for Nominatim geocoding (OpenStreetMap)
 builder.Services.AddHttpClient("Nominatim", client =>
