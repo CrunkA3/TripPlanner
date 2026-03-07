@@ -29,7 +29,7 @@ public class OllamaPlaceAnalysisService : IPlaceAnalysisService
 
     private sealed record OllamaStreamChunk(string? Response, bool Done);
 
-    public async Task<PlaceSuggestion?> AnalyzeUrlAsync(string url, CancellationToken cancellationToken = default)
+    public async Task<PlaceAnalysisResult?> AnalyzeUrlAsync(string url, CancellationToken cancellationToken = default)
     {
         // Step 1: Fetch the page content
         string pageContent;
@@ -140,7 +140,12 @@ public class OllamaPlaceAnalysisService : IPlaceAnalysisService
                 }
             }
 
-            return suggestion;
+            return new PlaceAnalysisResult
+            {
+                Suggestion = suggestion,
+                Prompt = prompt,
+                RawResponse = responseText,
+            };
         }
         catch (OperationCanceledException)
         {

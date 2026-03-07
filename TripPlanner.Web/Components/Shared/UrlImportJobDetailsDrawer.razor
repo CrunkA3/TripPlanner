@@ -1,0 +1,53 @@
+@implements IDialogContentComponent<UrlImportJob>
+
+@using TripPlanner.Web.Models
+
+<FluentDialogHeader ShowDismiss="true">
+    <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" Gap="8px">
+        <FluentIcon Value="@(new Icons.Regular.Size20.Bot())" Color="Color.Accent" />
+        <FluentLabel Typo="Typography.PaneHeader">AI Details: @Content?.Url</FluentLabel>
+    </FluentStack>
+</FluentDialogHeader>
+
+<FluentDialogBody Style="display: flex; flex-direction: column; gap: 12px; padding: 16px; overflow: auto;">
+    <FluentStack Orientation="Orientation.Vertical" Style="gap: 4px;">
+        <FluentLabel Typo="Typography.Subject" Style="font-weight: 600;">Prompt</FluentLabel>
+        @if (string.IsNullOrWhiteSpace(Content?.AiPrompt))
+        {
+            <FluentLabel Color="Color.Disabled" Style="font-style: italic;">No prompt saved.</FluentLabel>
+        }
+        else
+        {
+            <pre class="ai-code-block">@Content.AiPrompt</pre>
+        }
+    </FluentStack>
+
+    <FluentStack Orientation="Orientation.Vertical" Style="gap: 4px;">
+        <FluentLabel Typo="Typography.Subject" Style="font-weight: 600;">AI Response</FluentLabel>
+        @if (string.IsNullOrWhiteSpace(Content?.AiResponse))
+        {
+            <FluentLabel Color="Color.Disabled" Style="font-style: italic;">No response saved.</FluentLabel>
+        }
+        else
+        {
+            <pre class="ai-code-block">@Content.AiResponse</pre>
+        }
+    </FluentStack>
+</FluentDialogBody>
+
+<FluentDialogFooter>
+    <FluentButton Appearance="Appearance.Neutral" OnClick="@CloseAsync">Close</FluentButton>
+</FluentDialogFooter>
+
+@code {
+    [Parameter]
+    public UrlImportJob Content { get; set; } = default!;
+
+    [CascadingParameter]
+    public FluentDialog Dialog { get; set; } = default!;
+
+    private async Task CloseAsync()
+    {
+        await Dialog.CloseAsync(Content);
+    }
+}

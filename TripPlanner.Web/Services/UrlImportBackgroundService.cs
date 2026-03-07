@@ -105,9 +105,12 @@ public class UrlImportBackgroundService(
 
         try
         {
-            var suggestion = await analysisService.AnalyzeUrlAsync(job.Url, cancellationToken);
+            var result = await analysisService.AnalyzeUrlAsync(job.Url, cancellationToken);
 
-            if (suggestion == null)
+            job.AiPrompt = result?.Prompt;
+            job.AiResponse = result?.RawResponse;
+
+            if (result?.Suggestion == null)
             {
                 job.Status = UrlImportJobStatus.Failed;
                 job.ErrorMessage = "The AI analysis returned no result for this URL.";
@@ -116,6 +119,8 @@ public class UrlImportBackgroundService(
                 logger.LogWarning("Job {JobId}: analysis returned null for URL {Url}", job.Id, job.Url);
                 return;
             }
+
+            var suggestion = result.Suggestion;
 
             var place = new Place
             {

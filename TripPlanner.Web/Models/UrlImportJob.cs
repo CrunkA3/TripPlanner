@@ -24,6 +24,12 @@ public class UrlImportJob
     [Required]
     public string CreatedByUserId { get; set; } = string.Empty;
 
+    /// <summary>The prompt sent to the AI model for this job.</summary>
+    public string? AiPrompt { get; set; }
+
+    /// <summary>The raw response returned by the AI model for this job.</summary>
+    public string? AiResponse { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? ProcessedAt { get; set; }
 }

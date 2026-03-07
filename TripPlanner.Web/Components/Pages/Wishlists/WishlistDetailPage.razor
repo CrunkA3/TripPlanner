@@ -143,11 +143,31 @@ else
                                                       OnClick="@(() => DeleteJob(context.Id))">
                                         </FluentButton>
                                     }
+                                    @if (!string.IsNullOrEmpty(context.AiPrompt) || !string.IsNullOrEmpty(context.AiResponse))
+                                    {
+                                        <FluentButton Appearance="Appearance.Lightweight"
+                                                      IconStart="@(new Icons.Regular.Size20.Bot())"
+                                                      OnClick="@(() => OpenJobDetails(context))"
+                                                      title="Show AI prompt and response">
+                                            Details
+                                        </FluentButton>
+                                    }
                                 </FluentStack>
                             }
                             else if (context.Status == UrlImportJobStatus.Completed && context.CreatedPlaceId != null)
                             {
-                                <FluentLabel Color="Color.Success" Style="font-size: 0.85em;">Place created</FluentLabel>
+                                <FluentStack Orientation="Orientation.Horizontal" Style="gap: 4px;">
+                                    <FluentLabel Color="Color.Success" Style="font-size: 0.85em;">Place created</FluentLabel>
+                                    @if (!string.IsNullOrEmpty(context.AiPrompt) || !string.IsNullOrEmpty(context.AiResponse))
+                                    {
+                                        <FluentButton Appearance="Appearance.Lightweight"
+                                                      IconStart="@(new Icons.Regular.Size20.Bot())"
+                                                      OnClick="@(() => OpenJobDetails(context))"
+                                                      title="Show AI prompt and response">
+                                            Details
+                                        </FluentButton>
+                                    }
+                                </FluentStack>
                             }
                         </TemplateColumn>
                     </FluentDataGrid>
@@ -288,6 +308,18 @@ else
     {
         await UrlImportJobRepository.DeleteAsync(jobId);
         await LoadImportJobs();
+    }
+
+    private async Task OpenJobDetails(UrlImportJob job)
+    {
+        var panel = await DialogService.ShowPanelAsync<UrlImportJobDetailsDrawer>(job, new DialogParameters()
+        {
+            Title = $"AI Details: {job.Url}",
+            Width = "min(95vw, 900px)",
+            PreventDismissOnOverlayClick = false,
+        });
+
+        await panel.Result;
     }
 
     private async Task ShowAddPlaceDialog()
