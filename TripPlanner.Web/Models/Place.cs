@@ -34,6 +34,11 @@ public class Place
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
 
+    /// <summary>
+    /// When true, this place was created automatically via URL analysis and needs manual review.
+    /// </summary>
+    public bool NeedsReview { get; set; }
+
 
 
     // Computed property

@@ -19,6 +19,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<GpxPoint> GpxPoints { get; set; }
     public DbSet<UserWishlist> UserWishlists { get; set; }
     public DbSet<SharedTrip> SharedTrips { get; set; }
+    public DbSet<UrlImportJob> UrlImportJobs { get; set; }
 
 
 
@@ -108,5 +109,12 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .HasConversion(
                 v => string.Join(',', v),
                 v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList());
+
+        // Configure UrlImportJob
+        modelBuilder.Entity<UrlImportJob>()
+            .HasOne(j => j.Wishlist)
+            .WithMany()
+            .HasForeignKey(j => j.WishlistId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

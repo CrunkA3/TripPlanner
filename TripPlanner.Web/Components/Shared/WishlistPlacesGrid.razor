@@ -61,6 +61,10 @@
 
                     <div class="place-card-badges">
                         <FluentBadge BackgroundColor="@IPlaceRepository.GetCategoryColor(place.Category)" Color="white">@place.Category</FluentBadge>
+                        @if (place.NeedsReview)
+                        {
+                            <FluentBadge BackgroundColor="var(--warning-fill-rest, #f0a500)" Color="white" title="This place was created automatically and needs review.">⚠️ Review</FluentBadge>
+                        }
                         @if (place.Wishlist is not null)
                         {
                             <FluentBadge BackgroundColor="var(--neutral-layer-3)">@place.Wishlist.Name</FluentBadge>
