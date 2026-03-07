@@ -67,7 +67,10 @@ builder.Services.AddHttpClient("UrlFetch", client =>
 });
 
 // Register HttpClient for Ollama (local LLM)
-var ollamaBaseUrl = builder.Configuration["Ollama:BaseUrl"] ?? "http://localhost:11434";
+// Prefer the Aspire-injected connection string ("ollama"), fall back to explicit config or localhost default
+var ollamaBaseUrl = builder.Configuration.GetConnectionString("ollama")
+    ?? builder.Configuration["Ollama:BaseUrl"]
+    ?? "http://localhost:11434";
 builder.Services.AddHttpClient("Ollama", client =>
 {
     client.BaseAddress = new Uri(ollamaBaseUrl);
