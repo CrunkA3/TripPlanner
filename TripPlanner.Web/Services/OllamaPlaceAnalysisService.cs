@@ -27,6 +27,8 @@ public class OllamaPlaceAnalysisService : IPlaceAnalysisService
         _geocodingService = geocodingService;
     }
 
+    private sealed record OllamaStreamChunk(string? Response, bool Done);
+
     public async Task<PlaceSuggestion?> AnalyzeUrlAsync(string url, CancellationToken cancellationToken = default)
     {
         // Step 1: Fetch the page content
@@ -73,7 +75,7 @@ public class OllamaPlaceAnalysisService : IPlaceAnalysisService
         {
             model = modelName,
             prompt,
-            stream = false,
+            stream = true,
             format = "json"
         };
 
@@ -83,16 +85,31 @@ public class OllamaPlaceAnalysisService : IPlaceAnalysisService
             var json = JsonSerializer.Serialize(requestBody);
             using var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            var ollamaResponse = await ollamaClient.PostAsync("/api/generate", content, cancellationToken);
+            // Use streaming so Ollama sends tokens incrementally, keeping the connection alive
+            // and avoiding TCP keep-alive/proxy timeouts that occur with stream=false.
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/generate") { Content = content };
+            using var ollamaResponse = await ollamaClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
             ollamaResponse.EnsureSuccessStatusCode();
 
-            var responseJson = await ollamaResponse.Content.ReadAsStringAsync(cancellationToken);
-            using var doc = JsonDocument.Parse(responseJson);
+            using var responseStream = await ollamaResponse.Content.ReadAsStreamAsync(cancellationToken);
+            using var reader = new StreamReader(responseStream);
 
-            if (!doc.RootElement.TryGetProperty("response", out var responseElement))
-                return null;
+            var streamOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var responseBuilder = new StringBuilder();
+            string? line;
+            while ((line = await reader.ReadLineAsync(cancellationToken)) != null)
+            {
+                if (string.IsNullOrWhiteSpace(line)) continue;
 
-            var responseText = responseElement.GetString();
+                var chunk = JsonSerializer.Deserialize<OllamaStreamChunk>(line, streamOptions);
+                if (!string.IsNullOrEmpty(chunk?.Response))
+                    responseBuilder.Append(chunk.Response);
+
+                if (chunk?.Done == true)
+                    break;
+            }
+
+            var responseText = responseBuilder.ToString();
             if (string.IsNullOrWhiteSpace(responseText))
                 return null;
 
