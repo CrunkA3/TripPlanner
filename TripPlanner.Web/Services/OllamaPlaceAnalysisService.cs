@@ -13,15 +13,18 @@ public class OllamaPlaceAnalysisService : IPlaceAnalysisService
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IConfiguration _configuration;
     private readonly ILogger<OllamaPlaceAnalysisService> _logger;
+    private readonly IGeocodingService _geocodingService;
 
     public OllamaPlaceAnalysisService(
         IHttpClientFactory httpClientFactory,
         IConfiguration configuration,
-        ILogger<OllamaPlaceAnalysisService> logger)
+        ILogger<OllamaPlaceAnalysisService> logger,
+        IGeocodingService geocodingService)
     {
         _httpClientFactory = httpClientFactory;
         _configuration = configuration;
         _logger = logger;
+        _geocodingService = geocodingService;
     }
 
     public async Task<PlaceSuggestion?> AnalyzeUrlAsync(string url, CancellationToken cancellationToken = default)
@@ -96,6 +99,19 @@ public class OllamaPlaceAnalysisService : IPlaceAnalysisService
             {
                 PropertyNameCaseInsensitive = true
             });
+
+            // Step 3: If the LLM did not return coordinates, use geocoding as a fallback
+            if (suggestion != null && (!suggestion.Latitude.HasValue || !suggestion.Longitude.HasValue)
+                && !string.IsNullOrWhiteSpace(suggestion.Name))
+            {
+                _logger.LogDebug("LLM did not return coordinates for '{Name}', attempting geocoding.", suggestion.Name);
+                var geoResult = await _geocodingService.GeocodeAsync(suggestion.Name, cancellationToken);
+                if (geoResult != null)
+                {
+                    suggestion.Latitude = geoResult.Latitude;
+                    suggestion.Longitude = geoResult.Longitude;
+                }
+            }
 
             return suggestion;
         }
