@@ -1,10 +1,13 @@
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.FluentUI.AspNetCore.Components;
+using TripPlanner.Web.Auth;
 using TripPlanner.Web.Components;
 using TripPlanner.Web.Components.Account;
 using TripPlanner.Web.Data;
+using TripPlanner.Web.McpTools;
 using TripPlanner.Web.Models;
 using TripPlanner.Web.Repositories;
 using TripPlanner.Web.Services;
@@ -23,12 +26,13 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
 
-builder.Services.AddAuthentication(options =>
+var authBuilder = builder.Services.AddAuthentication(options =>
     {
         options.DefaultScheme = IdentityConstants.ApplicationScheme;
         options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
-    })
-    .AddIdentityCookies();
+    });
+authBuilder.AddIdentityCookies();
+authBuilder.AddScheme<AuthenticationSchemeOptions, McpApiKeyAuthHandler>(McpApiKeyAuthHandler.SchemeName, _ => { });
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -83,6 +87,16 @@ builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<WeatherService>();
 builder.Services.AddScoped<IPlaceAnalysisService, OllamaPlaceAnalysisService>();
 
+// Register HttpContextAccessor for MCP tools
+builder.Services.AddHttpContextAccessor();
+
+// Register MCP server
+builder.Services.AddMcpServer()
+    .WithHttpTransport()
+    .WithTools<TripMcpTools>()
+    .WithTools<WishlistMcpTools>()
+    .WithTools<PlaceMcpTools>();
+
 
 var app = builder.Build();
 
@@ -110,6 +124,12 @@ app.MapRazorComponents<App>()
 
 // Add additional endpoints required by the Identity /Account Razor components.
 app.MapAdditionalIdentityEndpoints();
+
+// Map the MCP endpoint – secured with the MCP API key Bearer scheme
+app.MapMcp("/mcp")
+    .RequireAuthorization(policy => policy
+        .AddAuthenticationSchemes(McpApiKeyAuthHandler.SchemeName)
+        .RequireAuthenticatedUser());
 
 app.MapDefaultEndpoints();
 

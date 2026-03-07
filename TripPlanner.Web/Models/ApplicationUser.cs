@@ -12,6 +12,13 @@ public class ApplicationUser : IdentityUser
     public double? HomeLongitude { get; set; }
     public string? HomeLocationName { get; set; }
 
+    [MaxLength(64)]
+    /// <summary>
+    /// SHA-256 hash (64 lowercase hex characters) of the user's MCP API key.
+    /// Null when no key has been generated. Used by <see cref="Auth.McpApiKeyAuthHandler"/>.
+    /// </summary>
+    public string? McpApiKeyHash { get; set; }
+
     // Navigation properties
     public List<Wishlist> Wishlists { get; set; } = new();
     public List<UserWishlist> SharedWishlists { get; set; } = new();
