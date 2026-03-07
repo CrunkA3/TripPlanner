@@ -77,6 +77,15 @@ builder.Services.AddHttpClient("Ollama", client =>
     client.Timeout = TimeSpan.FromMinutes(3);
 });
 
+// Register HttpClient for Nominatim geocoding (OpenStreetMap)
+builder.Services.AddHttpClient("Nominatim", client =>
+{
+    client.BaseAddress = new Uri("https://nominatim.openstreetmap.org/");
+    client.Timeout = TimeSpan.FromSeconds(10);
+    // Nominatim requires a valid User-Agent identifying the application
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("TripPlanner/1.0 (https://github.com/CrunkA3/TripPlanner)");
+});
+
 // Register TripPlanner repositories (EF Core)
 builder.Services.AddScoped<IPlaceRepository, PlaceRepository>();
 builder.Services.AddScoped<ITripRepository, EfTripRepository>();
@@ -88,6 +97,7 @@ builder.Services.AddScoped<GpxService>();
 builder.Services.AddScoped<RoutingService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<WeatherService>();
+builder.Services.AddScoped<IGeocodingService, NominatimGeocodingService>();
 builder.Services.AddScoped<IPlaceAnalysisService, OllamaPlaceAnalysisService>();
 
 // Register HttpContextAccessor for MCP tools
