@@ -26,7 +26,7 @@
                 My Trips
             </FluentLabel>
             <FluentSpacer />
-            <FluentButton Appearance="Appearance.Accent" IconStart="@(new Icons.Regular.Size20.Add())" OnClick="@CreateNewTrip">
+            <FluentButton Appearance="Appearance.Accent" IconStart="@(new Icons.Regular.Size20.Add())" OnClick="@CreateNewTrip" data-testid="create-trip-button">
                 Create Trip
             </FluentButton>
         </FluentToolbar>
@@ -85,7 +85,7 @@
                             <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size16.Edit())" OnClick="@(() => EditTrip(trip))">
                                 Edit
                             </FluentButton>
-                            <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size16.CalendarEdit())" OnClick="@(() => PlanTrip(trip))">
+                            <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size16.CalendarEdit())" OnClick="@(() => PlanTrip(trip))" data-testid="plan-trip-button">
                                 Plan
                             </FluentButton>
                             @if (trip.OwnerId == CurrentUserId)
@@ -128,7 +128,7 @@
         }
     </FluentDialogBody>
     <FluentDialogFooter>
-        <FluentButton Appearance="Appearance.Accent" OnClick="@SaveTrip">Save</FluentButton>
+        <FluentButton Appearance="Appearance.Accent" OnClick="@SaveTrip" data-testid="save-trip-button">Save</FluentButton>
         <FluentButton Appearance="Appearance.Neutral" OnClick="@(() => HideAddDialog = true)">Cancel</FluentButton>
     </FluentDialogFooter>
 </FluentDialog>
