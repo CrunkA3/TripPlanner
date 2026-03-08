@@ -143,9 +143,9 @@ public class PlaceRepository : IPlaceRepository
         return place;
     }
 
-    public async Task DeleteAsync(string id)
+    public async Task DeleteAsync(string id, string userId)
     {
-        var place = await _context.Places.FindAsync(id);
+        var place = await GetByIdAsync(id, userId);
         if (place != null)
         {
             _context.Places.Remove(place);

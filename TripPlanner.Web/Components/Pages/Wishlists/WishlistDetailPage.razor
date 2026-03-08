@@ -373,6 +373,8 @@ else
 
     private async Task DeletePlace(string placeId)
     {
+        if (currentUserId is null) return;
+
         var place = places?.FirstOrDefault(p => p.Id == placeId);
         var name = place?.Name ?? "this place";
         var dialog = await DialogService.ShowDialogAsync<ConfirmDialog>(
@@ -381,7 +383,7 @@ else
         var result = await dialog.Result;
         if (result.Cancelled) return;
 
-        await PlaceRepository.DeleteAsync(placeId);
+        await PlaceRepository.DeleteAsync(placeId, currentUserId);
         await LoadPlaces();
     }
 }

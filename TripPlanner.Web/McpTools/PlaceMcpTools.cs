@@ -142,7 +142,7 @@ public class PlaceMcpTools(IPlaceRepository placeRepository, IHttpContextAccesso
         var place = await placeRepository.GetByIdAsync(placeId, UserId);
         if (place is null) return "Place not found.";
 
-        await placeRepository.DeleteAsync(placeId);
+        await placeRepository.DeleteAsync(placeId, UserId);
         return "Place deleted successfully.";
     }
 }
