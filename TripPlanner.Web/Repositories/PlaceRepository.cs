@@ -58,10 +58,24 @@ public class PlaceRepository : IPlaceRepository
 
     public async Task<Place?> GetByIdAsync(string id, string userId)
     {
+        var accessibleWishlists = _context.UserWishlists
+            .Where(uw => uw.UserId == userId)
+            .Select(uw => uw.WishlistId);
+
+        var accessibleTrips = _context.Trips
+            .Where(t => t.OwnerId == userId)
+            .Select(t => t.Id)
+            .Union(
+                _context.SharedTrips
+                    .Where(st => st.UserId == userId)
+                    .Select(st => st.TripId));
+
         return await _context.Places
             .Include(p => p.Wishlist)
             .Include(p => p.Images)
-            .FirstOrDefaultAsync(p => p.Id == id);
+            .FirstOrDefaultAsync(p => p.Id == id &&
+                ((p.WishlistId != null && accessibleWishlists.Contains(p.WishlistId)) ||
+                 (p.TripId != null && accessibleTrips.Contains(p.TripId))));
     }
 
     public async Task<Place> AddAsync(Place place)
