@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -187,7 +188,7 @@ public class OllamaChatService(
         if (args.ValueKind == JsonValueKind.Object && args.TryGetProperty(key, out var val))
         {
             if (val.ValueKind == JsonValueKind.Number) { value = val.GetDouble(); return true; }
-            if (val.ValueKind == JsonValueKind.String && double.TryParse(val.GetString(), out value)) return true;
+            if (val.ValueKind == JsonValueKind.String && double.TryParse(val.GetString(), NumberStyles.Float, CultureInfo.InvariantCulture, out value)) return true;
         }
         value = 0;
         return false;
