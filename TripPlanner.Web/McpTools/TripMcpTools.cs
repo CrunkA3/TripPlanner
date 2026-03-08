@@ -127,8 +127,10 @@ public class TripMcpTools(ITripRepository tripRepository, IHttpContextAccessor h
 
         if (name is not null) trip.Name = name;
         if (description is not null) trip.Description = description;
-        if (startDate is not null) trip.StartDate = DateTime.TryParseExact(startDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var sd) ? sd : trip.StartDate;
-        if (endDate is not null) trip.EndDate = DateTime.TryParseExact(endDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var ed) ? ed : trip.EndDate;
+        if (startDate is not null && DateTime.TryParseExact(startDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var sd))
+            trip.StartDate = sd;
+        if (endDate is not null && DateTime.TryParseExact(endDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var ed))
+            trip.EndDate = ed;
 
         await tripRepository.UpdateAsync(trip);
         return "Trip updated successfully.";
