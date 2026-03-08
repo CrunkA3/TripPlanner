@@ -160,11 +160,12 @@ public class OllamaChatService(
 
         var model = configuration["Ollama:Model"] ?? "llama3.2";
         var client = httpClientFactory.CreateClient("Ollama");
+        var systemMessage = BuildSystemMessage();
 
         const int maxIterations = 10;
         for (var i = 0; i < maxIterations; i++)
         {
-            var messages = new List<OllamaMessage> { BuildSystemMessage() };
+            var messages = new List<OllamaMessage> { systemMessage };
             messages.AddRange(_history);
 
             var requestObj = new
@@ -285,7 +286,7 @@ public class OllamaChatService(
                     ? await DeletePlaceAsync(placeId, userId)
                     : "Missing required parameter: place_id",
                 "get_weather" => TryGetDouble(args, "latitude", out var wLat) && TryGetDouble(args, "longitude", out var wLon)
-                    ? await GetWeatherAsync(wLat, wLon, Str(args, "date"), ct)
+                    ? await GetWeatherAsync(wLat, wLon, Str(args, "date"))
                     : "Missing required parameters: latitude, longitude",
                 _ => $"Unknown tool: {name}"
             };
@@ -562,11 +563,13 @@ public class OllamaChatService(
 
     // ── Weather tool ─────────────────────────────────────────────────────────────
 
-    private async Task<string> GetWeatherAsync(double latitude, double longitude, string? dateStr, CancellationToken ct)
+    private async Task<string> GetWeatherAsync(double latitude, double longitude, string? dateStr)
     {
-        if (dateStr is not null &&
-            DateOnly.TryParseExact(dateStr, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+        if (dateStr is not null)
         {
+            if (!DateOnly.TryParseExact(dateStr, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+                return $"Invalid date format '{dateStr}'. Please provide the date in yyyy-MM-dd format.";
+
             var day = await weatherService.GetWeatherForDateAsync(latitude, longitude, date);
             if (day is null)
                 return $"No weather data available for {dateStr} at ({latitude.ToString("F4", CultureInfo.InvariantCulture)}, {longitude.ToString("F4", CultureInfo.InvariantCulture)}).";
