@@ -16,10 +16,14 @@
 
 <PageTitle>AI Assistant</PageTitle>
 
-<FluentStack Orientation="Orientation.Horizontal" Style="height: calc(100vh - 140px); gap: 0;">
+@* ─── Sidebar overlay backdrop (mobile) ─── *@
+<div class="@(_showSidebar ? "chat-sidebar-overlay chat-sidebar-overlay--open" : "chat-sidebar-overlay")"
+     @onclick="CloseSidebar"></div>
+
+<div class="chat-layout">
 
     @* ─── Sidebar ─── *@
-    <div style="width: 260px; flex-shrink: 0; border-right: 1px solid var(--neutral-stroke-rest); display: flex; flex-direction: column; overflow: hidden;">
+    <div class="@(_showSidebar ? "chat-sidebar chat-sidebar--open" : "chat-sidebar")">
         <div style="padding: 8px;">
             <FluentButton Appearance="Appearance.Accent"
                           IconStart="@(new Icons.Regular.Size20.Add())"
@@ -55,14 +59,18 @@
     </div>
 
     @* ─── Chat panel ─── *@
-    <FluentStack Orientation="Orientation.Vertical" Style="flex: 1; min-width: 0; gap: 0;">
+    <div class="chat-panel">
         <FluentToolbar Style="flex-shrink: 0;">
+            <FluentButton Appearance="Appearance.Stealth"
+                          Class="chat-sidebar-toggle"
+                          IconStart="@(new Icons.Regular.Size20.Navigation())"
+                          Title="Conversations"
+                          OnClick="@ToggleSidebar" />
             <FluentIcon Value="@(new Icons.Regular.Size24.Bot())" Color="Color.Accent" />
             <FluentLabel Typo="Typography.H3" Style="margin-left: 8px;">AI Trip Assistant</FluentLabel>
         </FluentToolbar>
 
-        <div id="chat-messages"
-             style="flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+        <div id="chat-messages" class="chat-messages">
             @if (!ChatService.Messages.Any() && !_isThinking)
             {
                 <FluentStack Orientation="Orientation.Vertical"
@@ -82,7 +90,7 @@
                 @if (msg.Role == "user")
                 {
                     <div style="display: flex; justify-content: flex-end;">
-                        <FluentCard Style="max-width: 75%; background: var(--accent-fill-rest); color: var(--foreground-on-accent-rest); padding: 10px 14px; border-radius: 12px 12px 4px 12px;">
+                        <FluentCard Style="max-width: 85%; background: var(--accent-fill-rest); color: var(--foreground-on-accent-rest); padding: 10px 14px; border-radius: 12px 12px 4px 12px;">
                             <FluentLabel Style="color: inherit; white-space: pre-wrap; word-break: break-word;">@msg.Content</FluentLabel>
                         </FluentCard>
                     </div>
@@ -90,7 +98,7 @@
                 else
                 {
                     <div style="display: flex; justify-content: flex-start;">
-                        <FluentCard Style="max-width: 85%; padding: 10px 14px; border-radius: 12px 12px 12px 4px;">
+                        <FluentCard Style="max-width: 90%; padding: 10px 14px; border-radius: 12px 12px 12px 4px;">
                             <pre style="white-space: pre-wrap; font-family: inherit; margin: 0; word-break: break-word;">@msg.Content</pre>
                         </FluentCard>
                     </div>
@@ -112,7 +120,7 @@
             }
         </div>
 
-        <FluentCard Style="flex-shrink: 0; padding: 8px; border-radius: 0; border-top: 1px solid var(--neutral-stroke-rest); max-height:200px;">
+        <FluentCard Class="chat-input-card">
             <FluentStack Orientation="Orientation.Horizontal" Style="gap: 8px; align-items: flex-end;">
                 <FluentTextArea @bind-Value="@_userInput"
                                 Placeholder="Ask me about your trips, wishlists, or places…"
@@ -125,16 +133,17 @@
                               Disabled="@(_isThinking || string.IsNullOrWhiteSpace(_userInput))"
                               IconStart="@(new Icons.Regular.Size20.Send())"
                               Style="align-self: flex-end;">
-                    Send
+                    <span class="chat-input-send-label">Send</span>
                 </FluentButton>
             </FluentStack>
         </FluentCard>
-    </FluentStack>
-</FluentStack>
+    </div>
+</div>
 
 @code {
     private string _userInput = string.Empty;
     private bool _isThinking;
+    private bool _showSidebar;
     private ApplicationUser? _currentUser;
     private List<ChatConversation> _conversations = [];
 
@@ -173,6 +182,7 @@
         if (_currentUser is null || _isThinking) return;
         var loaded = await ChatService.LoadConversationAsync(conversationId, _currentUser.Id);
         if (!loaded) return;
+        _showSidebar = false;
         StateHasChanged();
         await ScrollToBottomAsync();
     }
@@ -180,6 +190,7 @@
     private void NewConversation()
     {
         ChatService.Clear();
+        _showSidebar = false;
         StateHasChanged();
     }
 
@@ -198,6 +209,10 @@
         if (e.Key == "Enter" && !e.ShiftKey && !_isThinking)
             await SendMessage();
     }
+
+    private void ToggleSidebar() => _showSidebar = !_showSidebar;
+
+    private void CloseSidebar() => _showSidebar = false;
 
     private async Task ScrollToBottomAsync()
     {
