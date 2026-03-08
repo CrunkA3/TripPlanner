@@ -20,6 +20,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<UserWishlist> UserWishlists { get; set; }
     public DbSet<SharedTrip> SharedTrips { get; set; }
     public DbSet<UrlImportJob> UrlImportJobs { get; set; }
+    public DbSet<ChatConversation> ChatConversations { get; set; }
+    public DbSet<ChatMessage> ChatMessages { get; set; }
 
 
 
@@ -115,6 +117,20 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .HasOne(j => j.Wishlist)
             .WithMany()
             .HasForeignKey(j => j.WishlistId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Configure ChatConversation
+        modelBuilder.Entity<ChatConversation>()
+            .HasOne(c => c.User)
+            .WithMany(u => u.ChatConversations)
+            .HasForeignKey(c => c.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Configure ChatMessage
+        modelBuilder.Entity<ChatMessage>()
+            .HasOne(m => m.Conversation)
+            .WithMany(c => c.Messages)
+            .HasForeignKey(m => m.ConversationId)
             .OnDelete(DeleteBehavior.Cascade);
     }
 }
