@@ -37,7 +37,7 @@ public class ChatConversationRepository(ApplicationDbContext context) : IChatCon
             .ExecuteUpdateAsync(s => s.SetProperty(c => c.Title, title));
     }
 
-    public async Task AddMessageAsync(string conversationId, string role, string content)
+    public async Task AddMessageAsync(string conversationId, string role, string content, string? toolCallsJson = null)
     {
         var now = DateTime.UtcNow;
 
@@ -46,6 +46,7 @@ public class ChatConversationRepository(ApplicationDbContext context) : IChatCon
             ConversationId = conversationId,
             Role = role,
             Content = content,
+            ToolCallsJson = toolCallsJson,
             CreatedAt = now
         };
         context.ChatMessages.Add(message);
