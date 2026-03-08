@@ -12,7 +12,10 @@ public interface IPlaceRepository
 
 
     Task<Place?> GetByIdAsync(string id, string userId);
-    Task<bool> ExistsAsync(string id);
+    Task<bool> ExistsAsync(string id)
+    {
+        throw new System.NotSupportedException("ExistsAsync is not implemented for this repository. Ensure the concrete repository provides an implementation.");
+    }
     Task<Place> AddAsync(Place place);
     Task<Place> UpdateAsync(Place place);
     Task DeleteAsync(string id);
