@@ -79,6 +79,31 @@ public class PlaceRepository : IPlaceRepository
                 (p.TripId != null && userTripIds.Contains(p.TripId))));
     }
 
+    public async Task<bool> ExistsAsync(string id)
+    {
+        return await _context.Places.AnyAsync(p => p.Id == id);
+    }
+
+    public async Task<bool> HasAccessAsync(string id, string userId)
+    {
+        var userWishlistIds = await _context.UserWishlists
+            .Where(w => w.UserId == userId)
+            .Select(w => w.WishlistId)
+            .ToListAsync();
+
+        var userTripIds = await _context.Trips
+            .Where(t => t.OwnerId == userId)
+            .Select(t => t.Id)
+            .Union(_context.SharedTrips
+                .Where(st => st.UserId == userId)
+                .Select(st => st.TripId))
+            .ToListAsync();
+
+        return await _context.Places.AnyAsync(p => p.Id == id && (
+            (p.WishlistId != null && userWishlistIds.Contains(p.WishlistId)) ||
+            (p.TripId != null && userTripIds.Contains(p.TripId))));
+    }
+
     public async Task<Place> AddAsync(Place place)
     {
         _context.Places.Add(place);
