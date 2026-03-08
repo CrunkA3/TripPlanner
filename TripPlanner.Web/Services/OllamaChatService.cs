@@ -217,11 +217,16 @@ public class OllamaChatService(
 
     private static string? Str(JsonElement args, string key)
     {
-        if (args.ValueKind == JsonValueKind.Object &&
-            args.TryGetProperty(key, out var val) &&
-            val.ValueKind != JsonValueKind.Null)
-            return val.GetString();
-        return null;
+        if (args.ValueKind != JsonValueKind.Object || !args.TryGetProperty(key, out var val))
+            return null;
+        return val.ValueKind switch
+        {
+            JsonValueKind.String => val.GetString(),
+            JsonValueKind.Number => val.GetRawText(),
+            JsonValueKind.True => "true",
+            JsonValueKind.False => "false",
+            _ => null
+        };
     }
 
     private static bool TryGetDouble(JsonElement args, string key, out double value)
