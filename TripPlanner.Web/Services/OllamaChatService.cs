@@ -150,6 +150,10 @@ public class OllamaChatService(
                     toolResult[..Math.Min(200, toolResult.Length)]);
                 _history.Add(new OllamaMessage { Role = "tool", Content = toolResult });
             }
+
+            // Trim after each tool-call round so the next iteration's request payload
+            // is bounded even when the loop continues.
+            TrimHistory();
         }
 
         const string maxIterMsg = "I apologize, I reached the maximum number of steps. Please try a simpler question.";
