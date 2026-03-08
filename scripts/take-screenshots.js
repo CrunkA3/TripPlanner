@@ -120,7 +120,7 @@ async function main() {
         // Submit via the button click (triggers browser validation + Blazor anti-forgery)
         await Promise.all([
             page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 15000 }),
-            page.locator('fluent-button[type="submit"]').click(),
+            page.getByTestId('submit-register-button').click(),
         ]);
 
         // ── 3. Confirm e-mail (development flow shows the link on-screen) ──────
@@ -146,7 +146,7 @@ async function main() {
         // Submit via button click
         await Promise.all([
             page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 15000 }),
-            page.locator('fluent-button[type="submit"]').click(),
+            page.getByTestId('submit-login-button').click(),
         ]);
         await page.waitForTimeout(2000);
         console.log(`  ✓ Logged in – current URL: ${page.url()}`);
@@ -178,28 +178,28 @@ async function main() {
 
         // ── 8. Wishlist detail page + add places ──────────────────────────────
         console.log('\n[8] Wishlist detail – add places');
-        await page.locator('fluent-button:has-text("View")').first().click();
+        await page.getByTestId('view-wishlist-button').first().click();
         await page.waitForTimeout(2500);
         await screenshot(page, '05-wishlist-detail-empty.png', 'Wishlist detail – empty');
 
         // Add first place
-        await page.locator('fluent-button:has-text("Add Place")').click();
+        await page.getByTestId('add-place-button').click();
         await page.waitForTimeout(2000);
 
         await fillByLabel(page, 'Name', 'Eiffel Tower');
         await fillByLabel(page, 'Description', 'Iconic iron lattice tower on the Champ de Mars in Paris');
 
-        await page.locator('fluent-button:has-text("Save")').first().click();
+        await page.getByTestId('save-place-button').click();
         await page.waitForTimeout(2500);
 
         // Add second place
-        await page.locator('fluent-button:has-text("Add Place")').click();
+        await page.getByTestId('add-place-button').click();
         await page.waitForTimeout(2000);
 
         await fillByLabel(page, 'Name', 'Colosseum');
         await fillByLabel(page, 'Description', 'Ancient amphitheatre in the centre of Rome');
 
-        await page.locator('fluent-button:has-text("Save")').first().click();
+        await page.getByTestId('save-place-button').click();
         await page.waitForTimeout(2500);
 
         await screenshot(page, '06-wishlist-detail-with-places.png', 'Wishlist detail – with places');
@@ -212,7 +212,7 @@ async function main() {
 
         // ── 10. Create a trip ─────────────────────────────────────────────────
         console.log('\n[10] Create trip');
-        await page.locator('fluent-button:has-text("Create Trip")').click();
+        await page.getByTestId('create-trip-button').click();
         await page.waitForTimeout(1500);
 
         await fillByLabel(page, 'Trip Name', 'Paris 2025');
@@ -220,13 +220,13 @@ async function main() {
         await fillByLabel(page, 'Start Date (YYYY-MM-DD)', '2025-06-01');
         await fillByLabel(page, 'End Date (YYYY-MM-DD)', '2025-06-07');
 
-        await page.locator('fluent-button:has-text("Save")').first().click();
+        await page.getByTestId('save-trip-button').click();
         await page.waitForTimeout(2500);
         await screenshot(page, '08-trips-with-data.png', 'Trips page – with trip');
 
         // ── 11. Trip plan page ─────────────────────────────────────────────────
         console.log('\n[11] Trip plan page');
-        await page.locator('fluent-button:has-text("Plan")').first().click();
+        await page.getByTestId('plan-trip-button').first().click();
         await page.waitForTimeout(3000);
         await screenshot(page, '09-trip-plan.png', 'Trip plan page');
 
