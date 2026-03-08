@@ -24,4 +24,5 @@ public class ApplicationUser : IdentityUser
     public List<UserWishlist> SharedWishlists { get; set; } = new();
     public List<Trip> OwnedTrips { get; set; } = new();
     public List<SharedTrip> SharedTrips { get; set; } = new();
+    public List<ChatConversation> ChatConversations { get; set; } = new();
 }

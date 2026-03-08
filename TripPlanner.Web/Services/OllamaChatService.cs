@@ -16,7 +16,8 @@ public class OllamaChatService(
     ILogger<OllamaChatService> logger,
     ITripRepository tripRepository,
     IWishlistRepository wishlistRepository,
-    IPlaceRepository placeRepository)
+    IPlaceRepository placeRepository,
+    IChatConversationRepository conversationRepository)
 {
     public sealed record DisplayMessage(string Role, string Content);
 
@@ -68,13 +69,39 @@ public class OllamaChatService(
 
     private readonly List<OllamaMessage> _history = [];
 
+    /// <summary>The ID of the currently active persisted conversation, or null if no conversation is loaded.</summary>
+    public string? CurrentConversationId { get; private set; }
+
     public IReadOnlyList<DisplayMessage> Messages =>
         _history
             .Where(m => m.Role is "user" or "assistant" && !string.IsNullOrEmpty(m.Content))
             .Select(m => new DisplayMessage(m.Role, m.Content))
             .ToList();
 
-    public void Clear() => _history.Clear();
+    /// <summary>Clears the in-memory history and detaches from any active conversation (does not delete from DB).</summary>
+    public void Clear()
+    {
+        _history.Clear();
+        CurrentConversationId = null;
+    }
+
+    /// <summary>Loads a persisted conversation into the in-memory history so the user can continue it.</summary>
+    /// <returns><c>true</c> if the conversation was found and loaded; <c>false</c> if it was not found.</returns>
+    public async Task<bool> LoadConversationAsync(string conversationId, string userId)
+    {
+        var conversation = await conversationRepository.GetByIdAsync(conversationId, userId);
+        if (conversation is null) return false;
+
+        _history.Clear();
+        CurrentConversationId = conversationId;
+
+        foreach (var msg in conversation.Messages.OrderBy(m => m.CreatedAt))
+        {
+            _history.Add(new OllamaMessage { Role = msg.Role, Content = msg.Content });
+        }
+
+        return true;
+    }
 
     private void TrimHistory()
     {
@@ -87,7 +114,16 @@ public class OllamaChatService(
 
     public async Task<string> SendMessageAsync(string userMessage, string userId, CancellationToken ct = default)
     {
+        // Create a new persisted conversation on the first message
+        if (CurrentConversationId is null)
+        {
+            var title = userMessage.Length > 80 ? userMessage[..77] + "…" : userMessage;
+            var conversation = await conversationRepository.CreateAsync(userId, title);
+            CurrentConversationId = conversation.Id;
+        }
+
         _history.Add(new OllamaMessage { Role = "user", Content = userMessage });
+        await conversationRepository.AddMessageAsync(CurrentConversationId, "user", userMessage);
         TrimHistory();
 
         var model = configuration["Ollama:Model"] ?? "llama3.2";
@@ -122,6 +158,7 @@ public class OllamaChatService(
                 logger.LogWarning(ex, "Failed to call Ollama /api/chat");
                 var errMsg = $"I'm sorry, I couldn't connect to the AI service: {ex.Message}";
                 _history.Add(new OllamaMessage { Role = "assistant", Content = errMsg });
+                await conversationRepository.AddMessageAsync(CurrentConversationId, "assistant", errMsg);
                 TrimHistory();
                 return errMsg;
             }
@@ -131,6 +168,7 @@ public class OllamaChatService(
             {
                 const string noResponseMsg = "I'm sorry, I didn't receive a valid response.";
                 _history.Add(new OllamaMessage { Role = "assistant", Content = noResponseMsg });
+                await conversationRepository.AddMessageAsync(CurrentConversationId, "assistant", noResponseMsg);
                 TrimHistory();
                 return noResponseMsg;
             }
@@ -139,8 +177,10 @@ public class OllamaChatService(
 
             if (response.Message.ToolCalls is null || response.Message.ToolCalls.Count == 0)
             {
+                var finalContent = response.Message.Content ?? string.Empty;
+                await conversationRepository.AddMessageAsync(CurrentConversationId, "assistant", finalContent);
                 TrimHistory();
-                return response.Message.Content ?? string.Empty;
+                return finalContent;
             }
 
             foreach (var toolCall in response.Message.ToolCalls)
@@ -158,6 +198,7 @@ public class OllamaChatService(
 
         const string maxIterMsg = "I apologize, I reached the maximum number of steps. Please try a simpler question.";
         _history.Add(new OllamaMessage { Role = "assistant", Content = maxIterMsg });
+        await conversationRepository.AddMessageAsync(CurrentConversationId, "assistant", maxIterMsg);
         TrimHistory();
         return maxIterMsg;
     }

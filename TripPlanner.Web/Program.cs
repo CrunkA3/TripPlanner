@@ -108,6 +108,7 @@ builder.Services.AddScoped<ITripRepository, EfTripRepository>();
 builder.Services.AddScoped<IGpxRepository, GpxRepository>();
 builder.Services.AddScoped<IWishlistRepository, WishlistRepository>();
 builder.Services.AddScoped<IUrlImportJobRepository, UrlImportJobRepository>();
+builder.Services.AddScoped<IChatConversationRepository, ChatConversationRepository>();
 
 // Register services
 builder.Services.AddScoped<GpxService>();
