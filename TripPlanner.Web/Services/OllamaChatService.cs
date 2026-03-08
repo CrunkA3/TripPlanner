@@ -149,16 +149,32 @@ public class OllamaChatService(
             {
                 "list_trips" => await ListTripsAsync(userId),
                 "get_trip" => await GetTripAsync(Str(args, "trip_id"), userId),
-                "create_trip" => await CreateTripAsync(Str(args, "name")!, Str(args, "description"), Str(args, "start_date"), Str(args, "end_date"), userId),
-                "update_trip" => await UpdateTripAsync(Str(args, "trip_id")!, Str(args, "name"), Str(args, "description"), Str(args, "start_date"), Str(args, "end_date"), userId),
-                "delete_trip" => await DeleteTripAsync(Str(args, "trip_id")!, userId),
+                "create_trip" => Str(args, "name") is { } tripName && !string.IsNullOrWhiteSpace(tripName)
+                    ? await CreateTripAsync(tripName, Str(args, "description"), Str(args, "start_date"), Str(args, "end_date"), userId)
+                    : "Missing required parameter: name",
+                "update_trip" => Str(args, "trip_id") is { } updateTripId && !string.IsNullOrWhiteSpace(updateTripId)
+                    ? await UpdateTripAsync(updateTripId, Str(args, "name"), Str(args, "description"), Str(args, "start_date"), Str(args, "end_date"), userId)
+                    : "Missing required parameter: trip_id",
+                "delete_trip" => Str(args, "trip_id") is { } deleteTripId && !string.IsNullOrWhiteSpace(deleteTripId)
+                    ? await DeleteTripAsync(deleteTripId, userId)
+                    : "Missing required parameter: trip_id",
                 "list_wishlists" => await ListWishlistsAsync(userId),
-                "get_wishlist" => await GetWishlistAsync(Str(args, "wishlist_id")!, userId),
-                "create_wishlist" => await CreateWishlistAsync(Str(args, "name")!, Str(args, "description"), userId),
-                "update_wishlist" => await UpdateWishlistAsync(Str(args, "wishlist_id")!, Str(args, "name"), Str(args, "description"), userId),
-                "delete_wishlist" => await DeleteWishlistAsync(Str(args, "wishlist_id")!, userId),
+                "get_wishlist" => Str(args, "wishlist_id") is { } wishlistId && !string.IsNullOrWhiteSpace(wishlistId)
+                    ? await GetWishlistAsync(wishlistId, userId)
+                    : "Missing required parameter: wishlist_id",
+                "create_wishlist" => Str(args, "name") is { } wishlistName && !string.IsNullOrWhiteSpace(wishlistName)
+                    ? await CreateWishlistAsync(wishlistName, Str(args, "description"), userId)
+                    : "Missing required parameter: name",
+                "update_wishlist" => Str(args, "wishlist_id") is { } updateWishlistId && !string.IsNullOrWhiteSpace(updateWishlistId)
+                    ? await UpdateWishlistAsync(updateWishlistId, Str(args, "name"), Str(args, "description"), userId)
+                    : "Missing required parameter: wishlist_id",
+                "delete_wishlist" => Str(args, "wishlist_id") is { } deleteWishlistId && !string.IsNullOrWhiteSpace(deleteWishlistId)
+                    ? await DeleteWishlistAsync(deleteWishlistId, userId)
+                    : "Missing required parameter: wishlist_id",
                 "list_places" => await ListPlacesAsync(Str(args, "category"), userId),
-                "get_place" => await GetPlaceAsync(Str(args, "place_id")!, userId),
+                "get_place" => Str(args, "place_id") is { } getPlaceId && !string.IsNullOrWhiteSpace(getPlaceId)
+                    ? await GetPlaceAsync(getPlaceId, userId)
+                    : "Missing required parameter: place_id",
                 "create_place" => await CreatePlaceAsync(args, userId),
                 "update_place" => await UpdatePlaceAsync(args, userId),
                 "delete_place" => Str(args, "place_id") is { } placeId && !string.IsNullOrWhiteSpace(placeId)
