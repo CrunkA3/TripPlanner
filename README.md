@@ -1,6 +1,6 @@
 # TripPlanner – Persönliche Reiseplanung
 
-Eine moderne **Blazor Server**-Webanwendung zur Reiseplanung und Verwaltung von Reisewunschlisten – mit **Multi-User-Unterstützung und Sharing-Funktionen** auf Basis von .NET 10, Entity Framework Core, ASP.NET Core Identity und Fluent UI Components.
+Eine moderne **Blazor Server**-Webanwendung zur Reiseplanung und Verwaltung von Reisewunschlisten – mit **Multi-User-Unterstützung, Sharing-Funktionen, KI-Assistent und MCP-Server-Integration** auf Basis von .NET 10, Entity Framework Core, ASP.NET Core Identity und Fluent UI Components.
 
 ## Screenshots
 
@@ -28,6 +28,8 @@ Eine moderne **Blazor Server**-Webanwendung zur Reiseplanung und Verwaltung von 
 - Sichere Passwortanforderungen
 - E-Mail-basierte Benutzeridentifikation
 - Optionale Angabe des Home-Standorts (Koordinaten + Name)
+- **Passkey-Unterstützung** (WebAuthn) für passwortlose Anmeldung
+- Verwaltung von Passkeys unter „Account → Passkeys"
 
 ### 2. Wunschlisten (Wishlists)
 - **Mehrere Wunschlisten erstellen** für verschiedene Reiseziele (z. B. „Europareise 2025", „Strandurlaub-Ideen")
@@ -45,8 +47,11 @@ Eine moderne **Blazor Server**-Webanwendung zur Reiseplanung und Verwaltung von 
   - Optionales Bild (Upload oder URL)
   - Optionaler GPX-Track-Upload
   - Zuordnung zu einer Wunschliste oder Reise
+  - Besuchsdatum (von/bis)
+  - Notizen und optionale URL
 - Orte nach Kategorie, Tags oder GPX-Track filtern
 - Responsive Kachel-Ansicht aller Orte
+- **Ort per URL importieren**: URL einer Webseite eingeben → KI analysiert die Seite und befüllt die Ortsdaten automatisch
 
 ### 4. Reiseplanung (Trips)
 - Mehrtägige Reisen mit detaillierten Tagesitinerarien erstellen
@@ -62,6 +67,7 @@ Eine moderne **Blazor Server**-Webanwendung zur Reiseplanung und Verwaltung von 
   - Fahrtzeiten zwischen Orten schätzen
   - Planungskonflikte erkennen
   - Warnung bei überfüllten Tagen
+- **Wettervorhersage** direkt im Reiseplan (14-Tage-Prognose via Open-Meteo)
 - Eigene und geteilte Reisen in einer Übersicht
 
 ### 5. Kartenansicht (Map)
@@ -70,6 +76,40 @@ Eine moderne **Blazor Server**-Webanwendung zur Reiseplanung und Verwaltung von 
 - Karteninhalt nach Reise filtern
 - Seitenpanel mit Ortsdetails
 
+### 6. KI-Assistent (AI Trip Assistant)
+- **Chat-Interface** unter `/chat` mit einem lokalen Sprachmodell (Ollama)
+- Der Assistent kann Reisen, Wunschlisten und Orte verwalten:
+  - Reisen und Wunschlisten auflisten, anlegen, bearbeiten und löschen
+  - Orte anlegen, bearbeiten, löschen und nach Kategorie filtern
+- Conversation-History je Browser-Tab (isoliert pro Sitzung)
+- Konfigurierbar über `appsettings.json` (Modell, Basis-URL, History-Länge)
+- Standard-Modell: `llama3.2`
+
+### 7. MCP-Server (Model Context Protocol)
+- **MCP-Endpunkt** unter `/mcp` (HTTP-Transport)
+- Ermöglicht externen KI-Agenten (z. B. Claude Desktop) den Zugriff auf TripPlanner-Daten
+- Verfügbare Tool-Gruppen:
+  - **Trips**: `list_trips`, `get_trip`, `create_trip`, `update_trip`, `delete_trip`
+  - **Wishlists**: `list_wishlists`, `get_wishlist`, `create_wishlist`, `update_wishlist`, `delete_wishlist`
+  - **Places**: `list_places`, `get_place`, `create_place`, `update_place`, `delete_place`
+- **API-Key-Authentifizierung**: Schlüssel generieren unter „Account → MCP API Key"
+  - Der Schlüssel wird als SHA-256-Hash gespeichert (Klartext nur einmalig angezeigt)
+  - Bearer-Token-Authentifizierung über den `Authorization`-Header
+- MCP-Client-Konfiguration (z. B. für Claude Desktop):
+  ```json
+  {
+    "mcpServers": {
+      "tripplanner": {
+        "type": "http",
+        "url": "https://<your-host>/mcp",
+        "headers": {
+          "Authorization": "Bearer <your-api-key>"
+        }
+      }
+    }
+  }
+  ```
+
 ---
 
 ## Technische Architektur
@@ -77,42 +117,71 @@ Eine moderne **Blazor Server**-Webanwendung zur Reiseplanung und Verwaltung von 
 ### Projektstruktur
 ```
 TripPlanner.Web/
+├── Auth/                     # Authentifizierungslogik
+│   └── McpApiKeyAuthHandler.cs  # Bearer-API-Key-Auth für MCP
 ├── Data/                     # Datenbankkontext
 │   └── ApplicationDbContext.cs
+├── McpTools/                 # MCP-Tool-Implementierungen
+│   ├── PlaceMcpTools.cs      # CRUD-Tools für Orte
+│   ├── TripMcpTools.cs       # CRUD-Tools für Reisen
+│   └── WishlistMcpTools.cs   # CRUD-Tools für Wunschlisten
 ├── Models/                   # Domain-Entities
-│   ├── ApplicationUser.cs    # Identity-User mit zusätzlichen Eigenschaften
+│   ├── ApplicationUser.cs    # Identity-User mit McpApiKeyHash, DisplayName
 │   ├── Wishlist.cs           # Wunschliste mit Sharing-Unterstützung
 │   ├── Place.cs              # Ort mit Wunschlisten-/Reisezuordnung
+│   ├── PlaceImage.cs         # Bilddaten eines Ortes
+│   ├── PlaceSuggestion.cs    # KI-generierter Ortsvorschlag
+│   ├── PlaceAnalysisResult.cs # Ergebnis der URL-Analyse
 │   ├── Trip.cs               # Reise mit Eigentümerschaft
 │   ├── SharedTrip.cs         # m:n User-Trip-Sharing
 │   ├── Accommodation.cs      # Unterkunft mit Check-in/-out
+│   ├── UrlImportJob.cs       # Hintergrundjob für URL-Import
+│   ├── UrlImportJobStatus.cs # Status des Import-Jobs
 │   ├── GpxTrack.cs
 │   └── PlaceCategory.cs
 ├── Repositories/             # Datenzugriffsschicht
 │   ├── IWishlistRepository.cs / WishlistRepository.cs
 │   ├── IPlaceRepository.cs   / PlaceRepository.cs
 │   ├── ITripRepository.cs    / EfTripRepository.cs
-│   └── IGpxRepository.cs     / EfGpxRepository.cs
+│   ├── IGpxRepository.cs     / EfGpxRepository.cs
+│   └── IUrlImportJobRepository.cs / UrlImportJobRepository.cs
 ├── Services/                 # Geschäftslogik
 │   ├── UserService.cs        # Authentifizierungs-Hilfsmethoden
 │   ├── GpxService.cs         # GPX-Parsing und Berechnungen
-│   └── RoutingService.cs     # Distanz- und Zeitberechnungen
+│   ├── RoutingService.cs     # Distanz- und Zeitberechnungen
+│   ├── OllamaChatService.cs  # KI-Chatbot (Ollama)
+│   ├── OllamaPlaceAnalysisService.cs # KI-gestützte URL-Analyse
+│   ├── UrlImportBackgroundService.cs # Hintergrunddienst für URL-Importe
+│   ├── NominatimGeocodingService.cs  # Geocoding via OpenStreetMap
+│   ├── WeatherService.cs     # Wettervorhersage via Open-Meteo
+│   ├── IGeocodingService.cs
+│   └── IPlaceAnalysisService.cs
 └── Components/
     ├── Account/              # Authentifizierungsseiten (Login, Register, …)
+    │   └── Pages/Manage/
+    │       ├── ApiKey.razor  # MCP API-Key-Verwaltung
+    │       ├── HomeLocation.razor
+    │       └── Passkeys.razor
     ├── Layout/               # MainLayout.razor, NavMenu.razor
     └── Pages/
         ├── Home.razor
-        ├── Wishlists/        # WishlistsPage, WishlistDetailPage, WishlistAddPlaceDialog
-        ├── Trips/            # TripsPage, TripPlanPage, TripAddPlaceDialog
+        ├── Chat/             # ChatPage (KI-Assistent)
+        ├── Places/           # PlacesPage
+        ├── Wishlists/        # WishlistsPage, WishlistDetailPage
+        ├── Trips/            # TripsPage, TripPlanPage
         └── Map/              # MapPage
 ```
 
 ### Technologien
 - **Framework**: .NET 10, ASP.NET Core Blazor Server
 - **Datenbank**: Entity Framework Core 10.0.3 mit **SQL Server**
-- **Authentifizierung**: ASP.NET Core Identity (Cookie-basiert)
+- **Authentifizierung**: ASP.NET Core Identity (Cookie-basiert) + Passkeys (WebAuthn) + MCP API-Key
 - **UI-Bibliothek**: Microsoft Fluent UI Blazor Components 4.14.0
 - **Karte**: MapLibre GL JS (Integration in MapPage)
+- **KI/LLM**: Ollama (lokales Sprachmodell, Standard: `llama3.2`)
+- **MCP**: ModelContextProtocol.AspNetCore 1.0.0
+- **Geocoding**: OpenStreetMap Nominatim API
+- **Wetter**: Open-Meteo API (kostenlos, keine Registrierung erforderlich)
 - **Orchestrierung**: .NET Aspire 13.0 (`TripPlanner.AppHost`)
 
 ### Wichtige Services
@@ -132,15 +201,38 @@ TripPlanner.Web/
   - Planungskonflikte erkennen
   - Warnung bei unrealistischen Zeitplänen
 
+#### OllamaChatService
+- Kommunikation mit lokalem Ollama-Server (`/api/chat`)
+- Integrierte Tool-Calls für Reisen, Wunschlisten und Orte (CRUD-Operationen, s. MCP-Sektion)
+- Conversation-History pro Blazor-Circuit (Browser-Tab-Isolierung)
+- Konfigurierbar über `Ollama`-Sektion in `appsettings.json`
+
+#### OllamaPlaceAnalysisService
+- Ruft URL ab und extrahiert Text der Webseite
+- Sendet den Text an Ollama und bittet um JSON-Ortsvorschlag
+- Nutzt NominatimGeocodingService für Koordinaten-Ermittlung
+- Ergebnis wird als `PlaceAnalysisResult` zurückgegeben
+
+#### WeatherService
+- Ruft 14-Tage-Wettervorhersage für GPS-Koordinaten ab
+- Verwendet die kostenlose Open-Meteo API (kein API-Key erforderlich)
+- In-Memory-Cache zur Vermeidung doppelter Anfragen
+
+#### NominatimGeocodingService
+- Wandelt Ortsnamen in GPS-Koordinaten um
+- Verwendet die kostenlose OpenStreetMap Nominatim API
+
 ### Datenmodelle
 
 **ApplicationUser** (erweitert IdentityUser)
 ```csharp
 - Id: string (GUID – aus Identity)
 - Email: string (aus Identity)
+- DisplayName: string?
 - HomeLatitude: double?
 - HomeLongitude: double?
 - HomeLocationName: string?
+- McpApiKeyHash: string?  // SHA-256-Hash des MCP API-Keys
 - Wishlists: List<Wishlist>
 - SharedWishlists: List<UserWishlist>
 - OwnedTrips: List<Trip>
@@ -165,10 +257,14 @@ TripPlanner.Web/
 - Category: PlaceCategory (enum)
 - Latitude, Longitude: double
 - Tags: List<string>
-- ImageData: byte[]? / ImageContentType: string?
+- Notes: string?
+- Url: string?
+- VisitDate: DateTime? / VisitDateEnd: DateTime?
 - GpxTrackId: string? (optional)
 - WishlistId: string? (optional)
 - TripId: string? (optional)
+- NeedsReview: bool  // true wenn per URL-Import erstellt
+- Images: List<PlaceImage>
 - CreatedAt, UpdatedAt: DateTime
 ```
 
@@ -200,6 +296,20 @@ TripPlanner.Web/
 - Notes: string?
 ```
 
+**UrlImportJob**
+```csharp
+- Id: string (GUID)
+- WishlistId: string (FK to Wishlist)
+- Url: string
+- Status: UrlImportJobStatus (Pending / Processing / Completed / Failed)
+- CreatedPlaceId: string?  // nach erfolgreicher Verarbeitung
+- AiPrompt: string?
+- AiResponse: string?
+- ErrorMessage: string?
+- CreatedByUserId: string
+- CreatedAt: DateTime / ProcessedAt: DateTime?
+```
+
 **UserWishlist** (m:n User ↔ Wishlist)
 ```csharp
 - UserId: string (FK)
@@ -223,6 +333,7 @@ TripPlanner.Web/
 - .NET 10 SDK
 - **SQL Server** (lokal oder per Docker)
 - Visual Studio 2022, VS Code oder Rider
+- **Ollama** (optional, für KI-Assistent und URL-Import)
 
 ### Erste Schritte
 
@@ -259,7 +370,25 @@ TripPlanner.Web/
    }
    ```
 
-4. **Anwendung starten**
+4. **Ollama einrichten** (optional, für KI-Funktionen):
+   ```bash
+   # Ollama installieren: https://ollama.com
+   ollama pull llama3.2
+   ollama serve
+   ```
+   
+   Konfiguration in `TripPlanner.Web/appsettings.json`:
+   ```json
+   {
+     "Ollama": {
+       "BaseUrl": "http://localhost:11434",
+       "Model": "llama3.2",
+       "MaxHistoryMessages": 40
+     }
+   }
+   ```
+
+5. **Anwendung starten**
    ```bash
    cd TripPlanner.Web
    dotnet run
@@ -267,7 +396,7 @@ TripPlanner.Web/
    
    Migrationen werden beim ersten Start automatisch angewendet.
 
-5. Unter `http://localhost:5278` aufrufen und registrieren.
+6. Unter `http://localhost:5278` aufrufen und registrieren.
 
 ### Ausführen mit .NET Aspire (orchestriert)
 ```bash
@@ -315,6 +444,7 @@ dotnet test
 ✅ **Umgesetzt**:
 - Vollständige Architektur und Datenmodelle
 - Benutzerauthentifizierung und -autorisierung (ASP.NET Core Identity)
+- Passkey-Unterstützung (WebAuthn) für passwortlose Anmeldung
 - Datenbankpersistenz mit Entity Framework Core (SQL Server)
 - Multi-User-Unterstützung mit Eigentümerschaft
 - Wunschlisten-Verwaltung mit Sharing
@@ -322,22 +452,26 @@ dotnet test
 - Unterkunftsverwaltung pro Reise
 - Repository-Pattern mit EF Core
 - Alle Services mit Geschäftslogik implementiert
-- Hauptseiten: Wishlists, Trips (inkl. TripPlan), Map, Places
+- Hauptseiten: Wishlists, Trips (inkl. TripPlan), Map, Places, Chat
 - Authentifizierungsseiten (Login, Register, Profilverwaltung)
 - Fluent UI Integration
 - Parallax-Heldenbereich auf der Startseite
 - Kartenansicht mit MapLibre GL JS
+- **KI-Assistent** (Ollama-Chat) mit Trip/Wishlist/Places-Tool-Calls
+- **MCP-Server** (`/mcp`) mit API-Key-Authentifizierung
+- **URL-Import**: KI-gestützte Ortsextraktion aus Webseiten
+- **Geocoding** via OpenStreetMap Nominatim
+- **Wettervorhersage** via Open-Meteo (14 Tage)
 
 ⚠️ **Bekannte Einschränkungen**:
 - Ältere `WishlistPage` (`/wishlist`) noch vorhanden (ersetzt durch `WishlistsPage` / `WishlistDetailPage`)
-- GPX-Datei-Upload noch nicht vollständig in der UI
+- KI-Funktionen erfordern eine laufende Ollama-Instanz
 
 🔄 **Noch ausstehend**:
-1. GPX-Upload vollständig in UI einbinden
-2. Drag-and-Drop für Tagesplanung
-3. PDF-/JSON-Export von Reisen
-4. Seed-Daten für Demo-Zwecke
-5. Umfassende Tests
+1. Drag-and-Drop für Tagesplanung
+2. PDF-/JSON-Export von Reisen
+3. Seed-Daten für Demo-Zwecke
+4. Umfassende Tests
 
 ---
 
@@ -361,8 +495,10 @@ dotnet test
 
 - **Passwortanforderungen**: Mindestens 6 Zeichen, Groß-/Kleinbuchstaben und Ziffern erforderlich
 - **Sichere Authentifizierung** via ASP.NET Core Identity mit Cookie-basierter Authentifizierung
+- **Passkeys**: WebAuthn-basierte passwortlose Anmeldung
 - **Autorisierung**: Alle Seiten (außer Home, Login, Register) erfordern Anmeldung
 - **Datenisolation**: Nutzer sehen nur eigene oder explizit geteilte Daten
+- **MCP API-Key**: SHA-256-Hash im Klartext niemals gespeichert; Constant-Time-Vergleich zur Timing-Angriff-Prävention
 
 ---
 
