@@ -30,15 +30,20 @@ public class ChatConversationRepository(ApplicationDbContext context) : IChatCon
         return conversation;
     }
 
-    public async Task UpdateTitleAsync(string id, string title)
+    public async Task UpdateTitleAsync(string id, string title, string userId)
     {
         await context.ChatConversations
-            .Where(c => c.Id == id)
+            .Where(c => c.Id == id && c.UserId == userId)
             .ExecuteUpdateAsync(s => s.SetProperty(c => c.Title, title));
     }
 
-    public async Task AddMessageAsync(string conversationId, string role, string content)
+    public async Task AddMessageAsync(string conversationId, string role, string content, string userId)
     {
+        var conversationExists = await context.ChatConversations
+            .AnyAsync(c => c.Id == conversationId && c.UserId == userId);
+        if (!conversationExists)
+            return;
+
         var message = new ChatMessage
         {
             ConversationId = conversationId,
@@ -49,7 +54,7 @@ public class ChatConversationRepository(ApplicationDbContext context) : IChatCon
         context.ChatMessages.Add(message);
         // Update conversation's UpdatedAt timestamp
         await context.ChatConversations
-            .Where(c => c.Id == conversationId)
+            .Where(c => c.Id == conversationId && c.UserId == userId)
             .ExecuteUpdateAsync(s => s.SetProperty(c => c.UpdatedAt, DateTime.UtcNow));
         await context.SaveChangesAsync();
     }
@@ -61,10 +66,10 @@ public class ChatConversationRepository(ApplicationDbContext context) : IChatCon
             .ExecuteDeleteAsync();
     }
 
-    public async Task TouchAsync(string id)
+    public async Task TouchAsync(string id, string userId)
     {
         await context.ChatConversations
-            .Where(c => c.Id == id)
+            .Where(c => c.Id == id && c.UserId == userId)
             .ExecuteUpdateAsync(s => s.SetProperty(c => c.UpdatedAt, DateTime.UtcNow));
     }
 }
