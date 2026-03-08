@@ -494,7 +494,8 @@ table {
 
 @media (max-width: 767px) {
     .chat-layout {
-        height: calc(100dvh - 86px);
+        height: 100%;
+        min-height: 0;
         position: relative;
     }
 
