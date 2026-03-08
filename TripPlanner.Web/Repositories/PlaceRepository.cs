@@ -58,24 +58,25 @@ public class PlaceRepository : IPlaceRepository
 
     public async Task<Place?> GetByIdAsync(string id, string userId)
     {
-        var accessibleWishlists = _context.UserWishlists
-            .Where(uw => uw.UserId == userId)
-            .Select(uw => uw.WishlistId);
+        var userWishlistIds = await _context.UserWishlists
+            .Where(w => w.UserId == userId)
+            .Select(w => w.WishlistId)
+            .ToListAsync();
 
-        var accessibleTrips = _context.Trips
+        var userTripIds = await _context.Trips
             .Where(t => t.OwnerId == userId)
             .Select(t => t.Id)
-            .Union(
-                _context.SharedTrips
-                    .Where(st => st.UserId == userId)
-                    .Select(st => st.TripId));
+            .Union(_context.SharedTrips
+                .Where(st => st.UserId == userId)
+                .Select(st => st.TripId))
+            .ToListAsync();
 
         return await _context.Places
             .Include(p => p.Wishlist)
             .Include(p => p.Images)
-            .FirstOrDefaultAsync(p => p.Id == id &&
-                ((p.WishlistId != null && accessibleWishlists.Contains(p.WishlistId)) ||
-                 (p.TripId != null && accessibleTrips.Contains(p.TripId))));
+            .FirstOrDefaultAsync(p => p.Id == id && (
+                (p.WishlistId != null && userWishlistIds.Contains(p.WishlistId)) ||
+                (p.TripId != null && userTripIds.Contains(p.TripId))));
     }
 
     public async Task<Place> AddAsync(Place place)
