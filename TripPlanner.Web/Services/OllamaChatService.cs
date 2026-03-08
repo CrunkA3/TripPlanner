@@ -61,6 +61,11 @@ public class OllamaChatService(
                   "Always be concise and helpful."
     };
 
+    // Default maximum number of messages kept in the conversation history (≈ 20 turns).
+    // Older messages are dropped to prevent unbounded payloads and memory growth.
+    // Can be overridden via "Ollama:MaxHistoryMessages" in configuration.
+    private const int DefaultMaxHistoryMessages = 40;
+
     private readonly List<OllamaMessage> _history = [];
 
     public IReadOnlyList<DisplayMessage> Messages =>
@@ -71,9 +76,19 @@ public class OllamaChatService(
 
     public void Clear() => _history.Clear();
 
+    private void TrimHistory()
+    {
+        var maxMessages = int.TryParse(configuration["Ollama:MaxHistoryMessages"], out var n) && n > 0
+            ? n
+            : DefaultMaxHistoryMessages;
+        if (_history.Count > maxMessages)
+            _history.RemoveRange(0, _history.Count - maxMessages);
+    }
+
     public async Task<string> SendMessageAsync(string userMessage, string userId, CancellationToken ct = default)
     {
         _history.Add(new OllamaMessage { Role = "user", Content = userMessage });
+        TrimHistory();
 
         var model = configuration["Ollama:Model"] ?? "llama3.2";
         var client = httpClientFactory.CreateClient("Ollama");
@@ -107,6 +122,7 @@ public class OllamaChatService(
                 logger.LogWarning(ex, "Failed to call Ollama /api/chat");
                 var errMsg = $"I'm sorry, I couldn't connect to the AI service: {ex.Message}";
                 _history.Add(new OllamaMessage { Role = "assistant", Content = errMsg });
+                TrimHistory();
                 return errMsg;
             }
 
@@ -115,13 +131,17 @@ public class OllamaChatService(
             {
                 const string noResponseMsg = "I'm sorry, I didn't receive a valid response.";
                 _history.Add(new OllamaMessage { Role = "assistant", Content = noResponseMsg });
+                TrimHistory();
                 return noResponseMsg;
             }
 
             _history.Add(response.Message);
 
             if (response.Message.ToolCalls is null || response.Message.ToolCalls.Count == 0)
+            {
+                TrimHistory();
                 return response.Message.Content ?? string.Empty;
+            }
 
             foreach (var toolCall in response.Message.ToolCalls)
             {
@@ -130,10 +150,15 @@ public class OllamaChatService(
                     toolResult[..Math.Min(200, toolResult.Length)]);
                 _history.Add(new OllamaMessage { Role = "tool", Content = toolResult });
             }
+
+            // Trim after each tool-call round so the next iteration's request payload
+            // is bounded even when the loop continues.
+            TrimHistory();
         }
 
         const string maxIterMsg = "I apologize, I reached the maximum number of steps. Please try a simpler question.";
         _history.Add(new OllamaMessage { Role = "assistant", Content = maxIterMsg });
+        TrimHistory();
         return maxIterMsg;
     }
 
