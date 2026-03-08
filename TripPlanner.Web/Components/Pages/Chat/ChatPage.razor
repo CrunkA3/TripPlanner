@@ -18,7 +18,12 @@
 
 @* ─── Sidebar overlay backdrop (mobile) ─── *@
 <div class="@(_showSidebar ? "chat-sidebar-overlay chat-sidebar-overlay--open" : "chat-sidebar-overlay")"
-     @onclick="CloseSidebar"></div>
+     role="button"
+     tabindex="0"
+     aria-label="Close conversations sidebar"
+     @onclick="CloseSidebar"
+     @onkeydown="@(e => { if (e.Key == "Enter" || e.Key == " ") { CloseSidebar(); } })">
+</div>
 
 <div class="chat-layout">
 
