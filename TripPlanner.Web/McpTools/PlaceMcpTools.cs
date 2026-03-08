@@ -9,7 +9,7 @@ using TripPlanner.Web.Repositories;
 namespace TripPlanner.Web.McpTools;
 
 [McpServerToolType]
-public class PlaceMcpTools(IPlaceRepository placeRepository, IHttpContextAccessor httpContextAccessor)
+public class PlaceMcpTools(IPlaceRepository placeRepository, IWishlistRepository wishlistRepository, IHttpContextAccessor httpContextAccessor)
 {
     private string? UserId => httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -88,6 +88,9 @@ public class PlaceMcpTools(IPlaceRepository placeRepository, IHttpContextAccesso
 
         if (!Enum.TryParse<PlaceCategory>(category, true, out var cat))
             return $"Invalid category '{category}'. Valid values: {string.Join(", ", Enum.GetNames<PlaceCategory>())}";
+
+        if (!await wishlistRepository.CanUserEditAsync(wishlistId, UserId))
+            return "Access denied: you do not have permission to add places to this wishlist.";
 
         var place = new Models.Place
         {
