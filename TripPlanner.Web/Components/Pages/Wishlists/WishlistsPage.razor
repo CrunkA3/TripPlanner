@@ -108,7 +108,7 @@ else
             <FluentTextField @bind-Value="newWishlist.Name" Label="Name" Required="true" Style="width: 100%;" />
             <FluentTextArea @bind-Value="newWishlist.Description" Label="Description" Style="width: 100%;" />
             <FluentStack Orientation="Orientation.Horizontal">
-                <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent">Create</FluentButton>
+                <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" data-testid="submit-new-wishlist-button">Create</FluentButton>
                 <FluentButton Appearance="Appearance.Neutral" OnClick="@(() => hideCreateDialog = true)">Cancel</FluentButton>
             </FluentStack>
         </FluentStack>

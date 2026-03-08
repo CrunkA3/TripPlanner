@@ -172,7 +172,7 @@ async function main() {
         await fillByLabel(page, 'Description', 'Places I want to visit across Europe');
 
         // Submit the create-wishlist form
-        await page.locator('fluent-button[type="submit"]:has-text("Create")').click();
+        await page.getByTestId('submit-new-wishlist-button').click();
         await page.waitForTimeout(2500);
         await screenshot(page, '04-wishlists-with-data.png', 'Wishlists page – with wishlist');
 
