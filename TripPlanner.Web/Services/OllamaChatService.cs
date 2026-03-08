@@ -207,7 +207,6 @@ public class OllamaChatService(
                 logger.LogDebug("Tool {Tool} returned: {Result}", toolCall.Function.Name,
                     toolResult[..Math.Min(200, toolResult.Length)]);
                 _history.Add(new OllamaMessage { Role = "tool", Content = toolResult });
-                await conversationRepository.AddMessageAsync(CurrentConversationId, "tool", toolResult);
             }
 
             // Trim after each tool-call round so the next iteration's request payload
