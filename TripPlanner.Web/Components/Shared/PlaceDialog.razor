@@ -189,6 +189,10 @@
             </FluentTab>
         </FluentTabs>
     }
+    @if (!string.IsNullOrEmpty(_saveError))
+    {
+        <FluentLabel Color="Color.Error" Style="font-size: 0.875em; margin-top: 8px;">@_saveError</FluentLabel>
+    }
 </FluentDialogBody>
 <FluentDialogFooter>
     <FluentButton Appearance="Appearance.Accent" OnClick="@SavePlace">Save</FluentButton>
@@ -214,6 +218,7 @@
     private string _imageUrl = string.Empty;
     private string? _imageError;
     private string? _urlError;
+    private string? _saveError;
     private string _fileInputId = $"img-upload-{Guid.NewGuid():N}";
     private const long MaxImageSizeBytes = 5 * 1024 * 1024;
     private const int MaxImageCount = 10;
@@ -364,6 +369,7 @@
             return;
 
         _urlError = null;
+        _saveError = null;
         if (!string.IsNullOrWhiteSpace(Content.Url))
         {
             if (!Uri.TryCreate(Content.Url, UriKind.Absolute, out var uri) ||
@@ -387,16 +393,23 @@
         }
 
 
-        var dbPlace = await PlaceRepository.GetByIdAsync(Content.Id, CurrentUser.Id);
+        var placeExists = await PlaceRepository.ExistsAsync(Content.Id);
 
         Content.Tags = SelectedTags.ToList();
 
-        if (dbPlace is null)
+        if (!placeExists)
         {
             await PlaceRepository.AddAsync(Content);
         }
         else
         {
+            var dbPlace = await PlaceRepository.GetByIdAsync(Content.Id, CurrentUser.Id);
+            if (dbPlace is null)
+            {
+                // Place exists but the current user no longer has access – show an error.
+                _saveError = "You no longer have access to this place and it cannot be saved.";
+                return;
+            }
             await PlaceRepository.UpdateAsync(Content);
         }
         await Dialog.CloseAsync(Content);

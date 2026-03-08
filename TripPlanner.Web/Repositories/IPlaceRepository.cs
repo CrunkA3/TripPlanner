@@ -12,6 +12,7 @@ public interface IPlaceRepository
 
 
     Task<Place?> GetByIdAsync(string id, string userId);
+    Task<bool> ExistsAsync(string id);
     Task<Place> AddAsync(Place place);
     Task<Place> UpdateAsync(Place place);
     Task DeleteAsync(string id);
