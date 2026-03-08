@@ -83,7 +83,7 @@
                             Placeholder="Ask me about your trips, wishlists, or places…"
                             Style="flex: 1; resize: none;"
                             Rows="1"
-                            @onkeydown="@HandleKeyDown"
+                            @onkeydown="HandleKeyDown"
                             Disabled="@_isThinking" />
             <FluentButton Appearance="Appearance.Accent"
                           OnClick="@SendMessage"
