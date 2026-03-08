@@ -264,6 +264,7 @@ TripPlanner.Web/
 - WishlistId: string? (optional)
 - TripId: string? (optional)
 - NeedsReview: bool  // true wenn per URL-Import erstellt
+- Images: List<PlaceImage>
 - CreatedAt, UpdatedAt: DateTime
 ```
 
