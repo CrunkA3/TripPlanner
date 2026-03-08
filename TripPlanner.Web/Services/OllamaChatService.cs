@@ -432,6 +432,9 @@ public class OllamaChatService(
         if (!TryGetDouble(args, "latitude", out var lat) || !TryGetDouble(args, "longitude", out var lon))
             return "Missing required parameters: latitude, longitude.";
 
+        if (!await wishlistRepository.CanUserEditAsync(wishlistId, userId))
+            return "Access denied: you do not have permission to add places to this wishlist.";
+
         var place = new Models.Place
         {
             Name = name,
