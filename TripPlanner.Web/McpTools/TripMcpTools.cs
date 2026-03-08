@@ -103,8 +103,8 @@ public class TripMcpTools(ITripRepository tripRepository, IHttpContextAccessor h
             Name = name,
             Description = description ?? string.Empty,
             OwnerId = UserId,
-            StartDate = startDate is not null ? DateTime.TryParseExact(startDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var sd) ? sd : null : null,
-            EndDate = endDate is not null ? DateTime.TryParseExact(endDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var ed) ? ed : null : null
+            StartDate = startDate is not null && DateTime.TryParseExact(startDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var sd) ? sd : null,
+            EndDate = endDate is not null && DateTime.TryParseExact(endDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var ed) ? ed : null
         };
 
         var created = await tripRepository.AddAsync(trip);
