@@ -51,10 +51,25 @@ public class ChatConversationRepository(ApplicationDbContext context) : IChatCon
         context.ChatMessages.Add(message);
 
         // Update conversation's UpdatedAt timestamp in the same SaveChanges call
-        var conversation = new ChatConversation { Id = conversationId, UpdatedAt = now };
-        context.ChatConversations.Attach(conversation);
-        context.Entry(conversation).Property(c => c.UpdatedAt).IsModified = true;
+        // Prefer an already-tracked conversation entity if available to avoid
+        // attaching a duplicate instance with the same key.
+        var trackedConversation = context.ChatConversations.Local
+            .FirstOrDefault(c => c.Id == conversationId);
 
+        ChatConversation conversationToUpdate;
+        if (trackedConversation is not null)
+        {
+            conversationToUpdate = trackedConversation;
+            conversationToUpdate.UpdatedAt = now;
+        }
+        else
+        {
+            conversationToUpdate = new ChatConversation { Id = conversationId, UpdatedAt = now };
+            context.ChatConversations.Attach(conversationToUpdate);
+        }
+
+        // Ensure only UpdatedAt is marked as modified
+        context.Entry(conversationToUpdate).Property(c => c.UpdatedAt).IsModified = true;
         await context.SaveChangesAsync();
     }
 
