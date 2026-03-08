@@ -304,6 +304,7 @@ TripPlanner.Web/
 - CreatedPlaceId: string?  // nach erfolgreicher Verarbeitung
 - AiPrompt: string?
 - AiResponse: string?
+- ErrorMessage: string?
 - CreatedByUserId: string
 - CreatedAt: DateTime / ProcessedAt: DateTime?
 ```
