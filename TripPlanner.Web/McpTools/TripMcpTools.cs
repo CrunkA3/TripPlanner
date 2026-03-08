@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Globalization;
 using System.Security.Claims;
 using System.Text.Json;
 using ModelContextProtocol.Server;
@@ -102,8 +103,8 @@ public class TripMcpTools(ITripRepository tripRepository, IHttpContextAccessor h
             Name = name,
             Description = description ?? string.Empty,
             OwnerId = UserId,
-            StartDate = startDate is not null ? DateTime.TryParse(startDate, out var sd) ? sd : null : null,
-            EndDate = endDate is not null ? DateTime.TryParse(endDate, out var ed) ? ed : null : null
+            StartDate = startDate is not null && DateTime.TryParseExact(startDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var sd) ? sd : null,
+            EndDate = endDate is not null && DateTime.TryParseExact(endDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var ed) ? ed : null
         };
 
         var created = await tripRepository.AddAsync(trip);
@@ -126,8 +127,10 @@ public class TripMcpTools(ITripRepository tripRepository, IHttpContextAccessor h
 
         if (name is not null) trip.Name = name;
         if (description is not null) trip.Description = description;
-        if (startDate is not null) trip.StartDate = DateTime.TryParse(startDate, out var sd) ? sd : trip.StartDate;
-        if (endDate is not null) trip.EndDate = DateTime.TryParse(endDate, out var ed) ? ed : trip.EndDate;
+        if (startDate is not null && DateTime.TryParseExact(startDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var sd))
+            trip.StartDate = sd;
+        if (endDate is not null && DateTime.TryParseExact(endDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var ed))
+            trip.EndDate = ed;
 
         await tripRepository.UpdateAsync(trip);
         return "Trip updated successfully.";

@@ -253,8 +253,8 @@ public class OllamaChatService(
             Name = name,
             Description = description ?? string.Empty,
             OwnerId = userId,
-            StartDate = startDate is not null && DateTime.TryParse(startDate, out var sd) ? sd : null,
-            EndDate = endDate is not null && DateTime.TryParse(endDate, out var ed) ? ed : null
+            StartDate = startDate is not null && DateTime.TryParseExact(startDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var sd) ? sd : null,
+            EndDate = endDate is not null && DateTime.TryParseExact(endDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var ed) ? ed : null
         };
         var created = await tripRepository.AddAsync(trip);
         return JsonSerializer.Serialize(new { created.Id, created.Name, Message = "Trip created successfully." });
@@ -266,8 +266,8 @@ public class OllamaChatService(
         if (trip is null || trip.OwnerId != userId) return "Trip not found or access denied.";
         if (name is not null) trip.Name = name;
         if (description is not null) trip.Description = description;
-        if (startDate is not null && DateTime.TryParse(startDate, out var sd)) trip.StartDate = sd;
-        if (endDate is not null && DateTime.TryParse(endDate, out var ed)) trip.EndDate = ed;
+        if (startDate is not null && DateTime.TryParseExact(startDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var sd)) trip.StartDate = sd;
+        if (endDate is not null && DateTime.TryParseExact(endDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var ed)) trip.EndDate = ed;
         await tripRepository.UpdateAsync(trip);
         return "Trip updated successfully.";
     }
@@ -396,7 +396,7 @@ public class OllamaChatService(
             Description = Str(args, "description") ?? string.Empty,
             Notes = Str(args, "notes"),
             Url = Str(args, "url"),
-            VisitDate = Str(args, "visit_date") is { } vd && DateTime.TryParse(vd, out var vdDt) ? vdDt : null,
+            VisitDate = Str(args, "visit_date") is { } vd && DateTime.TryParseExact(vd, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var vdDt) ? vdDt : null,
             Tags = Str(args, "tags")?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList() ?? []
         };
         var created = await placeRepository.AddAsync(place);
@@ -413,7 +413,7 @@ public class OllamaChatService(
         if (Str(args, "description") is { } d) place.Description = d;
         if (Str(args, "notes") is { } no) place.Notes = no;
         if (Str(args, "url") is { } u) place.Url = u;
-        if (Str(args, "visit_date") is { } vd && DateTime.TryParse(vd, out var vdDt)) place.VisitDate = vdDt;
+        if (Str(args, "visit_date") is { } vd && DateTime.TryParseExact(vd, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var vdDt)) place.VisitDate = vdDt;
         if (Str(args, "tags") is { } t)
             place.Tags = t.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
         place.UpdatedAt = DateTime.UtcNow;

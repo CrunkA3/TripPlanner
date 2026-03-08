@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Globalization;
 using System.Security.Claims;
 using System.Text.Json;
 using ModelContextProtocol.Server;
@@ -98,7 +99,7 @@ public class PlaceMcpTools(IPlaceRepository placeRepository, IHttpContextAccesso
             Description = description ?? string.Empty,
             Notes = notes,
             Url = url,
-            VisitDate = visitDate is not null && DateTime.TryParse(visitDate, out var vd) ? vd : null,
+            VisitDate = visitDate is not null && DateTime.TryParseExact(visitDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var vd) ? vd : null,
             Tags = tags?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList() ?? []
         };
 
@@ -125,7 +126,7 @@ public class PlaceMcpTools(IPlaceRepository placeRepository, IHttpContextAccesso
         if (description is not null) place.Description = description;
         if (notes is not null) place.Notes = notes;
         if (url is not null) place.Url = url;
-        if (visitDate is not null) place.VisitDate = DateTime.TryParse(visitDate, out var vd) ? vd : place.VisitDate;
+        if (visitDate is not null) place.VisitDate = DateTime.TryParseExact(visitDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var vd) ? vd : place.VisitDate;
         if (tags is not null) place.Tags = tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
 
         place.UpdatedAt = DateTime.UtcNow;
