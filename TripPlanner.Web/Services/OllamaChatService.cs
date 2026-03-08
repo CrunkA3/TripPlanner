@@ -95,7 +95,7 @@ public class OllamaChatService(
         _history.Clear();
         CurrentConversationId = conversationId;
 
-        foreach (var msg in conversation.Messages.OrderBy(m => m.CreatedAt))
+        foreach (var msg in conversation.Messages.OrderBy(m => m.CreatedAt).ThenBy(m => m.Id))
         {
             var ollamaMsg = new OllamaMessage { Role = msg.Role, Content = msg.Content };
             if (msg.ToolCallsJson is not null)
