@@ -39,18 +39,22 @@ public class ChatConversationRepository(ApplicationDbContext context) : IChatCon
 
     public async Task AddMessageAsync(string conversationId, string role, string content)
     {
+        var now = DateTime.UtcNow;
+
         var message = new ChatMessage
         {
             ConversationId = conversationId,
             Role = role,
             Content = content,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = now
         };
         context.ChatMessages.Add(message);
-        // Update conversation's UpdatedAt timestamp
-        await context.ChatConversations
-            .Where(c => c.Id == conversationId)
-            .ExecuteUpdateAsync(s => s.SetProperty(c => c.UpdatedAt, DateTime.UtcNow));
+
+        // Update conversation's UpdatedAt timestamp in the same SaveChanges call
+        var conversation = new ChatConversation { Id = conversationId, UpdatedAt = now };
+        context.ChatConversations.Attach(conversation);
+        context.Entry(conversation).Property(c => c.UpdatedAt).IsModified = true;
+
         await context.SaveChangesAsync();
     }
 
