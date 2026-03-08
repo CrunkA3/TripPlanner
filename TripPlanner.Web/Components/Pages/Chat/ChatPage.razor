@@ -161,6 +161,34 @@
             _conversations = await ConversationRepository.GetByUserAsync(_currentUser.Id);
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await TrySetUserLocationAsync();
+        }
+    }
+
+    private async Task TrySetUserLocationAsync()
+    {
+        try
+        {
+            var location = await JS.InvokeAsync<LocationResult?>("chatInterop.getLocation");
+            if (location is not null)
+                ChatService.SetUserLocation(location.Latitude, location.Longitude);
+        }
+        catch
+        {
+            // Geolocation not available or denied — continue without it.
+        }
+    }
+
+    private sealed class LocationResult
+    {
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
+    }
+
     private async Task SendMessage()
     {
         if (string.IsNullOrWhiteSpace(_userInput) || _currentUser is null || _isThinking) return;
