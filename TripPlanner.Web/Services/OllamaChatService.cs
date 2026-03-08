@@ -425,7 +425,7 @@ public class OllamaChatService(
     {
         var place = await placeRepository.GetByIdAsync(placeId, userId);
         if (place is null) return "Place not found.";
-        await placeRepository.DeleteAsync(placeId);
+        await placeRepository.DeleteAsync(placeId, userId);
         return "Place deleted successfully.";
     }
 
