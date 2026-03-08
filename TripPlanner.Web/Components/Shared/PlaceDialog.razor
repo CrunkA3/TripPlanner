@@ -403,10 +403,12 @@
         }
         else
         {
-            var dbPlace = await PlaceRepository.GetByIdAsync(Content.Id, CurrentUser.Id);
-            if (dbPlace is null)
+            // Verify the user still has access before updating. ExistsAsync confirmed the
+            // place is in the DB; HasAccessAsync does a lightweight bool check without
+            // loading the full entity (Content already contains all edited fields for UpdateAsync).
+            var hasAccess = await PlaceRepository.HasAccessAsync(Content.Id, CurrentUser.Id);
+            if (!hasAccess)
             {
-                // Place exists but the current user no longer has access – show an error.
                 _saveError = "You no longer have access to this place and it cannot be saved.";
                 return;
             }
