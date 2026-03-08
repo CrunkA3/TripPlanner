@@ -132,7 +132,8 @@
                               OnClick="@SendMessage"
                               Disabled="@(_isThinking || string.IsNullOrWhiteSpace(_userInput))"
                               IconStart="@(new Icons.Regular.Size20.Send())"
-                              Style="align-self: flex-end;">
+                              Style="align-self: flex-end;"
+                              AriaLabel="Send message">
                     <span class="chat-input-send-label">Send</span>
                 </FluentButton>
             </FluentStack>
