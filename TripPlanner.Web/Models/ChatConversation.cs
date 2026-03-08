@@ -38,6 +38,9 @@ public class ChatMessage
     [Required]
     public string Content { get; set; } = string.Empty;
 
+    /// <summary>Serialized JSON of tool calls for assistant messages that request tool execution. Null for other messages.</summary>
+    public string? ToolCallsJson { get; set; }
+
     [Required]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

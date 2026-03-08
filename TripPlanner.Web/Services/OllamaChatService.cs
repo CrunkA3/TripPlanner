@@ -95,9 +95,21 @@ public class OllamaChatService(
         _history.Clear();
         CurrentConversationId = conversationId;
 
-        foreach (var msg in conversation.Messages.OrderBy(m => m.CreatedAt))
+        foreach (var msg in conversation.Messages.OrderBy(m => m.CreatedAt).ThenBy(m => m.Id))
         {
-            _history.Add(new OllamaMessage { Role = msg.Role, Content = msg.Content });
+            var ollamaMsg = new OllamaMessage { Role = msg.Role, Content = msg.Content };
+            if (msg.ToolCallsJson is not null)
+            {
+                try
+                {
+                    ollamaMsg.ToolCalls = JsonSerializer.Deserialize<List<OllamaToolCall>>(msg.ToolCallsJson, SerializerOptions);
+                }
+                catch (JsonException ex)
+                {
+                    logger.LogWarning(ex, "Failed to deserialize ToolCallsJson for message in conversation {ConversationId}; tool calls will be omitted.", conversationId);
+                }
+            }
+            _history.Add(ollamaMsg);
         }
 
         return true;
@@ -182,6 +194,12 @@ public class OllamaChatService(
                 TrimHistory();
                 return finalContent;
             }
+
+            // Persist the assistant message that contains tool calls so that
+            // reloaded conversations have the full context for follow-up turns.
+            var toolCallsJson = JsonSerializer.Serialize(response.Message.ToolCalls, SerializerOptions);
+            await conversationRepository.AddMessageAsync(CurrentConversationId, "assistant",
+                response.Message.Content ?? string.Empty, toolCallsJson);
 
             foreach (var toolCall in response.Message.ToolCalls)
             {
