@@ -251,6 +251,7 @@
 
     private void NewConversation()
     {
+        ChatService.Clear();
         _showSidebar = false;
         Navigation.NavigateTo("/chat");
     }
