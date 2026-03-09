@@ -41,11 +41,13 @@ public class ChatConversationRepository(ApplicationDbContext context) : IChatCon
     {
         await using var transaction = await context.Database.BeginTransactionAsync();
 
+        var now = DateTime.UtcNow;
+
         // Use the affected-row count to both validate ownership and advance UpdatedAt
         // in a single round-trip, eliminating the separate AnyAsync check.
         var updated = await context.ChatConversations
             .Where(c => c.Id == conversationId && c.UserId == userId)
-            .ExecuteUpdateAsync(s => s.SetProperty(c => c.UpdatedAt, DateTime.UtcNow));
+            .ExecuteUpdateAsync(s => s.SetProperty(c => c.UpdatedAt, now));
 
         if (updated == 0)
             throw new InvalidOperationException("Chat conversation does not exist or is not owned by the specified user.");
@@ -57,29 +59,7 @@ public class ChatConversationRepository(ApplicationDbContext context) : IChatCon
             Content = content,
             ToolCallsJson = toolCallsJson,
             CreatedAt = now
-        };
-        context.ChatMessages.Add(message);
-
-        // Update conversation's UpdatedAt timestamp in the same SaveChanges call
-        // Prefer an already-tracked conversation entity if available to avoid
-        // attaching a duplicate instance with the same key.
-        var trackedConversation = context.ChatConversations.Local
-            .FirstOrDefault(c => c.Id == conversationId);
-
-        ChatConversation conversationToUpdate;
-        if (trackedConversation is not null)
-        {
-            conversationToUpdate = trackedConversation;
-            conversationToUpdate.UpdatedAt = now;
-        }
-        else
-        {
-            conversationToUpdate = new ChatConversation { Id = conversationId, UpdatedAt = now };
-            context.ChatConversations.Attach(conversationToUpdate);
-        }
-
-        // Ensure only UpdatedAt is marked as modified
-        context.Entry(conversationToUpdate).Property(c => c.UpdatedAt).IsModified = true;
+        });
         await context.SaveChangesAsync();
         await transaction.CommitAsync();
     }
