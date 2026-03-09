@@ -10,11 +10,15 @@
 
 @rendermode InteractiveServer
 
+@implements IDisposable
+
 @inject OllamaChatService ChatService
 @inject IChatConversationRepository ConversationRepository
+@inject IChatJobRepository ChatJobRepository
 @inject UserService UserService
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
+@inject ILogger<ChatPage> Logger
 
 <PageTitle>AI Assistant</PageTitle>
 
@@ -79,7 +83,7 @@
         </FluentToolbar>
 
         <div id="chat-messages" class="chat-messages">
-            @if (!ChatService.Messages.Any() && !_isThinking)
+            @if (!ChatService.Messages.Any() && _pendingUserMessage is null && !_isThinking)
             {
                 <FluentStack Orientation="Orientation.Vertical"
                              HorizontalAlignment="HorizontalAlignment.Center"
@@ -113,6 +117,16 @@
                 }
             }
 
+            @* Pending user message shown while the background job is running *@
+            @if (_pendingUserMessage is not null && !ChatService.Messages.Any(m => m.Role == "user" && m.Content == _pendingUserMessage))
+            {
+                <div style="display: flex; justify-content: flex-end;">
+                    <FluentCard Style="max-width: 85%; background: var(--accent-fill-rest); color: var(--foreground-on-accent-rest); padding: 10px 14px; border-radius: 12px 12px 4px 12px;">
+                        <FluentLabel Style="color: inherit; white-space: pre-wrap; word-break: break-word;">@_pendingUserMessage</FluentLabel>
+                    </FluentCard>
+                </div>
+            }
+
             @if (_isThinking)
             {
                 <div style="display: flex; justify-content: flex-start;">
@@ -122,6 +136,29 @@
                                      Style="gap: 8px;">
                             <FluentProgressRing Width="18px" />
                             <FluentLabel Style="font-style: italic; color: var(--neutral-foreground-hint);">Thinking…</FluentLabel>
+                        </FluentStack>
+                    </FluentCard>
+                </div>
+            }
+
+            @* Error card shown when a job has failed, with a retry button *@
+            @if (_jobError is not null)
+            {
+                <div style="display: flex; justify-content: flex-start;">
+                    <FluentCard Style="max-width: 90%; padding: 10px 14px; border-radius: 12px 12px 12px 4px; border: 1px solid var(--error);">
+                        <FluentStack Orientation="Orientation.Vertical" Style="gap: 8px;">
+                            <FluentStack Orientation="Orientation.Horizontal"
+                                         VerticalAlignment="VerticalAlignment.Center"
+                                         Style="gap: 8px;">
+                                <FluentIcon Value="@(new Icons.Regular.Size20.ErrorCircle())" Color="Color.Error" />
+                                <FluentLabel Style="color: var(--error);">An error occurred while processing your message.</FluentLabel>
+                            </FluentStack>
+                            <FluentButton Appearance="Appearance.Outline"
+                                          IconStart="@(new Icons.Regular.Size20.ArrowClockwise())"
+                                          OnClick="@RetryLastMessage"
+                                          Style="align-self: flex-start;">
+                                Retry
+                            </FluentButton>
                         </FluentStack>
                     </FluentCard>
                 </div>
@@ -158,6 +195,12 @@
     private ApplicationUser? _currentUser;
     private List<ChatConversation> _conversations = [];
 
+    // Background job tracking
+    private string? _activeJobId;
+    private string? _pendingUserMessage;
+    private string? _jobError;
+    private CancellationTokenSource? _pollingCts;
+
     protected override async Task OnInitializedAsync()
     {
         _currentUser = await UserService.GetCurrentUserAsync();
@@ -173,6 +216,7 @@
         if (string.IsNullOrEmpty(ConversationId))
         {
             ChatService.Clear();
+            _pendingUserMessage = null;
         }
         else
         {
@@ -183,6 +227,8 @@
                 Navigation.NavigateTo("/chat");
                 return;
             }
+            // The conversation was reloaded from DB so the pending message is now in ChatService.Messages.
+            _pendingUserMessage = null;
             await ScrollToBottomAsync();
         }
     }
@@ -221,25 +267,117 @@
 
         var message = _userInput.Trim();
         _userInput = string.Empty;
+        _jobError = null;
+
+        // Ensure a conversation exists before creating the job so we have a ConversationId.
+        if (ChatService.CurrentConversationId is null)
+        {
+            var title = message.Length > 80 ? message[..77] + "…" : message;
+            var conversation = await ConversationRepository.CreateAsync(_currentUser.Id, title);
+            ChatService.SetCurrentConversationId(conversation.Id);
+            Navigation.NavigateTo($"/chat/{conversation.Id}", replace: true);
+            // Refresh the sidebar so the new conversation appears immediately.
+            _conversations = await ConversationRepository.GetByUserAsync(_currentUser.Id);
+        }
+
+        // Save the user message to the database so the background service can load it.
+        await ConversationRepository.AddMessageAsync(ChatService.CurrentConversationId!, "user", message, _currentUser.Id);
+
+        // Create the background job.
+        var job = await ChatJobRepository.CreateAsync(ChatService.CurrentConversationId!, _currentUser.Id, message);
+        _activeJobId = job.Id;
+        _pendingUserMessage = message;
         _isThinking = true;
         StateHasChanged();
+        await ScrollToBottomAsync();
 
-        try
+        StartPolling();
+    }
+
+    private void StartPolling()
+    {
+        _pollingCts?.Cancel();
+        _pollingCts = new CancellationTokenSource();
+        _ = PollJobStatusAsync(_pollingCts.Token);
+    }
+
+    private async Task PollJobStatusAsync(CancellationToken ct)
+    {
+        while (!ct.IsCancellationRequested && _activeJobId is not null)
         {
-            await ChatService.SendMessageAsync(message, _currentUser.Id);
+            try
+            {
+                await Task.Delay(3000, ct);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
 
-            // If a new conversation was created, update the URL to include its ID
-            if (ChatService.CurrentConversationId is not null && !string.Equals(ChatService.CurrentConversationId, ConversationId, StringComparison.OrdinalIgnoreCase))
-                Navigation.NavigateTo($"/chat/{ChatService.CurrentConversationId}", replace: true);
+            if (ct.IsCancellationRequested) break;
+
+            try
+            {
+                var job = await ChatJobRepository.GetByIdAsync(_activeJobId, _currentUser!.Id);
+                if (job is null) break;
+
+                if (job.Status == ChatJobStatus.Completed)
+                {
+                    await InvokeAsync(async () =>
+                    {
+                        await OnJobCompletedAsync();
+                        StateHasChanged();
+                    });
+                    break;
+                }
+                else if (job.Status == ChatJobStatus.Failed)
+                {
+                    await InvokeAsync(() =>
+                    {
+                        _jobError = job.ErrorMessage ?? "An error occurred.";
+                        _activeJobId = null;
+                        _isThinking = false;
+                        StateHasChanged();
+                        return Task.CompletedTask;
+                    });
+                    break;
+                }
+            }
+            catch (Exception ex) when (!ct.IsCancellationRequested)
+            {
+                Logger.LogWarning(ex, "Error polling chat job {JobId}.", _activeJobId);
+            }
         }
-        finally
+    }
+
+    private async Task OnJobCompletedAsync()
+    {
+        _activeJobId = null;
+        _isThinking = false;
+
+        // Reload the conversation from the database to show the AI response.
+        if (_currentUser is not null && ChatService.CurrentConversationId is not null)
         {
-            _isThinking = false;
-            // Refresh the conversation list (title/timestamp may have changed)
+            await ChatService.LoadConversationAsync(ChatService.CurrentConversationId, _currentUser.Id);
+            _pendingUserMessage = null;
             _conversations = await ConversationRepository.GetByUserAsync(_currentUser.Id);
-            StateHasChanged();
-            await ScrollToBottomAsync();
         }
+
+        await ScrollToBottomAsync();
+    }
+
+    private async Task RetryLastMessage()
+    {
+        if (_pendingUserMessage is null || _currentUser is null || ChatService.CurrentConversationId is null) return;
+
+        _jobError = null;
+        _isThinking = true;
+
+        var job = await ChatJobRepository.CreateAsync(ChatService.CurrentConversationId, _currentUser.Id, _pendingUserMessage);
+        _activeJobId = job.Id;
+        StateHasChanged();
+
+        StartPolling();
     }
 
     private void SelectConversation(string conversationId)
@@ -251,7 +389,10 @@
 
     private void NewConversation()
     {
+        if (_isThinking) return;
         ChatService.Clear();
+        _pendingUserMessage = null;
+        _jobError = null;
         _showSidebar = false;
         Navigation.NavigateTo("/chat");
     }
@@ -299,4 +440,11 @@
         if (diff.TotalDays < 7) return $"{(int)diff.TotalDays}d ago";
         return dt.ToString("MMM d");
     }
+
+    public void Dispose()
+    {
+        _pollingCts?.Cancel();
+        _pollingCts?.Dispose();
+    }
 }
+
