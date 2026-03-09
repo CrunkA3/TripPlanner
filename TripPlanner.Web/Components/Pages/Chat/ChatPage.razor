@@ -176,7 +176,13 @@
         }
         else
         {
-            await ChatService.LoadConversationAsync(ConversationId, _currentUser.Id);
+            var loaded = await ChatService.LoadConversationAsync(ConversationId, _currentUser.Id);
+            if (!loaded)
+            {
+                ChatService.Clear();
+                Navigation.NavigateTo("/chat");
+                return;
+            }
             await ScrollToBottomAsync();
         }
     }
