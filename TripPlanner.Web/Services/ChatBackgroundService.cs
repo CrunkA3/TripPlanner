@@ -75,6 +75,7 @@ public class ChatBackgroundService(
         using var scope = scopeFactory.CreateScope();
         var jobRepo = scope.ServiceProvider.GetRequiredService<IChatJobRepository>();
         var chatService = scope.ServiceProvider.GetRequiredService<OllamaChatService>();
+        var userManager = scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<Models.ApplicationUser>>();
 
         var pendingJobs = await jobRepo.GetPendingJobsAsync(MaxJobsPerCycle);
 
@@ -83,7 +84,7 @@ public class ChatBackgroundService(
             if (cancellationToken.IsCancellationRequested)
                 break;
 
-            await ProcessJobAsync(job, jobRepo, chatService, cancellationToken);
+            await ProcessJobAsync(job, jobRepo, chatService, userManager, cancellationToken);
         }
     }
 
@@ -91,6 +92,7 @@ public class ChatBackgroundService(
         ChatJob job,
         IChatJobRepository jobRepo,
         OllamaChatService chatService,
+        Microsoft.AspNetCore.Identity.UserManager<Models.ApplicationUser> userManager,
         CancellationToken cancellationToken)
     {
         logger.LogInformation("Processing chat job {JobId} for conversation {ConversationId}", job.Id, job.ConversationId);
@@ -100,6 +102,12 @@ public class ChatBackgroundService(
 
         try
         {
+            // Apply the user's persisted home location so the system prompt includes
+            // GPS coordinates and the get_weather tool hint, matching the browser path.
+            var user = await userManager.FindByIdAsync(job.UserId);
+            if (user?.HomeLatitude is not null && user.HomeLongitude is not null)
+                chatService.SetUserLocation(user.HomeLatitude.Value, user.HomeLongitude.Value);
+
             // Load the conversation history from the database (which already contains the user message).
             var loaded = await chatService.LoadConversationAsync(job.ConversationId, job.UserId);
             if (!loaded)
