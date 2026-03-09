@@ -105,6 +105,9 @@ public class OllamaChatService(
         CurrentConversationId = null;
     }
 
+    /// <summary>Sets the current conversation ID without loading history (used when the conversation was created externally).</summary>
+    public void SetCurrentConversationId(string conversationId) => CurrentConversationId = conversationId;
+
     /// <summary>Loads a persisted conversation into the in-memory history so the user can continue it.</summary>
     /// <returns><c>true</c> if the conversation was found and loaded; <c>false</c> if it was not found.</returns>
     public async Task<bool> LoadConversationAsync(string conversationId, string userId)
@@ -157,6 +160,19 @@ public class OllamaChatService(
         _history.Add(new OllamaMessage { Role = "user", Content = userMessage });
         await conversationRepository.AddMessageAsync(CurrentConversationId, "user", userMessage, userId);
         TrimHistory();
+
+        return await RunInferenceAsync(userId, ct);
+    }
+
+    /// <summary>
+    /// Runs the Ollama inference loop on the already-loaded conversation history and saves
+    /// the assistant response to the database. Call <see cref="LoadConversationAsync"/> (or
+    /// <see cref="SendMessageAsync"/> which adds the user message) before invoking this method.
+    /// </summary>
+    public async Task<string> RunInferenceAsync(string userId, CancellationToken ct = default)
+    {
+        if (CurrentConversationId is null)
+            throw new InvalidOperationException("No active conversation. Call LoadConversationAsync or SendMessageAsync first.");
 
         var model = configuration["Ollama:Model"] ?? "llama3.2";
         var client = httpClientFactory.CreateClient("Ollama");
