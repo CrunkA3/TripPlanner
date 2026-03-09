@@ -30,18 +30,27 @@ public class ChatConversationRepository(ApplicationDbContext context) : IChatCon
         return conversation;
     }
 
-    public async Task UpdateTitleAsync(string id, string title)
+    public async Task UpdateTitleAsync(string id, string title, string userId)
     {
         await context.ChatConversations
-            .Where(c => c.Id == id)
+            .Where(c => c.Id == id && c.UserId == userId)
             .ExecuteUpdateAsync(s => s.SetProperty(c => c.Title, title));
     }
 
-    public async Task AddMessageAsync(string conversationId, string role, string content, string? toolCallsJson = null)
+    public async Task AddMessageAsync(string conversationId, string role, string content, string userId, string? toolCallsJson = null)
     {
-        var now = DateTime.UtcNow;
+        await using var transaction = await context.Database.BeginTransactionAsync();
 
-        var message = new ChatMessage
+        // Use the affected-row count to both validate ownership and advance UpdatedAt
+        // in a single round-trip, eliminating the separate AnyAsync check.
+        var updated = await context.ChatConversations
+            .Where(c => c.Id == conversationId && c.UserId == userId)
+            .ExecuteUpdateAsync(s => s.SetProperty(c => c.UpdatedAt, DateTime.UtcNow));
+
+        if (updated == 0)
+            throw new InvalidOperationException("Chat conversation does not exist or is not owned by the specified user.");
+
+        context.ChatMessages.Add(new ChatMessage
         {
             ConversationId = conversationId,
             Role = role,
@@ -72,6 +81,7 @@ public class ChatConversationRepository(ApplicationDbContext context) : IChatCon
         // Ensure only UpdatedAt is marked as modified
         context.Entry(conversationToUpdate).Property(c => c.UpdatedAt).IsModified = true;
         await context.SaveChangesAsync();
+        await transaction.CommitAsync();
     }
 
     public async Task DeleteAsync(string id, string userId)
@@ -81,10 +91,10 @@ public class ChatConversationRepository(ApplicationDbContext context) : IChatCon
             .ExecuteDeleteAsync();
     }
 
-    public async Task TouchAsync(string id)
+    public async Task TouchAsync(string id, string userId)
     {
         await context.ChatConversations
-            .Where(c => c.Id == id)
+            .Where(c => c.Id == id && c.UserId == userId)
             .ExecuteUpdateAsync(s => s.SetProperty(c => c.UpdatedAt, DateTime.UtcNow));
     }
 }

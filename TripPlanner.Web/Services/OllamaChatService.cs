@@ -155,7 +155,7 @@ public class OllamaChatService(
         }
 
         _history.Add(new OllamaMessage { Role = "user", Content = userMessage });
-        await conversationRepository.AddMessageAsync(CurrentConversationId, "user", userMessage);
+        await conversationRepository.AddMessageAsync(CurrentConversationId, "user", userMessage, userId);
         TrimHistory();
 
         var model = configuration["Ollama:Model"] ?? "llama3.2";
@@ -191,7 +191,7 @@ public class OllamaChatService(
                 logger.LogWarning(ex, "Failed to call Ollama /api/chat");
                 var errMsg = $"I'm sorry, I couldn't connect to the AI service: {ex.Message}";
                 _history.Add(new OllamaMessage { Role = "assistant", Content = errMsg });
-                await conversationRepository.AddMessageAsync(CurrentConversationId, "assistant", errMsg);
+                await conversationRepository.AddMessageAsync(CurrentConversationId, "assistant", errMsg, userId);
                 TrimHistory();
                 return errMsg;
             }
@@ -201,7 +201,7 @@ public class OllamaChatService(
             {
                 const string noResponseMsg = "I'm sorry, I didn't receive a valid response.";
                 _history.Add(new OllamaMessage { Role = "assistant", Content = noResponseMsg });
-                await conversationRepository.AddMessageAsync(CurrentConversationId, "assistant", noResponseMsg);
+                await conversationRepository.AddMessageAsync(CurrentConversationId, "assistant", noResponseMsg, userId);
                 TrimHistory();
                 return noResponseMsg;
             }
@@ -211,7 +211,7 @@ public class OllamaChatService(
             if (response.Message.ToolCalls is null || response.Message.ToolCalls.Count == 0)
             {
                 var finalContent = response.Message.Content ?? string.Empty;
-                await conversationRepository.AddMessageAsync(CurrentConversationId, "assistant", finalContent);
+                await conversationRepository.AddMessageAsync(CurrentConversationId, "assistant", finalContent, userId);
                 TrimHistory();
                 return finalContent;
             }
@@ -220,7 +220,7 @@ public class OllamaChatService(
             // reloaded conversations have the full context for follow-up turns.
             var toolCallsJson = JsonSerializer.Serialize(response.Message.ToolCalls, SerializerOptions);
             await conversationRepository.AddMessageAsync(CurrentConversationId, "assistant",
-                response.Message.Content ?? string.Empty, toolCallsJson);
+                response.Message.Content ?? string.Empty, userId, toolCallsJson);
 
             foreach (var toolCall in response.Message.ToolCalls)
             {
@@ -228,6 +228,7 @@ public class OllamaChatService(
                 logger.LogDebug("Tool {Tool} returned: {Result}", toolCall.Function.Name,
                     toolResult[..Math.Min(200, toolResult.Length)]);
                 _history.Add(new OllamaMessage { Role = "tool", Content = toolResult });
+                await conversationRepository.AddMessageAsync(CurrentConversationId, "tool", toolResult, userId);
             }
 
             // Trim after each tool-call round so the next iteration's request payload
@@ -237,7 +238,7 @@ public class OllamaChatService(
 
         const string maxIterMsg = "I apologize, I reached the maximum number of steps. Please try a simpler question.";
         _history.Add(new OllamaMessage { Role = "assistant", Content = maxIterMsg });
-        await conversationRepository.AddMessageAsync(CurrentConversationId, "assistant", maxIterMsg);
+        await conversationRepository.AddMessageAsync(CurrentConversationId, "assistant", maxIterMsg, userId);
         TrimHistory();
         return maxIterMsg;
     }
