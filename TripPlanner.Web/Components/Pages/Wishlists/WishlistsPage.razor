@@ -79,7 +79,7 @@ else
                             </FluentLabel>
                             <FluentDivider Style="width: 100%;" Role="DividerRole.Presentation" />
                             <FluentStack Orientation="Orientation.Horizontal">
-                                <FluentButton Appearance="Appearance.Accent" IconStart="@(new Icons.Regular.Size16.Eye())" OnClick="@(() => ViewWishlist(wishlist.Id))">
+                                <FluentButton Appearance="Appearance.Accent" IconStart="@(new Icons.Regular.Size16.Eye())" OnClick="@(() => ViewWishlist(wishlist.Id))" data-testid="view-wishlist-button">
                                     View
                                 </FluentButton>
                                 @if (wishlist.SharedWith.Any(wl => wl.UserId == currentUserId && wl.Level == ShareLevel.Owner))

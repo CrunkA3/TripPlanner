@@ -56,8 +56,30 @@ public class ChatConversationRepository(ApplicationDbContext context) : IChatCon
             Role = role,
             Content = content,
             ToolCallsJson = toolCallsJson,
-            CreatedAt = DateTime.UtcNow
-        });
+            CreatedAt = now
+        };
+        context.ChatMessages.Add(message);
+
+        // Update conversation's UpdatedAt timestamp in the same SaveChanges call
+        // Prefer an already-tracked conversation entity if available to avoid
+        // attaching a duplicate instance with the same key.
+        var trackedConversation = context.ChatConversations.Local
+            .FirstOrDefault(c => c.Id == conversationId);
+
+        ChatConversation conversationToUpdate;
+        if (trackedConversation is not null)
+        {
+            conversationToUpdate = trackedConversation;
+            conversationToUpdate.UpdatedAt = now;
+        }
+        else
+        {
+            conversationToUpdate = new ChatConversation { Id = conversationId, UpdatedAt = now };
+            context.ChatConversations.Attach(conversationToUpdate);
+        }
+
+        // Ensure only UpdatedAt is marked as modified
+        context.Entry(conversationToUpdate).Property(c => c.UpdatedAt).IsModified = true;
         await context.SaveChangesAsync();
         await transaction.CommitAsync();
     }
