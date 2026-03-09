@@ -42,7 +42,7 @@ public class ChatConversationRepository(ApplicationDbContext context) : IChatCon
         var conversationExists = await context.ChatConversations
             .AnyAsync(c => c.Id == conversationId && c.UserId == userId);
         if (!conversationExists)
-            return;
+            throw new InvalidOperationException("Chat conversation does not exist or is not owned by the specified user.");
 
         var message = new ChatMessage
         {
