@@ -1,109 +1,264 @@
 @page "/chat"
+@page "/chat/{ConversationId}"
 
 @using Microsoft.AspNetCore.Authorization
+@using TripPlanner.Web.Models
+@using TripPlanner.Web.Repositories
 @using TripPlanner.Web.Services
 
 @attribute [Authorize]
 
 @rendermode InteractiveServer
 
+@implements IDisposable
+
 @inject OllamaChatService ChatService
+@inject IChatConversationRepository ConversationRepository
+@inject IChatJobRepository ChatJobRepository
 @inject UserService UserService
+@inject NavigationManager Navigation
 @inject IJSRuntime JS
+@inject ILogger<ChatPage> Logger
 
 <PageTitle>AI Assistant</PageTitle>
 
-<FluentStack Orientation="Orientation.Vertical" Style="height: calc(100vh - 140px); gap: 0;">
-    <FluentToolbar Style="flex-shrink: 0;">
-        <FluentIcon Value="@(new Icons.Regular.Size24.Bot())" Color="Color.Accent" />
-        <FluentLabel Typo="Typography.H3" Style="margin-left: 8px;">AI Trip Assistant</FluentLabel>
-        <FluentSpacer />
-        <FluentButton Appearance="Appearance.Lightweight"
-                      IconStart="@(new Icons.Regular.Size20.Delete())"
-                      OnClick="@ClearChat"
-                      Disabled="@(!ChatService.Messages.Any())">
-            Clear
-        </FluentButton>
-    </FluentToolbar>
+@* ─── Sidebar overlay backdrop (mobile) ─── *@
+<div class="@(_showSidebar ? "chat-sidebar-overlay chat-sidebar-overlay--open" : "chat-sidebar-overlay")"
+     role="button"
+     tabindex="0"
+     aria-label="Close conversations sidebar"
+     @onclick="CloseSidebar"
+     @onkeydown="@(e => { if (e.Key == "Enter" || e.Key == " ") { CloseSidebar(); } })">
+</div>
 
-    <div id="chat-messages"
-         style="flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
-        @if (!ChatService.Messages.Any() && !_isThinking)
-        {
-            <FluentStack Orientation="Orientation.Vertical"
-                         HorizontalAlignment="HorizontalAlignment.Center"
-                         VerticalAlignment="VerticalAlignment.Center"
-                         Style="flex: 1; opacity: 0.6;">
-                <FluentIcon Value="@(new Icons.Regular.Size48.Bot())" Color="Color.Neutral" />
-                <FluentLabel Typo="Typography.Body" Style="text-align: center;">
-                    Ask me anything about your trips, wishlists, or places.<br />
-                    I can list, create, update, and delete them for you.
-                </FluentLabel>
-            </FluentStack>
-        }
+<div class="chat-layout">
 
-        @foreach (var msg in ChatService.Messages)
-        {
-            @if (msg.Role == "user")
+    @* ─── Sidebar ─── *@
+    <div class="@(_showSidebar ? "chat-sidebar chat-sidebar--open" : "chat-sidebar")">
+        <div style="padding: 8px;">
+            <FluentButton Appearance="Appearance.Accent"
+                          IconStart="@(new Icons.Regular.Size20.Add())"
+                          OnClick="@NewConversation"
+                          Style="width: 100%;">
+                New Conversation
+            </FluentButton>
+        </div>
+        <div style="flex: 1; overflow-y: auto; padding: 4px 8px; display: flex; flex-direction: column; gap: 4px;">
+            @foreach (var conv in _conversations)
             {
-                <div style="display: flex; justify-content: flex-end;">
-                    <FluentCard Style="max-width: 75%; background: var(--accent-fill-rest); color: var(--foreground-on-accent-rest); padding: 10px 14px; border-radius: 12px 12px 4px 12px;">
-                        <FluentLabel Style="color: inherit; white-space: pre-wrap; word-break: break-word;">@msg.Content</FluentLabel>
-                    </FluentCard>
-                </div>
+                var isActive = conv.Id == ChatService.CurrentConversationId;
+                <FluentStack Orientation="Orientation.Horizontal"
+                             Style="@($"border-radius: 6px; padding: 2px 4px; background: {(isActive ? "var(--accent-fill-rest)" : "transparent")}; align-items: center;")">
+                    <FluentButton Appearance="Appearance.Stealth"
+                                  OnClick="@(() => SelectConversation(conv.Id))"
+                                  Style="@($"flex: 1; text-align: left; overflow: hidden; color: {(isActive ? "var(--foreground-on-accent-rest)" : "inherit")}; min-width: 0;")">
+                        <span style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.85rem;">@conv.Title</span>
+                        <span style="display: block; font-size: 0.7rem; opacity: 0.7;">@FormatDate(conv.UpdatedAt ?? conv.CreatedAt)</span>
+                    </FluentButton>
+                    <FluentButton Appearance="Appearance.Stealth"
+                                  IconStart="@(new Icons.Regular.Size16.Delete())"
+                                  Title="Delete conversation"
+                                  OnClick="@(() => DeleteConversation(conv.Id))"
+                                  Style="@($"flex-shrink: 0; color: {(isActive ? "var(--foreground-on-accent-rest)" : "inherit")};")" />
+                </FluentStack>
             }
-            else
+            @if (!_conversations.Any())
             {
-                <div style="display: flex; justify-content: flex-start;">
-                    <FluentCard Style="max-width: 85%; padding: 10px 14px; border-radius: 12px 12px 12px 4px;">
-                        <pre style="white-space: pre-wrap; font-family: inherit; margin: 0; word-break: break-word;">@msg.Content</pre>
-                    </FluentCard>
-                </div>
+                <FluentLabel Style="opacity: 0.5; font-size: 0.8rem; text-align: center; padding: 12px;">No conversations yet</FluentLabel>
             }
-        }
-
-        @if (_isThinking)
-        {
-            <div style="display: flex; justify-content: flex-start;">
-                <FluentCard Style="padding: 10px 14px; border-radius: 12px 12px 12px 4px;">
-                    <FluentStack Orientation="Orientation.Horizontal"
-                                 VerticalAlignment="VerticalAlignment.Center"
-                                 Style="gap: 8px;">
-                        <FluentProgressRing Width="18px" />
-                        <FluentLabel Style="font-style: italic; color: var(--neutral-foreground-hint);">Thinking…</FluentLabel>
-                    </FluentStack>
-                </FluentCard>
-            </div>
-        }
+        </div>
     </div>
 
-    <FluentCard Style="flex-shrink: 0; padding: 8px; border-radius: 0; border-top: 1px solid var(--neutral-stroke-rest); max-height:200px;">
-        <FluentStack Orientation="Orientation.Horizontal" Style="gap: 8px; align-items: flex-end;">
-            <FluentTextArea @bind-Value="@_userInput"
-                            Placeholder="Ask me about your trips, wishlists, or places…"
-                            Style="flex: 1; resize: none;"
-                            Rows="1"
-                            @onkeydown="HandleKeyDown"
-                            Disabled="@_isThinking" />
-            <FluentButton Appearance="Appearance.Accent"
-                          OnClick="@SendMessage"
-                          Disabled="@(_isThinking || string.IsNullOrWhiteSpace(_userInput))"
-                          IconStart="@(new Icons.Regular.Size20.Send())"
-                          Style="align-self: flex-end;">
-                Send
-            </FluentButton>
-        </FluentStack>
-    </FluentCard>
-</FluentStack>
+    @* ─── Chat panel ─── *@
+    <div class="chat-panel">
+        <FluentToolbar Style="flex-shrink: 0;">
+            <FluentButton Appearance="Appearance.Stealth"
+                          Class="chat-sidebar-toggle"
+                          IconStart="@(new Icons.Regular.Size20.Navigation())"
+                          Title="Conversations"
+                          AriaLabel="Toggle conversations sidebar"
+                          OnClick="@ToggleSidebar" />
+            <FluentIcon Value="@(new Icons.Regular.Size24.Bot())" Color="Color.Accent" />
+            <FluentLabel Typo="Typography.H3" Style="margin-left: 8px;">AI Trip Assistant</FluentLabel>
+        </FluentToolbar>
+
+        <div id="chat-messages" class="chat-messages">
+            @if (!ChatService.Messages.Any() && _pendingUserMessage is null && !_isThinking)
+            {
+                <FluentStack Orientation="Orientation.Vertical"
+                             HorizontalAlignment="HorizontalAlignment.Center"
+                             VerticalAlignment="VerticalAlignment.Center"
+                             Style="flex: 1; opacity: 0.6;">
+                    <FluentIcon Value="@(new Icons.Regular.Size48.Bot())" Color="Color.Neutral" />
+                    <FluentLabel Typo="Typography.Body" Style="text-align: center;">
+                        Ask me anything about your trips, wishlists, or places.<br />
+                        I can list, create, update, and delete them for you.
+                    </FluentLabel>
+                </FluentStack>
+            }
+
+            @foreach (var msg in ChatService.Messages)
+            {
+                @if (msg.Role == "user")
+                {
+                    <div style="display: flex; justify-content: flex-end;">
+                        <FluentCard Style="max-width: 85%; background: var(--accent-fill-rest); color: var(--foreground-on-accent-rest); padding: 10px 14px; border-radius: 12px 12px 4px 12px;">
+                            <FluentLabel Style="color: inherit; white-space: pre-wrap; word-break: break-word;">@msg.Content</FluentLabel>
+                        </FluentCard>
+                    </div>
+                }
+                else
+                {
+                    <div style="display: flex; justify-content: flex-start;">
+                        <FluentCard Style="max-width: 90%; padding: 10px 14px; border-radius: 12px 12px 12px 4px;">
+                            <pre style="white-space: pre-wrap; font-family: inherit; margin: 0; word-break: break-word;">@msg.Content</pre>
+                        </FluentCard>
+                    </div>
+                }
+            }
+
+            @* Pending user message shown while the background job is running *@
+            @if (_pendingUserMessage is not null && !ChatService.Messages.Any(m => m.Role == "user" && m.Content == _pendingUserMessage))
+            {
+                <div style="display: flex; justify-content: flex-end;">
+                    <FluentCard Style="max-width: 85%; background: var(--accent-fill-rest); color: var(--foreground-on-accent-rest); padding: 10px 14px; border-radius: 12px 12px 4px 12px;">
+                        <FluentLabel Style="color: inherit; white-space: pre-wrap; word-break: break-word;">@_pendingUserMessage</FluentLabel>
+                    </FluentCard>
+                </div>
+            }
+
+            @if (_isThinking)
+            {
+                <div style="display: flex; justify-content: flex-start;">
+                    <FluentCard Style="padding: 10px 14px; border-radius: 12px 12px 12px 4px;">
+                        <FluentStack Orientation="Orientation.Horizontal"
+                                     VerticalAlignment="VerticalAlignment.Center"
+                                     Style="gap: 8px;">
+                            <FluentProgressRing Width="18px" />
+                            <FluentLabel Style="font-style: italic; color: var(--neutral-foreground-hint);">Thinking…</FluentLabel>
+                        </FluentStack>
+                    </FluentCard>
+                </div>
+            }
+
+            @* Error card shown when a job has failed, with a retry button *@
+            @if (_jobError is not null)
+            {
+                <div style="display: flex; justify-content: flex-start;">
+                    <FluentCard Style="max-width: 90%; padding: 10px 14px; border-radius: 12px 12px 12px 4px; border: 1px solid var(--error);">
+                        <FluentStack Orientation="Orientation.Vertical" Style="gap: 8px;">
+                            <FluentStack Orientation="Orientation.Horizontal"
+                                         VerticalAlignment="VerticalAlignment.Center"
+                                         Style="gap: 8px;">
+                                <FluentIcon Value="@(new Icons.Regular.Size20.ErrorCircle())" Color="Color.Error" />
+                                <FluentLabel Style="color: var(--error);">An error occurred while processing your message.</FluentLabel>
+                            </FluentStack>
+                            <FluentButton Appearance="Appearance.Outline"
+                                          IconStart="@(new Icons.Regular.Size20.ArrowClockwise())"
+                                          OnClick="@RetryLastMessage"
+                                          Style="align-self: flex-start;">
+                                Retry
+                            </FluentButton>
+                        </FluentStack>
+                    </FluentCard>
+                </div>
+            }
+        </div>
+
+        <FluentCard Class="chat-input-card">
+            <FluentStack Orientation="Orientation.Horizontal" Style="gap: 8px; align-items: flex-end;">
+                <FluentTextArea @bind-Value="@_userInput"
+                                Placeholder="Ask me about your trips, wishlists, or places…"
+                                Style="flex: 1; resize: none;"
+                                Rows="1"
+                                @onkeydown="HandleKeyDown"
+                                Disabled="@_isThinking" />
+                <FluentButton Appearance="Appearance.Accent"
+                              OnClick="@SendMessage"
+                              Disabled="@(_isThinking || string.IsNullOrWhiteSpace(_userInput))"
+                              IconStart="@(new Icons.Regular.Size20.Send())"
+                              Style="align-self: flex-end;"
+                              AriaLabel="Send message">
+                    <span class="chat-input-send-label">Send</span>
+                </FluentButton>
+            </FluentStack>
+        </FluentCard>
+    </div>
+</div>
 
 @code {
+    [Parameter] public string? ConversationId { get; set; }
+
     private string _userInput = string.Empty;
     private bool _isThinking;
-    private Models.ApplicationUser? _currentUser;
+    private bool _showSidebar;
+    private ApplicationUser? _currentUser;
+    private List<ChatConversation> _conversations = [];
+
+    // Background job tracking
+    private string? _activeJobId;
+    private string? _pendingUserMessage;
+    private string? _jobError;
+    private CancellationTokenSource? _pollingCts;
 
     protected override async Task OnInitializedAsync()
     {
         _currentUser = await UserService.GetCurrentUserAsync();
+        if (_currentUser is not null)
+            _conversations = await ConversationRepository.GetByUserAsync(_currentUser.Id);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_currentUser is null) return;
+        if (string.Equals(ConversationId, ChatService.CurrentConversationId, StringComparison.OrdinalIgnoreCase)) return;
+
+        if (string.IsNullOrEmpty(ConversationId))
+        {
+            ChatService.Clear();
+            _pendingUserMessage = null;
+        }
+        else
+        {
+            var loaded = await ChatService.LoadConversationAsync(ConversationId, _currentUser.Id);
+            if (!loaded)
+            {
+                ChatService.Clear();
+                Navigation.NavigateTo("/chat");
+                return;
+            }
+            // The conversation was reloaded from DB so the pending message is now in ChatService.Messages.
+            _pendingUserMessage = null;
+            await ScrollToBottomAsync();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await TrySetUserLocationAsync();
+        }
+    }
+
+    private async Task TrySetUserLocationAsync()
+    {
+        try
+        {
+            var location = await JS.InvokeAsync<LocationResult?>("chatInterop.getLocation");
+            if (location is not null)
+                ChatService.SetUserLocation(location.Latitude, location.Longitude);
+        }
+        catch
+        {
+            // Geolocation not available or denied — continue without it.
+        }
+    }
+
+    private sealed class LocationResult
+    {
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
     }
 
     private async Task SendMessage()
@@ -112,19 +267,147 @@
 
         var message = _userInput.Trim();
         _userInput = string.Empty;
+        _jobError = null;
+
+        // Ensure a conversation exists before creating the job so we have a ConversationId.
+        if (ChatService.CurrentConversationId is null)
+        {
+            var title = message.Length > 80 ? message[..77] + "…" : message;
+            var conversation = await ConversationRepository.CreateAsync(_currentUser.Id, title);
+            ChatService.SetCurrentConversationId(conversation.Id);
+            Navigation.NavigateTo($"/chat/{conversation.Id}", replace: true);
+            // Refresh the sidebar so the new conversation appears immediately.
+            _conversations = await ConversationRepository.GetByUserAsync(_currentUser.Id);
+        }
+
+        // Save the user message to the database so the background service can load it.
+        await ConversationRepository.AddMessageAsync(ChatService.CurrentConversationId!, "user", message, _currentUser.Id);
+
+        // Create the background job.
+        var job = await ChatJobRepository.CreateAsync(ChatService.CurrentConversationId!, _currentUser.Id, message);
+        _activeJobId = job.Id;
+        _pendingUserMessage = message;
         _isThinking = true;
         StateHasChanged();
+        await ScrollToBottomAsync();
 
-        try
+        StartPolling();
+    }
+
+    private void StartPolling()
+    {
+        var previousCts = _pollingCts;
+        previousCts?.Cancel();
+        previousCts?.Dispose();
+        _pollingCts = new CancellationTokenSource();
+        _ = PollJobStatusAsync(_pollingCts.Token);
+    }
+
+    private async Task PollJobStatusAsync(CancellationToken ct)
+    {
+        while (!ct.IsCancellationRequested && _activeJobId is not null)
         {
-            await ChatService.SendMessageAsync(message, _currentUser.Id);
+            try
+            {
+                await Task.Delay(3000, ct);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+
+            if (ct.IsCancellationRequested) break;
+
+            try
+            {
+                var job = await ChatJobRepository.GetByIdAsync(_activeJobId, _currentUser!.Id);
+                if (job is null) break;
+
+                if (job.Status == ChatJobStatus.Completed)
+                {
+                    await InvokeAsync(async () =>
+                    {
+                        await OnJobCompletedAsync();
+                        StateHasChanged();
+                    });
+                    break;
+                }
+                else if (job.Status == ChatJobStatus.Failed)
+                {
+                    await InvokeAsync(() =>
+                    {
+                        _jobError = job.ErrorMessage ?? "An error occurred.";
+                        _activeJobId = null;
+                        _isThinking = false;
+                        StateHasChanged();
+                        return Task.CompletedTask;
+                    });
+                    break;
+                }
+            }
+            catch (Exception ex) when (!ct.IsCancellationRequested)
+            {
+                Logger.LogWarning(ex, "Error polling chat job {JobId}.", _activeJobId);
+            }
         }
-        finally
+    }
+
+    private async Task OnJobCompletedAsync()
+    {
+        _activeJobId = null;
+        _isThinking = false;
+
+        // Reload the conversation from the database to show the AI response.
+        if (_currentUser is not null && ChatService.CurrentConversationId is not null)
         {
-            _isThinking = false;
+            await ChatService.LoadConversationAsync(ChatService.CurrentConversationId, _currentUser.Id);
+            _pendingUserMessage = null;
+            _conversations = await ConversationRepository.GetByUserAsync(_currentUser.Id);
+        }
+
+        await ScrollToBottomAsync();
+    }
+
+    private async Task RetryLastMessage()
+    {
+        if (_pendingUserMessage is null || _currentUser is null || ChatService.CurrentConversationId is null) return;
+
+        _jobError = null;
+        _isThinking = true;
+
+        var job = await ChatJobRepository.CreateAsync(ChatService.CurrentConversationId, _currentUser.Id, _pendingUserMessage);
+        _activeJobId = job.Id;
+        StateHasChanged();
+
+        StartPolling();
+    }
+
+    private void SelectConversation(string conversationId)
+    {
+        if (_isThinking) return;
+        _showSidebar = false;
+        Navigation.NavigateTo($"/chat/{conversationId}");
+    }
+
+    private void NewConversation()
+    {
+        if (_isThinking) return;
+        ChatService.Clear();
+        _pendingUserMessage = null;
+        _jobError = null;
+        _showSidebar = false;
+        Navigation.NavigateTo("/chat");
+    }
+
+    private async Task DeleteConversation(string conversationId)
+    {
+        if (_currentUser is null) return;
+        await ConversationRepository.DeleteAsync(conversationId, _currentUser.Id);
+        _conversations = await ConversationRepository.GetByUserAsync(_currentUser.Id);
+        if (string.Equals(ChatService.CurrentConversationId, conversationId, StringComparison.OrdinalIgnoreCase))
+            Navigation.NavigateTo("/chat");
+        else
             StateHasChanged();
-            await ScrollToBottomAsync();
-        }
     }
 
     private async Task HandleKeyDown(KeyboardEventArgs e)
@@ -133,10 +416,9 @@
             await SendMessage();
     }
 
-    private void ClearChat()
-    {
-        ChatService.Clear();
-    }
+    private void ToggleSidebar() => _showSidebar = !_showSidebar;
+
+    private void CloseSidebar() => _showSidebar = false;
 
     private async Task ScrollToBottomAsync()
     {
@@ -149,4 +431,22 @@
             // Ignore JS interop errors (e.g. during prerendering)
         }
     }
+
+    private static string FormatDate(DateTime dt)
+    {
+        var now = DateTime.UtcNow;
+        var diff = now - dt;
+        if (diff.TotalMinutes < 1) return "just now";
+        if (diff.TotalHours < 1) return $"{(int)diff.TotalMinutes}m ago";
+        if (diff.TotalDays < 1) return $"{(int)diff.TotalHours}h ago";
+        if (diff.TotalDays < 7) return $"{(int)diff.TotalDays}d ago";
+        return dt.ToString("MMM d");
+    }
+
+    public void Dispose()
+    {
+        _pollingCts?.Cancel();
+        _pollingCts?.Dispose();
+    }
 }
+

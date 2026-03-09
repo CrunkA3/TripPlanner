@@ -16,7 +16,9 @@ public class OllamaChatService(
     ILogger<OllamaChatService> logger,
     ITripRepository tripRepository,
     IWishlistRepository wishlistRepository,
-    IPlaceRepository placeRepository)
+    IPlaceRepository placeRepository,
+    IChatConversationRepository conversationRepository,
+    WeatherService weatherService)
 {
     public sealed record DisplayMessage(string Role, string Content);
 
@@ -52,14 +54,33 @@ public class OllamaChatService(
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
-    private static readonly OllamaMessage SystemMessage = new()
+    // User's current location, set via SetUserLocation() when the browser provides coordinates.
+    private double? _userLatitude;
+    private double? _userLongitude;
+
+    /// <summary>Stores the user's current geographic position for inclusion in the system prompt.</summary>
+    public void SetUserLocation(double latitude, double longitude)
     {
-        Role = "system",
-        Content = "You are a helpful travel planning assistant for TripPlanner. " +
-                  "You help users manage their trips, wishlists, and places. " +
-                  "Use the available tools to access and modify the user's data. " +
-                  "Always be concise and helpful."
-    };
+        _userLatitude = latitude;
+        _userLongitude = longitude;
+    }
+
+    private OllamaMessage BuildSystemMessage()
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("You are a helpful travel planning assistant for TripPlanner.");
+        sb.AppendLine("You help users manage their trips, wishlists, and places.");
+        sb.AppendLine("Use the available tools to access and modify the user's data.");
+        sb.AppendLine($"Today's date is {DateTime.UtcNow:yyyy-MM-dd} (UTC).");
+        if (_userLatitude.HasValue && _userLongitude.HasValue)
+        {
+            sb.AppendLine($"The user's current location is latitude {_userLatitude.Value.ToString("F4", CultureInfo.InvariantCulture)}, " +
+                          $"longitude {_userLongitude.Value.ToString("F4", CultureInfo.InvariantCulture)}.");
+            sb.AppendLine("Use the get_weather tool to look up current or forecasted weather for any location.");
+        }
+        sb.Append("Always be concise and helpful.");
+        return new OllamaMessage { Role = "system", Content = sb.ToString() };
+    }
 
     // Default maximum number of messages kept in the conversation history (≈ 20 turns).
     // Older messages are dropped to prevent unbounded payloads and memory growth.
@@ -68,13 +89,54 @@ public class OllamaChatService(
 
     private readonly List<OllamaMessage> _history = [];
 
+    /// <summary>The ID of the currently active persisted conversation, or null if no conversation is loaded.</summary>
+    public string? CurrentConversationId { get; private set; }
+
     public IReadOnlyList<DisplayMessage> Messages =>
         _history
             .Where(m => m.Role is "user" or "assistant" && !string.IsNullOrEmpty(m.Content))
             .Select(m => new DisplayMessage(m.Role, m.Content))
             .ToList();
 
-    public void Clear() => _history.Clear();
+    /// <summary>Clears the in-memory history and detaches from any active conversation (does not delete from DB).</summary>
+    public void Clear()
+    {
+        _history.Clear();
+        CurrentConversationId = null;
+    }
+
+    /// <summary>Sets the current conversation ID without loading history (used when the conversation was created externally).</summary>
+    public void SetCurrentConversationId(string conversationId) => CurrentConversationId = conversationId;
+
+    /// <summary>Loads a persisted conversation into the in-memory history so the user can continue it.</summary>
+    /// <returns><c>true</c> if the conversation was found and loaded; <c>false</c> if it was not found.</returns>
+    public async Task<bool> LoadConversationAsync(string conversationId, string userId)
+    {
+        var conversation = await conversationRepository.GetByIdAsync(conversationId, userId);
+        if (conversation is null) return false;
+
+        _history.Clear();
+        CurrentConversationId = conversationId;
+
+        foreach (var msg in conversation.Messages.OrderBy(m => m.CreatedAt).ThenBy(m => m.Id))
+        {
+            var ollamaMsg = new OllamaMessage { Role = msg.Role, Content = msg.Content };
+            if (msg.ToolCallsJson is not null)
+            {
+                try
+                {
+                    ollamaMsg.ToolCalls = JsonSerializer.Deserialize<List<OllamaToolCall>>(msg.ToolCallsJson, SerializerOptions);
+                }
+                catch (JsonException ex)
+                {
+                    logger.LogWarning(ex, "Failed to deserialize ToolCallsJson for message in conversation {ConversationId}; tool calls will be omitted.", conversationId);
+                }
+            }
+            _history.Add(ollamaMsg);
+        }
+
+        return true;
+    }
 
     private void TrimHistory()
     {
@@ -87,16 +149,39 @@ public class OllamaChatService(
 
     public async Task<string> SendMessageAsync(string userMessage, string userId, CancellationToken ct = default)
     {
+        // Create a new persisted conversation on the first message
+        if (CurrentConversationId is null)
+        {
+            var title = userMessage.Length > 80 ? userMessage[..77] + "…" : userMessage;
+            var conversation = await conversationRepository.CreateAsync(userId, title);
+            CurrentConversationId = conversation.Id;
+        }
+
         _history.Add(new OllamaMessage { Role = "user", Content = userMessage });
+        await conversationRepository.AddMessageAsync(CurrentConversationId, "user", userMessage, userId);
         TrimHistory();
+
+        return await RunInferenceAsync(userId, ct);
+    }
+
+    /// <summary>
+    /// Runs the Ollama inference loop on the already-loaded conversation history and saves
+    /// the assistant response to the database. Call <see cref="LoadConversationAsync"/> (or
+    /// <see cref="SendMessageAsync"/> which adds the user message) before invoking this method.
+    /// </summary>
+    public async Task<string> RunInferenceAsync(string userId, CancellationToken ct = default)
+    {
+        if (CurrentConversationId is null)
+            throw new InvalidOperationException("No active conversation. Call LoadConversationAsync or SendMessageAsync first.");
 
         var model = configuration["Ollama:Model"] ?? "llama3.2";
         var client = httpClientFactory.CreateClient("Ollama");
+        var systemMessage = BuildSystemMessage();
 
         const int maxIterations = 10;
         for (var i = 0; i < maxIterations; i++)
         {
-            var messages = new List<OllamaMessage> { SystemMessage };
+            var messages = new List<OllamaMessage> { systemMessage };
             messages.AddRange(_history);
 
             var requestObj = new
@@ -122,6 +207,7 @@ public class OllamaChatService(
                 logger.LogWarning(ex, "Failed to call Ollama /api/chat");
                 var errMsg = $"I'm sorry, I couldn't connect to the AI service: {ex.Message}";
                 _history.Add(new OllamaMessage { Role = "assistant", Content = errMsg });
+                await conversationRepository.AddMessageAsync(CurrentConversationId, "assistant", errMsg, userId);
                 TrimHistory();
                 return errMsg;
             }
@@ -131,6 +217,7 @@ public class OllamaChatService(
             {
                 const string noResponseMsg = "I'm sorry, I didn't receive a valid response.";
                 _history.Add(new OllamaMessage { Role = "assistant", Content = noResponseMsg });
+                await conversationRepository.AddMessageAsync(CurrentConversationId, "assistant", noResponseMsg, userId);
                 TrimHistory();
                 return noResponseMsg;
             }
@@ -139,9 +226,17 @@ public class OllamaChatService(
 
             if (response.Message.ToolCalls is null || response.Message.ToolCalls.Count == 0)
             {
+                var finalContent = response.Message.Content ?? string.Empty;
+                await conversationRepository.AddMessageAsync(CurrentConversationId, "assistant", finalContent, userId);
                 TrimHistory();
-                return response.Message.Content ?? string.Empty;
+                return finalContent;
             }
+
+            // Persist the assistant message that contains tool calls so that
+            // reloaded conversations have the full context for follow-up turns.
+            var toolCallsJson = JsonSerializer.Serialize(response.Message.ToolCalls, SerializerOptions);
+            await conversationRepository.AddMessageAsync(CurrentConversationId, "assistant",
+                response.Message.Content ?? string.Empty, userId, toolCallsJson);
 
             foreach (var toolCall in response.Message.ToolCalls)
             {
@@ -149,6 +244,7 @@ public class OllamaChatService(
                 logger.LogDebug("Tool {Tool} returned: {Result}", toolCall.Function.Name,
                     toolResult[..Math.Min(200, toolResult.Length)]);
                 _history.Add(new OllamaMessage { Role = "tool", Content = toolResult });
+                await conversationRepository.AddMessageAsync(CurrentConversationId, "tool", toolResult, userId);
             }
 
             // Trim after each tool-call round so the next iteration's request payload
@@ -158,6 +254,7 @@ public class OllamaChatService(
 
         const string maxIterMsg = "I apologize, I reached the maximum number of steps. Please try a simpler question.";
         _history.Add(new OllamaMessage { Role = "assistant", Content = maxIterMsg });
+        await conversationRepository.AddMessageAsync(CurrentConversationId, "assistant", maxIterMsg, userId);
         TrimHistory();
         return maxIterMsg;
     }
@@ -205,6 +302,9 @@ public class OllamaChatService(
                 "delete_place" => Str(args, "place_id") is { } placeId && !string.IsNullOrWhiteSpace(placeId)
                     ? await DeletePlaceAsync(placeId, userId)
                     : "Missing required parameter: place_id",
+                "get_weather" => TryGetDouble(args, "latitude", out var wLat) && TryGetDouble(args, "longitude", out var wLon)
+                    ? await GetWeatherAsync(wLat, wLon, Str(args, "date"))
+                    : "Missing required parameters: latitude, longitude",
                 _ => $"Unknown tool: {name}"
             };
         }
@@ -432,6 +532,9 @@ public class OllamaChatService(
         if (!TryGetDouble(args, "latitude", out var lat) || !TryGetDouble(args, "longitude", out var lon))
             return "Missing required parameters: latitude, longitude.";
 
+        if (!await wishlistRepository.CanUserEditAsync(wishlistId, userId))
+            return "Access denied: you do not have permission to add places to this wishlist.";
+
         var place = new Models.Place
         {
             Name = name,
@@ -473,6 +576,38 @@ public class OllamaChatService(
         if (place is null) return "Place not found.";
         await placeRepository.DeleteAsync(placeId, userId);
         return "Place deleted successfully.";
+    }
+
+    // ── Weather tool ─────────────────────────────────────────────────────────────
+
+    private async Task<string> GetWeatherAsync(double latitude, double longitude, string? dateStr)
+    {
+        if (dateStr is not null)
+        {
+            if (!DateOnly.TryParseExact(dateStr, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+                return $"Invalid date format '{dateStr}'. Please provide the date in yyyy-MM-dd format.";
+
+            var day = await weatherService.GetWeatherForDateAsync(latitude, longitude, date);
+            if (day is null)
+                return $"No weather data available for {dateStr} at ({latitude.ToString("F4", CultureInfo.InvariantCulture)}, {longitude.ToString("F4", CultureInfo.InvariantCulture)}).";
+            return $"Weather on {dateStr} at ({latitude.ToString("F4", CultureInfo.InvariantCulture)}, {longitude.ToString("F4", CultureInfo.InvariantCulture)}): " +
+                   $"{day.GetDescription()} {day.GetIcon()}, " +
+                   $"{day.TempMin?.ToString("F0", CultureInfo.InvariantCulture) ?? "?"}°–{day.TempMax?.ToString("F0", CultureInfo.InvariantCulture) ?? "?"}°C, " +
+                   $"precipitation: {day.Precipitation?.ToString("F1", CultureInfo.InvariantCulture) ?? "0"}mm.";
+        }
+
+        // No date given – return the 7-day forecast.
+        var forecast = await weatherService.GetForecastAsync(latitude, longitude);
+        if (forecast is null || forecast.Daily.Count == 0)
+            return $"No weather data available for ({latitude.ToString("F4", CultureInfo.InvariantCulture)}, {longitude.ToString("F4", CultureInfo.InvariantCulture)}).";
+
+        var sb = new StringBuilder();
+        sb.AppendLine($"7-day weather forecast for ({latitude.ToString("F4", CultureInfo.InvariantCulture)}, {longitude.ToString("F4", CultureInfo.InvariantCulture)}):");
+        foreach (var d in forecast.Daily.Take(7))
+            sb.AppendLine($"  {d.Date:yyyy-MM-dd}: {d.GetDescription()} {d.GetIcon()}, " +
+                          $"{d.TempMin?.ToString("F0", CultureInfo.InvariantCulture) ?? "?"}°–{d.TempMax?.ToString("F0", CultureInfo.InvariantCulture) ?? "?"}°C, " +
+                          $"precipitation: {d.Precipitation?.ToString("F1", CultureInfo.InvariantCulture) ?? "0"}mm");
+        return sb.ToString();
     }
 
     // ── Tool definitions ─────────────────────────────────────────────────────────
@@ -556,6 +691,13 @@ public class OllamaChatService(
         MakeTool("delete_place", "Delete a place.",
             Props(("place_id", "string", "The ID of the place to delete.")),
             ["place_id"]),
+
+        MakeTool("get_weather", "Get the weather forecast for a given location. If a date is provided returns the weather for that day; otherwise returns a 7-day forecast.",
+            Props(
+                ("latitude", "number", "Latitude of the location."),
+                ("longitude", "number", "Longitude of the location."),
+                ("date", "string", "Optional date in yyyy-MM-dd format. If omitted, the full 7-day forecast is returned.")),
+            ["latitude", "longitude"]),
     ];
 
     private static Dictionary<string, object> Props(params (string Name, string Type, string Desc)[] props) =>

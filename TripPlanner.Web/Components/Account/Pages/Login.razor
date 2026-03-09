@@ -29,7 +29,7 @@
                 <FluentTextField type="password" Name="Input.Password" @bind-Value="Input.Password" AutoComplete="current-password" Required="true" Placeholder="password" Label="Password" Style="width: 100%" />
                 <FluentValidationMessage For="() => Input.Password" class="text-danger" />
                 <FluentCheckbox Name="Input.RememberMe" @bind-Value="Input.RememberMe" Label="Remember me" />
-                <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Style="width: 100%">Log in</FluentButton>
+                <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Style="width: 100%" data-testid="submit-login-button">Log in</FluentButton>
                 <div>
                     <p>
                         <FluentAnchor Appearance="Appearance.Hypertext" Href="Account/ForgotPassword">Forgot your password?</FluentAnchor>

@@ -108,6 +108,8 @@ builder.Services.AddScoped<ITripRepository, EfTripRepository>();
 builder.Services.AddScoped<IGpxRepository, GpxRepository>();
 builder.Services.AddScoped<IWishlistRepository, WishlistRepository>();
 builder.Services.AddScoped<IUrlImportJobRepository, UrlImportJobRepository>();
+builder.Services.AddScoped<IChatConversationRepository, ChatConversationRepository>();
+builder.Services.AddScoped<IChatJobRepository, ChatJobRepository>();
 
 // Register services
 builder.Services.AddScoped<GpxService>();
@@ -118,6 +120,7 @@ builder.Services.AddScoped<IGeocodingService, NominatimGeocodingService>();
 builder.Services.AddScoped<IPlaceAnalysisService, OllamaPlaceAnalysisService>();
 builder.Services.AddScoped<OllamaChatService>();
 builder.Services.AddHostedService<UrlImportBackgroundService>();
+builder.Services.AddHostedService<ChatBackgroundService>();
 
 // Register HttpContextAccessor for MCP tools
 builder.Services.AddHttpContextAccessor();
