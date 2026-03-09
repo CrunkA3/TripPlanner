@@ -39,24 +39,26 @@ public class ChatConversationRepository(ApplicationDbContext context) : IChatCon
 
     public async Task AddMessageAsync(string conversationId, string role, string content, string userId)
     {
-        var conversationExists = await context.ChatConversations
-            .AnyAsync(c => c.Id == conversationId && c.UserId == userId);
-        if (!conversationExists)
+        await using var transaction = await context.Database.BeginTransactionAsync();
+
+        // Use the affected-row count to both validate ownership and advance UpdatedAt
+        // in a single round-trip, eliminating the separate AnyAsync check.
+        var updated = await context.ChatConversations
+            .Where(c => c.Id == conversationId && c.UserId == userId)
+            .ExecuteUpdateAsync(s => s.SetProperty(c => c.UpdatedAt, DateTime.UtcNow));
+
+        if (updated == 0)
             throw new InvalidOperationException("Chat conversation does not exist or is not owned by the specified user.");
 
-        var message = new ChatMessage
+        context.ChatMessages.Add(new ChatMessage
         {
             ConversationId = conversationId,
             Role = role,
             Content = content,
             CreatedAt = DateTime.UtcNow
-        };
-        context.ChatMessages.Add(message);
-        // Update conversation's UpdatedAt timestamp
-        await context.ChatConversations
-            .Where(c => c.Id == conversationId && c.UserId == userId)
-            .ExecuteUpdateAsync(s => s.SetProperty(c => c.UpdatedAt, DateTime.UtcNow));
+        });
         await context.SaveChangesAsync();
+        await transaction.CommitAsync();
     }
 
     public async Task DeleteAsync(string id, string userId)
