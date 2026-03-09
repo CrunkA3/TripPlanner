@@ -58,9 +58,9 @@ async function fillByLabel(page, label, value) {
  * to give it focus, then types the value via keyboard and presses Tab
  * to trigger the Blazor onchange binding.
  */
-async function fillByTestId(page, labelId, value) {
+async function fillByTestId(page, testId, value) {
     // Covers fluent-text-field and fluent-text-area with a [label] attribute
-    const locator = page.getByTestId(getByTestId);
+    const locator = page.getByTestId(testId);
     await locator.click();
     await page.keyboard.press('Control+a');
     await page.keyboard.type(value, { delay: 20 });
