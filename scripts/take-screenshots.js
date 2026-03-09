@@ -54,6 +54,21 @@ async function fillByLabel(page, label, value) {
 }
 
 /**
+ * Clicks a fluent-text-field 
+ * to give it focus, then types the value via keyboard and presses Tab
+ * to trigger the Blazor onchange binding.
+ */
+async function fillByTestId(page, labelId, value) {
+    // Covers fluent-text-field and fluent-text-area with a [label] attribute
+    const locator = page.getByTestId(getByTestId);
+    await locator.click();
+    await page.keyboard.press('Control+a');
+    await page.keyboard.type(value, { delay: 20 });
+    await page.keyboard.press('Tab');
+    await page.waitForTimeout(300);
+}
+
+/**
  * Sets the value of a name-bound form field (used in static-SSR forms such as
  * Account/Register and Account/Login) via JavaScript so the server-side POST
  * picks it up.
@@ -168,8 +183,8 @@ async function main() {
         await page.getByTestId('open-new-wishlist-button').click();
         await page.waitForTimeout(1500);
 
-        await fillByLabel(page, 'Name', 'Europe Dream Trip');
-        await fillByLabel(page, 'Description', 'Places I want to visit across Europe');
+        await fillByTestId(page, 'wishlist-name', 'Europe Dream Trip');
+        await fillByTestId(page, 'wishlist-description', 'Places I want to visit across Europe');
 
         // Submit the create-wishlist form
         await page.getByTestId('submit-new-wishlist-button').click();
@@ -178,7 +193,7 @@ async function main() {
 
         // ── 8. Wishlist detail page + add places ──────────────────────────────
         console.log('\n[8] Wishlist detail – add places');
-        await page.locator('fluent-button:has-text("View")').first().click();
+        await page.getByTestId('view-wishlist-button').click();
         await page.waitForTimeout(2500);
         await screenshot(page, '05-wishlist-detail-empty.png', 'Wishlist detail – empty');
 
