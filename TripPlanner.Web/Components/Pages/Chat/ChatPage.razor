@@ -296,7 +296,9 @@
 
     private void StartPolling()
     {
-        _pollingCts?.Cancel();
+        var previousCts = _pollingCts;
+        previousCts?.Cancel();
+        previousCts?.Dispose();
         _pollingCts = new CancellationTokenSource();
         _ = PollJobStatusAsync(_pollingCts.Token);
     }
