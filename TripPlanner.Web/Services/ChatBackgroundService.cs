@@ -10,7 +10,7 @@ namespace TripPlanner.Web.Services;
 /// in a long-running hosted task. This prevents Blazor SignalR circuit timeouts caused
 /// by awaiting slow LLM inference directly in a component.
 /// </summary>
-public class ChatBackgroundService(
+public partial class ChatBackgroundService(
     IServiceScopeFactory scopeFactory,
     ILogger<ChatBackgroundService> logger) : BackgroundService
 {
@@ -75,7 +75,7 @@ public class ChatBackgroundService(
         using var scope = scopeFactory.CreateScope();
         var jobRepo = scope.ServiceProvider.GetRequiredService<IChatJobRepository>();
         var chatService = scope.ServiceProvider.GetRequiredService<OllamaChatService>();
-        var userManager = scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<Models.ApplicationUser>>();
+        var userManager = scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<ApplicationUser>>();
 
         var pendingJobs = await jobRepo.GetPendingJobsAsync(MaxJobsPerCycle);
 
@@ -92,10 +92,10 @@ public class ChatBackgroundService(
         ChatJob job,
         IChatJobRepository jobRepo,
         OllamaChatService chatService,
-        Microsoft.AspNetCore.Identity.UserManager<Models.ApplicationUser> userManager,
+        Microsoft.AspNetCore.Identity.UserManager<ApplicationUser> userManager,
         CancellationToken cancellationToken)
     {
-        logger.LogInformation("Processing chat job {JobId} for conversation {ConversationId}", job.Id, job.ConversationId);
+        LogProcessingChatJob(job.Id, job.ConversationId);
 
         job.Status = ChatJobStatus.Processing;
         await jobRepo.UpdateAsync(job);
@@ -116,7 +116,7 @@ public class ChatBackgroundService(
                 job.ErrorMessage = "Conversation not found.";
                 job.CompletedAt = DateTime.UtcNow;
                 await jobRepo.UpdateAsync(job);
-                logger.LogWarning("Chat job {JobId}: conversation {ConversationId} not found.", job.Id, job.ConversationId);
+                LogConversationNotFound(job.Id, job.ConversationId);
                 return;
             }
 
@@ -127,7 +127,7 @@ public class ChatBackgroundService(
             job.CompletedAt = DateTime.UtcNow;
             await jobRepo.UpdateAsync(job);
 
-            logger.LogInformation("Chat job {JobId} completed successfully.", job.Id);
+            LogJobCompleted(job.Id);
         }
         catch (OperationCanceledException)
         {
@@ -145,4 +145,14 @@ public class ChatBackgroundService(
             logger.LogWarning(ex, "Chat job {JobId} failed.", job.Id);
         }
     }
+
+
+    [LoggerMessage(Level = LogLevel.Trace, Message = "Processing chat job {JobId} for conversation {ConversationId}")]
+    private partial void LogProcessingChatJob(string jobId, string conversationId);
+
+    [LoggerMessage(Level = LogLevel.Trace, Message = "Chat job {JobId} completed successfully.")]
+    private partial void LogJobCompleted(string jobId);
+
+    [LoggerMessage(Level = LogLevel.Trace, Message = "Chat job {JobId}: conversation {ConversationId} not found.")]
+    private partial void LogConversationNotFound(string jobId, string conversationId);
 }
