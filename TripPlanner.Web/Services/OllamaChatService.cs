@@ -135,6 +135,7 @@ public partial class OllamaChatService(
             _history.Add(ollamaMsg);
         }
 
+        TrimHistory();
         return true;
     }
 
