@@ -91,6 +91,25 @@ builder.Services.AddHttpClient("Ollama", client =>
     // SamplingDuration must be at least twice the AttemptTimeout to pass validation.
     options.CircuitBreaker.SamplingDuration = TimeSpan.FromMinutes(10);
 });
+
+// Register HttpClient for OpenAI (cloud LLM – used when AI:Provider = "OpenAI")
+var openAIBaseUrl = builder.Configuration["OpenAI:BaseUrl"] ?? "https://api.openai.com";
+var openAIApiKey = builder.Configuration["OpenAI:ApiKey"] ?? string.Empty;
+builder.Services.AddHttpClient("OpenAI", client =>
+{
+    client.BaseAddress = new Uri(openAIBaseUrl);
+    client.Timeout = TimeSpan.FromMinutes(3);
+    if (!string.IsNullOrWhiteSpace(openAIApiKey))
+        client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", openAIApiKey);
+})
+.RemoveAllResilienceHandlers()
+.AddStandardResilienceHandler(options =>
+{
+    options.TotalRequestTimeout.Timeout = TimeSpan.FromMinutes(3);
+    options.AttemptTimeout.Timeout = TimeSpan.FromMinutes(3);
+    options.CircuitBreaker.SamplingDuration = TimeSpan.FromMinutes(10);
+});
 #pragma warning restore EXTEXP0001
 
 // Register HttpClient for Nominatim geocoding (OpenStreetMap)
@@ -117,8 +136,19 @@ builder.Services.AddScoped<RoutingService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<WeatherService>();
 builder.Services.AddScoped<IGeocodingService, NominatimGeocodingService>();
-builder.Services.AddScoped<IPlaceAnalysisService, OllamaPlaceAnalysisService>();
-builder.Services.AddScoped<OllamaChatService>();
+
+var aiProvider = builder.Configuration["AI:Provider"] ?? "Ollama";
+if (string.Equals(aiProvider, "OpenAI", StringComparison.OrdinalIgnoreCase))
+{
+    builder.Services.AddScoped<IPlaceAnalysisService, OpenAIPlaceAnalysisService>();
+    builder.Services.AddScoped<IChatService, OpenAIChatService>();
+}
+else
+{
+    builder.Services.AddScoped<IPlaceAnalysisService, OllamaPlaceAnalysisService>();
+    builder.Services.AddScoped<IChatService, OllamaChatService>();
+}
+
 builder.Services.AddHostedService<UrlImportBackgroundService>();
 builder.Services.AddHostedService<ChatBackgroundService>();
 

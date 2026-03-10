@@ -41,6 +41,9 @@ public class ChatMessage
     /// <summary>Serialized JSON of tool calls for assistant messages that request tool execution. Null for other messages.</summary>
     public string? ToolCallsJson { get; set; }
 
+    /// <summary>For "tool" role messages: the tool-call ID (from OpenAI) that this result satisfies. Null for Ollama-originated messages.</summary>
+    public string? ToolCallId { get; set; }
+
     [Required]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
