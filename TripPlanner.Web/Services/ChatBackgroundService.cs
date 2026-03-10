@@ -127,7 +127,7 @@ public partial class ChatBackgroundService(
             job.CompletedAt = DateTime.UtcNow;
             await jobRepo.UpdateAsync(job);
 
-            logger.LogInformation("Chat job {JobId} completed successfully.", job.Id);
+            LogJobCompleted(job.Id);
         }
         catch (OperationCanceledException)
         {
@@ -150,6 +150,8 @@ public partial class ChatBackgroundService(
     [LoggerMessage(Level = LogLevel.Trace, Message = "Processing chat job {JobId} for conversation {ConversationId}")]
     private partial void LogProcessingChatJob(string jobId, string conversationId);
 
+    [LoggerMessage(Level = LogLevel.Trace, Message = "Chat job {JobId} completed successfully.")]
+    private partial void LogJobCompleted(string jobId);
 
     [LoggerMessage(Level = LogLevel.Trace, Message = "Chat job {JobId}: conversation {ConversationId} not found.")]
     private partial void LogConversationNotFound(string jobId, string conversationId);
