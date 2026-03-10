@@ -206,6 +206,10 @@
         _currentUser = await UserService.GetCurrentUserAsync();
         if (_currentUser is not null)
             _conversations = await ConversationRepository.GetByUserAsync(_currentUser.Id);
+
+
+        // TODO: load pending message and job if the user reloads the page while a job is in progress.
+        // This requires loading from the database (ChatJob)
     }
 
     protected override async Task OnParametersSetAsync()

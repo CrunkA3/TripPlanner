@@ -10,7 +10,7 @@ namespace TripPlanner.Web.Services;
 // OllamaChatService is registered as Scoped: in Blazor Server each browser tab/window
 // creates its own SignalR circuit and therefore its own service instance, so conversation
 // history is naturally isolated per tab.
-public class OllamaChatService(
+public partial class OllamaChatService(
     IHttpClientFactory httpClientFactory,
     IConfiguration configuration,
     ILogger<OllamaChatService> logger,
@@ -189,17 +189,35 @@ public class OllamaChatService(
                 model,
                 messages,
                 tools = ToolDefinitions,
-                stream = false
+                stream = true
             };
 
-            string responseJson;
+            List<string> responseLines = [];
             try
             {
                 var requestJson = JsonSerializer.Serialize(requestObj, SerializerOptions);
                 using var httpContent = new StringContent(requestJson, Encoding.UTF8, "application/json");
-                var httpResponse = await client.PostAsync("/api/chat", httpContent, ct);
+                using var request = new HttpRequestMessage(HttpMethod.Post, "/api/chat") { Content = httpContent };
+                var httpResponse = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
                 httpResponse.EnsureSuccessStatusCode();
-                responseJson = await httpResponse.Content.ReadAsStringAsync(ct);
+
+                using var stream = await httpResponse.Content.ReadAsStreamAsync(ct);
+                using var reader = new StreamReader(stream);
+
+                string? line;
+                while ((line = await reader.ReadLineAsync(ct)) is not null)
+                {
+                    if (string.IsNullOrWhiteSpace(line))
+                        continue;
+
+                    responseLines.Add(line);
+                    LogData(line);
+                }
+
+                /// example response
+                /// {"model":"llama3.2","created_at":"2026-03-10T17:00:54.822089596Z","message":{"role":"assistant","content":"","tool_calls":[{"id":"call_ejnj3d2t","function":{"index":0,"name":"get_place","arguments":{"place_id":"48.8928, 11.4133"}}}]},"done":false}
+                /// {"model":"llama3.2","created_at":"2026-03-10T17:00:54.899038957Z","message":{"role":"assistant","content":""},"done":true,"done_reason":"stop","total_duration":2194658438,"load_duration":125007901,"prompt_eval_count":1535,"prompt_eval_duration":81825619,"eval_count":25,"eval_duration":1954616875}
+
             }
             catch (OperationCanceledException) { throw; }
             catch (Exception ex)
@@ -212,39 +230,47 @@ public class OllamaChatService(
                 return errMsg;
             }
 
-            var response = JsonSerializer.Deserialize<OllamaChatResponse>(responseJson, SerializerOptions);
-            if (response?.Message is null)
+
+            // The response contains the assistant's message and an optional list of tool calls to execute.
+            foreach (var responseLine in responseLines)
             {
-                const string noResponseMsg = "I'm sorry, I didn't receive a valid response.";
-                _history.Add(new OllamaMessage { Role = "assistant", Content = noResponseMsg });
-                await conversationRepository.AddMessageAsync(CurrentConversationId, "assistant", noResponseMsg, userId);
-                TrimHistory();
-                return noResponseMsg;
-            }
+                var response = JsonSerializer.Deserialize<OllamaChatResponse>(responseLine, SerializerOptions);
 
-            _history.Add(response.Message);
+                // if (response?.Done ?? false) break;
 
-            if (response.Message.ToolCalls is null || response.Message.ToolCalls.Count == 0)
-            {
-                var finalContent = response.Message.Content ?? string.Empty;
-                await conversationRepository.AddMessageAsync(CurrentConversationId, "assistant", finalContent, userId);
-                TrimHistory();
-                return finalContent;
-            }
+                if (response?.Message is null)
+                {
+                    const string noResponseMsg = "I'm sorry, I didn't receive a valid response.";
+                    _history.Add(new OllamaMessage { Role = "assistant", Content = noResponseMsg });
+                    await conversationRepository.AddMessageAsync(CurrentConversationId, "assistant", noResponseMsg, userId);
+                    TrimHistory();
+                    return noResponseMsg;
+                }
 
-            // Persist the assistant message that contains tool calls so that
-            // reloaded conversations have the full context for follow-up turns.
-            var toolCallsJson = JsonSerializer.Serialize(response.Message.ToolCalls, SerializerOptions);
-            await conversationRepository.AddMessageAsync(CurrentConversationId, "assistant",
-                response.Message.Content ?? string.Empty, userId, toolCallsJson);
+                _history.Add(response.Message);
 
-            foreach (var toolCall in response.Message.ToolCalls)
-            {
-                var toolResult = await ExecuteToolAsync(toolCall, userId, ct);
-                logger.LogDebug("Tool {Tool} returned: {Result}", toolCall.Function.Name,
-                    toolResult[..Math.Min(200, toolResult.Length)]);
-                _history.Add(new OllamaMessage { Role = "tool", Content = toolResult });
-                await conversationRepository.AddMessageAsync(CurrentConversationId, "tool", toolResult, userId);
+                if (response.Message.ToolCalls is null || response.Message.ToolCalls.Count == 0)
+                {
+                    var finalContent = response.Message.Content ?? string.Empty;
+                    await conversationRepository.AddMessageAsync(CurrentConversationId, "assistant", finalContent, userId);
+                    TrimHistory();
+                    return finalContent;
+                }
+
+                // Persist the assistant message that contains tool calls so that
+                // reloaded conversations have the full context for follow-up turns.
+                var toolCallsJson = JsonSerializer.Serialize(response.Message.ToolCalls, SerializerOptions);
+                await conversationRepository.AddMessageAsync(CurrentConversationId, "assistant",
+                    response.Message.Content ?? string.Empty, userId, toolCallsJson);
+
+                foreach (var toolCall in response.Message.ToolCalls)
+                {
+                    var toolResult = await ExecuteToolAsync(toolCall, userId, ct);
+                    logger.LogInformation("Tool {Tool} returned: {Result}", toolCall.Function.Name,
+                        toolResult[..Math.Min(200, toolResult.Length)]);
+                    _history.Add(new OllamaMessage { Role = "tool", Content = toolResult });
+                    await conversationRepository.AddMessageAsync(CurrentConversationId, "tool", toolResult, userId);
+                }
             }
 
             // Trim after each tool-call round so the next iteration's request payload
@@ -297,7 +323,8 @@ public class OllamaChatService(
                 "get_place" => Str(args, "place_id") is { } getPlaceId && !string.IsNullOrWhiteSpace(getPlaceId)
                     ? await GetPlaceAsync(getPlaceId, userId)
                     : "Missing required parameter: place_id",
-                "create_place" => await CreatePlaceAsync(args, userId),
+                "create_place_wishlist" => await CreatePlaceWishlistAsync(args, userId),
+                "create_place_trip" => await CreatePlaceTripAsync(args, userId),
                 "update_place" => await UpdatePlaceAsync(args, userId),
                 "delete_place" => Str(args, "place_id") is { } placeId && !string.IsNullOrWhiteSpace(placeId)
                     ? await DeletePlaceAsync(placeId, userId)
@@ -349,7 +376,9 @@ public class OllamaChatService(
         var all = owned.Concat(shared).DistinctBy(t => t.Id);
         return JsonSerializer.Serialize(all.Select(t => new
         {
-            t.Id, t.Name, t.Description,
+            t.Id,
+            t.Name,
+            t.Description,
             StartDate = t.StartDate?.ToString("yyyy-MM-dd"),
             EndDate = t.EndDate?.ToString("yyyy-MM-dd"),
             DayCount = t.Days.Count
@@ -364,28 +393,38 @@ public class OllamaChatService(
         if (trip is null) return "Trip not found.";
         return JsonSerializer.Serialize(new
         {
-            trip.Id, trip.Name, trip.Description,
+            trip.Id,
+            trip.Name,
+            trip.Description,
             StartDate = trip.StartDate?.ToString("yyyy-MM-dd"),
             EndDate = trip.EndDate?.ToString("yyyy-MM-dd"),
             Days = trip.Days.OrderBy(d => d.DayNumber).Select(d => new
             {
-                d.Id, d.DayNumber,
+                d.Id,
+                d.DayNumber,
                 Date = d.Date?.ToString("yyyy-MM-dd"),
                 Places = d.Places.OrderBy(p => p.Order).Select(p => new
                 {
-                    TripPlaceId = p.Id, p.PlaceId,
+                    TripPlaceId = p.Id,
+                    p.PlaceId,
                     PlaceName = p.Place?.Name,
                     ScheduledTime = p.ScheduledTime?.ToString("HH:mm"),
-                    p.DurationMinutes, p.Notes, p.Order
+                    p.DurationMinutes,
+                    p.Notes,
+                    p.Order
                 })
             }),
             UnscheduledPlaces = trip.UnscheduledPlaces.Select(p => new
             {
-                TripPlaceId = p.Id, p.PlaceId, PlaceName = p.Place?.Name
+                TripPlaceId = p.Id,
+                p.PlaceId,
+                PlaceName = p.Place?.Name
             }),
             Accommodations = trip.Accommodations.Select(a => new
             {
-                a.Id, a.Name, a.Address,
+                a.Id,
+                a.Name,
+                a.Address,
                 CheckIn = a.PlannedCheckIn?.ToString("yyyy-MM-dd"),
                 CheckOut = a.PlannedCheckOut?.ToString("yyyy-MM-dd")
             })
@@ -433,7 +472,9 @@ public class OllamaChatService(
         var wishlists = await wishlistRepository.GetAllByUserAsync(userId);
         return JsonSerializer.Serialize(wishlists.Select(w => new
         {
-            w.Id, w.Name, w.Description,
+            w.Id,
+            w.Name,
+            w.Description,
             PlaceCount = w.Places.Count,
             CreatedAt = w.CreatedAt.ToString("yyyy-MM-dd")
         }));
@@ -446,11 +487,18 @@ public class OllamaChatService(
         if (wishlist is null) return "Wishlist not found.";
         return JsonSerializer.Serialize(new
         {
-            wishlist.Id, wishlist.Name, wishlist.Description,
+            wishlist.Id,
+            wishlist.Name,
+            wishlist.Description,
             CreatedAt = wishlist.CreatedAt.ToString("yyyy-MM-dd"),
             Places = wishlist.Places.Select(p => new
             {
-                p.Id, p.Name, p.Category, p.Latitude, p.Longitude, p.Description,
+                p.Id,
+                p.Name,
+                p.Category,
+                p.Latitude,
+                p.Longitude,
+                p.Description,
                 VisitDate = p.VisitDate?.ToString("yyyy-MM-dd")
             })
         });
@@ -501,9 +549,16 @@ public class OllamaChatService(
             places = places.Where(p => p.Category == cat).ToList();
         return JsonSerializer.Serialize(places.Select(p => new
         {
-            p.Id, p.Name, p.Category, p.Latitude, p.Longitude, p.Description,
-            WishlistId = p.WishlistId, WishlistName = p.Wishlist?.Name,
-            VisitDate = p.VisitDate?.ToString("yyyy-MM-dd"), Tags = p.Tags
+            p.Id,
+            p.Name,
+            p.Category,
+            p.Latitude,
+            p.Longitude,
+            p.Description,
+            WishlistId = p.WishlistId,
+            WishlistName = p.Wishlist?.Name,
+            VisitDate = p.VisitDate?.ToString("yyyy-MM-dd"),
+            Tags = p.Tags
         }));
     }
 
@@ -513,14 +568,22 @@ public class OllamaChatService(
         if (place is null) return "Place not found.";
         return JsonSerializer.Serialize(new
         {
-            place.Id, place.Name, place.Category, place.Latitude, place.Longitude,
-            place.Description, place.Notes, place.Url,
-            WishlistId = place.WishlistId, WishlistName = place.Wishlist?.Name,
-            VisitDate = place.VisitDate?.ToString("yyyy-MM-dd"), Tags = place.Tags
+            place.Id,
+            place.Name,
+            place.Category,
+            place.Latitude,
+            place.Longitude,
+            place.Description,
+            place.Notes,
+            place.Url,
+            WishlistId = place.WishlistId,
+            WishlistName = place.Wishlist?.Name,
+            VisitDate = place.VisitDate?.ToString("yyyy-MM-dd"),
+            Tags = place.Tags
         });
     }
 
-    private async Task<string> CreatePlaceAsync(JsonElement args, string userId)
+    private async Task<string> CreatePlaceWishlistAsync(JsonElement args, string userId)
     {
         var name = Str(args, "name");
         var category = Str(args, "category");
@@ -552,6 +615,37 @@ public class OllamaChatService(
         return JsonSerializer.Serialize(new { created.Id, created.Name, Message = "Place created successfully." });
     }
 
+    private async Task<string> CreatePlaceTripAsync(JsonElement args, string userId)
+    {
+        var name = Str(args, "name");
+        var category = Str(args, "category");
+        var tripId = Str(args, "trip_id");
+        if (name is null || category is null || tripId is null)
+            return "Missing required parameters: name, category, trip_id.";
+        if (!Enum.TryParse<PlaceCategory>(category, true, out var cat))
+            return $"Invalid category: {category}. Valid values: {string.Join(", ", Enum.GetNames<PlaceCategory>())}";
+        if (!TryGetDouble(args, "latitude", out var lat) || !TryGetDouble(args, "longitude", out var lon))
+            return "Missing required parameters: latitude, longitude.";
+
+        if (!await tripRepository.CanUserAccessAsync(tripId, userId))
+            return "Access denied: you do not have permission to add places to this trip.";
+
+        var place = new Models.Place
+        {
+            Name = name,
+            Category = cat,
+            Latitude = lat,
+            Longitude = lon,
+            TripId = tripId,
+            Description = Str(args, "description") ?? string.Empty,
+            Notes = Str(args, "notes"),
+            Url = Str(args, "url"),
+            VisitDate = Str(args, "visit_date") is { } vd && DateTime.TryParseExact(vd, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var vdDt) ? vdDt : null,
+            Tags = Str(args, "tags")?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList() ?? []
+        };
+        var created = await placeRepository.AddAsync(place);
+        return JsonSerializer.Serialize(new { created.Id, created.Name, Message = "Place created successfully." });
+    }
     private async Task<string> UpdatePlaceAsync(JsonElement args, string userId)
     {
         var placeId = Str(args, "place_id");
@@ -661,10 +755,10 @@ public class OllamaChatService(
         MakeTool("list_places", "List all places accessible to the current user, optionally filtered by category.",
             Props(("category", "string",
                 "Optional category filter: Viewpoint, Museum, Restaurant, Nature, Activity, Accommodation, Shopping, Entertainment, Race, Other."))),
-        MakeTool("get_place", "Get details of a specific place by ID.",
+        MakeTool("get_place", "Get details of a specific place from a Wishlist or Trip by ID.",
             Props(("place_id", "string", "The place ID.")),
             ["place_id"]),
-        MakeTool("create_place", "Create a new place in a wishlist.",
+        MakeTool("create_place_wishlist", "Create a new place in a wishlist.",
             Props(
                 ("name", "string", "The name of the place."),
                 ("category", "string",
@@ -678,6 +772,20 @@ public class OllamaChatService(
                 ("visit_date", "string", "Optional visit date in yyyy-MM-dd format."),
                 ("tags", "string", "Optional comma-separated tags.")),
             ["name", "category", "latitude", "longitude", "wishlist_id"]),
+        MakeTool("create_place_trip", "Create a new place in a trip.",
+            Props(
+                ("name", "string", "The name of the place."),
+                ("category", "string",
+                    "Category: Viewpoint, Museum, Restaurant, Nature, Activity, Accommodation, Shopping, Entertainment, Race, Other."),
+                ("latitude", "number", "Latitude coordinate."),
+                ("longitude", "number", "Longitude coordinate."),
+                ("trip_id", "string", "The trip ID to add this place to."),
+                ("description", "string", "Optional description."),
+                ("notes", "string", "Optional notes."),
+                ("url", "string", "Optional URL with more information."),
+                ("visit_date", "string", "Optional visit date in yyyy-MM-dd format."),
+                ("tags", "string", "Optional comma-separated tags.")),
+            ["name", "category", "latitude", "longitude", "trip_id"]),
         MakeTool("update_place", "Update an existing place's details.",
             Props(
                 ("place_id", "string", "The ID of the place to update."),
@@ -715,9 +823,13 @@ public class OllamaChatService(
                 parameters = new
                 {
                     type = "object",
-                    properties = properties ?? new Dictionary<string, object>(),
-                    required = required ?? Array.Empty<string>()
+                    properties = properties ?? [],
+                    required = required ?? []
                 }
             }
         };
+
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Data: {data}")]
+    private partial void LogData(string data);
 }
