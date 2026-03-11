@@ -164,13 +164,45 @@ public abstract partial class ChatServiceBase(
 
     protected void TrimHistory()
     {
-        var maxMessages = int.TryParse(configuration["Ollama:MaxHistoryMessages"], out var n) && n > 0
-            ? n
-            : DefaultMaxHistoryMessages;
+        var maxMessages = GetConfiguredMaxHistoryMessages();
         if (History.Count > maxMessages)
             History.RemoveRange(0, History.Count - maxMessages);
     }
 
+    private int GetConfiguredMaxHistoryMessages()
+    {
+        // 1. Provider-agnostic key
+        if (int.TryParse(configuration["AI:MaxHistoryMessages"], out var generic) && generic > 0)
+        {
+            return generic;
+        }
+
+        // 2. Provider-specific overrides based on AI:Provider
+        var provider = configuration["AI:Provider"];
+        string? providerSpecificKey = provider switch
+        {
+            var p when string.Equals(p, "Ollama", System.StringComparison.OrdinalIgnoreCase)
+                => "Ollama:MaxHistoryMessages",
+            var p when string.Equals(p, "OpenAI", System.StringComparison.OrdinalIgnoreCase)
+                => "OpenAI:MaxHistoryMessages",
+            _ => null
+        };
+
+        if (providerSpecificKey is not null &&
+            int.TryParse(configuration[providerSpecificKey], out var providerSpecific) &&
+            providerSpecific > 0)
+        {
+            return providerSpecific;
+        }
+
+        // 3. Backwards-compatible fallback to legacy Ollama key
+        if (int.TryParse(configuration["Ollama:MaxHistoryMessages"], out var legacy) && legacy > 0)
+        {
+            return legacy;
+        }
+
+        return DefaultMaxHistoryMessages;
+    }
     protected ChatMessage BuildSystemMessage()
     {
         var sb = new StringBuilder();
