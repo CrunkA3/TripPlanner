@@ -165,8 +165,20 @@ public abstract partial class ChatServiceBase(
     protected void TrimHistory()
     {
         var maxMessages = GetConfiguredMaxHistoryMessages();
+
         if (History.Count > maxMessages)
-            History.RemoveRange(0, History.Count - maxMessages);
+        {
+            var removeCount = History.Count - maxMessages;
+            History.RemoveRange(0, removeCount);
+        }
+
+        // Ensure history does not start with orphan tool messages after trimming.
+        // Tool messages require a preceding assistant tool_call; if that caller was
+        // trimmed away, drop the remaining leading tool messages to keep a valid sequence.
+        while (History.Count > 0 && string.Equals(History[0].Role, "tool", StringComparison.OrdinalIgnoreCase))
+        {
+            History.RemoveAt(0);
+        }
     }
 
     private int GetConfiguredMaxHistoryMessages()
