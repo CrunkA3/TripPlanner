@@ -93,6 +93,8 @@ builder.Services.AddHttpClient("Ollama", client =>
 });
 
 // Register HttpClient for OpenAI (cloud LLM – used when AI:Provider = "OpenAI")
+// OpenAI:BaseUrl can be overridden to point at any OpenAI-compatible proxy (e.g. LiteLLM, LocalAI, Ollama's OpenAI shim).
+// Note: Azure OpenAI uses a different URL path and auth header and is not supported out-of-the-box.
 var openAIBaseUrl = builder.Configuration["OpenAI:BaseUrl"] ?? "https://api.openai.com";
 var openAIApiKey = builder.Configuration["OpenAI:ApiKey"] ?? string.Empty;
 builder.Services.AddHttpClient("OpenAI", client =>
