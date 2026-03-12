@@ -204,6 +204,7 @@
     private string? _pendingUserMessage;
     private string? _jobError;
     private CancellationTokenSource? _pollingCts;
+    private bool _shouldScrollToBottom;
 
     protected override async Task OnInitializedAsync()
     {
@@ -250,7 +251,7 @@
                 StartPolling();
             }
 
-            await ScrollToBottomAsync();
+            _shouldScrollToBottom = true;
         }
     }
 
@@ -259,6 +260,12 @@
         if (firstRender)
         {
             await TrySetUserLocationAsync();
+        }
+
+        if (_shouldScrollToBottom)
+        {
+            _shouldScrollToBottom = false;
+            await ScrollToBottomAsync();
         }
     }
 
@@ -309,8 +316,8 @@
         _activeJobId = job.Id;
         _pendingUserMessage = message;
         _isThinking = true;
+        _shouldScrollToBottom = true;
         StateHasChanged();
-        await ScrollToBottomAsync();
 
         StartPolling();
     }
@@ -386,7 +393,7 @@
             _conversations = await ConversationRepository.GetByUserAsync(_currentUser.Id);
         }
 
-        await ScrollToBottomAsync();
+        _shouldScrollToBottom = true;
     }
 
     private async Task RetryLastMessage()
