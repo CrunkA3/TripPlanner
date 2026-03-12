@@ -391,7 +391,7 @@ public abstract partial class ChatServiceBase(
         if (!DateTime.TryParseExact(startDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var sd) ) return "no valid start date";
         if (!DateTime.TryParseExact(endDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var ed)) return "no valid end date";
 
-        var dateDiff = sd - ed;
+        var dateDiff = ed - sd;
         if (dateDiff.TotalDays < 0)
             return "End date cannot be before start date.";
 
@@ -402,7 +402,7 @@ public abstract partial class ChatServiceBase(
             OwnerId = userId,
             StartDate = sd,
             EndDate = ed,
-            Days = [.. Enumerable.Range(0, (int)dateDiff.TotalDays)
+            Days = [.. Enumerable.Range(0, (int)dateDiff.TotalDays + 1)
                 .Select(i => new TripDay
                 {
                     DayNumber = i + 1,
