@@ -135,7 +135,7 @@ TripPlanner.Web/
 │   ├── PlaceAnalysisResult.cs # Ergebnis der URL-Analyse
 │   ├── Trip.cs               # Reise mit Eigentümerschaft
 │   ├── SharedTrip.cs         # m:n User-Trip-Sharing
-│   ├── ShareLevel.cs         # Enum: Owner / Viewer (Wunschlisten-Sharing)
+│   ├── ShareLevel.cs         # Enum: Owner / Editor / Viewer (Wunschlisten-Sharing)
 │   ├── Accommodation.cs      # Unterkunft mit Check-in/-out
 │   ├── ChatConversation.cs   # Persistente Chat-Unterhaltung mit Nachrichten
 │   ├── ChatJob.cs            # Hintergrundjob für Chat-Verarbeitung
