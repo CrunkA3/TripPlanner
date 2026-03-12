@@ -3,7 +3,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using TripPlanner.Web.Models;
 
-namespace TripPlanner.Web.Services;
+namespace TripPlanner.Web.Services.OpenAI;
 
 /// <summary>
 /// <see cref="IPlaceAnalysisService"/> implementation backed by the OpenAI Chat Completions API.

@@ -3,7 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using TripPlanner.Web.Repositories;
 
-namespace TripPlanner.Web.Services;
+namespace TripPlanner.Web.Services.OpenAI;
 
 /// <summary>
 /// Chat service implementation backed by the OpenAI Chat Completions API.
@@ -20,50 +20,6 @@ public partial class OpenAIChatService(
     WeatherService weatherService)
     : ChatServiceBase(configuration, logger, tripRepository, wishlistRepository, placeRepository, conversationRepository, weatherService)
 {
-    // ── OpenAI request message types ─────────────────────────────────────────────
-
-    private sealed class OpenAIRequestMessage
-    {
-        /// <summary>
-        /// Gets or sets the role associated with the user or entity.
-        /// </summary>
-        [JsonPropertyName("role")]
-        public string Role { get; set; } = string.Empty;
-
-        /// <summary>
-        /// Gets or sets the textual content associated with this instance.
-        /// </summary>
-        [JsonPropertyName("content")]
-        public string? Content { get; set; }
-
-        /// <summary>
-        /// Gets or sets the collection of tool calls associated with the request.
-        /// </summary>
-        /// <remarks>Each tool call in the collection represents an invocation of a tool as part of the
-        /// request. The property may be null if no tool calls are present.</remarks>
-        [JsonPropertyName("tool_calls"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public List<OpenAIRequestToolCall>? ToolCalls { get; set; }
-
-        /// <summary>
-        /// Gets or sets the identifier of the tool call associated with this object.
-        /// </summary>
-        [JsonPropertyName("tool_call_id"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public string? ToolCallId { get; set; }
-    }
-
-    private sealed class OpenAIRequestToolCall
-    {
-        [JsonPropertyName("id")] public string Id { get; set; } = string.Empty;
-        [JsonPropertyName("type")] public string Type { get; set; } = "function";
-        [JsonPropertyName("function")] public OpenAIRequestToolCallFunction Function { get; set; } = new();
-    }
-
-    private sealed class OpenAIRequestToolCallFunction
-    {
-        [JsonPropertyName("name")] public string Name { get; set; } = string.Empty;
-        // OpenAI requires arguments as a JSON string, not an object.
-        [JsonPropertyName("arguments")] public string Arguments { get; set; } = string.Empty;
-    }
 
     // ── OpenAI SSE streaming response types ──────────────────────────────────────
 

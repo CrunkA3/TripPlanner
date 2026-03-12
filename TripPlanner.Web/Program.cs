@@ -12,6 +12,7 @@ using TripPlanner.Web.McpTools;
 using TripPlanner.Web.Models;
 using TripPlanner.Web.Repositories;
 using TripPlanner.Web.Services;
+using TripPlanner.Web.Services.OpenAI;
 
 var builder = WebApplication.CreateBuilder(args);
 
