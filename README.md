@@ -471,7 +471,7 @@ Startet `apiservice` und `webfrontend` mit Health Checks.
 docker-compose up --build
 ```
 Startet SQL Server + Ollama + Webanwendung; Web erreichbar auf Port `8980` (HTTP) und `8981` (HTTPS).  
-Bei Ollama-Konfiguration wird das `llama3.2`-Modell beim ersten Start automatisch heruntergeladen.
+Das Docker-Compose-Setup startet standardmäßig Ollama und lädt beim ersten Start das `llama3.2`-Modell über den Service `ollama-model-init` automatisch herunter.
 
 ### Datenbankmigrationen
 Immer aus dem `TripPlanner.Web`-Verzeichnis ausführen:
