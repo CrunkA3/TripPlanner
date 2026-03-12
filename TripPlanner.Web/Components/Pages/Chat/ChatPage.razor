@@ -107,7 +107,7 @@
                 {
                     <div style="display: flex; justify-content: flex-end;">
                         <FluentCard Style="max-width: 85%; background: var(--accent-fill-rest); color: var(--foreground-on-accent-rest); padding: 10px 14px; border-radius: 12px 12px 4px 12px;">
-                            <FluentLabel Style="color: inherit; white-space: pre-wrap; word-break: break-word;">@msg.Content</FluentLabel>
+                            <MarkdownSection Content="@msg.Content" />
                         </FluentCard>
                     </div>
                 }
@@ -115,7 +115,7 @@
                 {
                     <div style="display: flex; justify-content: flex-start;">
                         <FluentCard Style="max-width: 90%; padding: 10px 14px; border-radius: 12px 12px 12px 4px;">
-                            <pre style="white-space: pre-wrap; font-family: inherit; margin: 0; word-break: break-word;">@msg.Content</pre>
+                            <MarkdownSection Content="@msg.Content" />
                         </FluentCard>
                     </div>
                 }
