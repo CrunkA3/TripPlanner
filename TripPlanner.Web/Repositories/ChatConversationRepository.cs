@@ -37,7 +37,7 @@ public class ChatConversationRepository(ApplicationDbContext context) : IChatCon
             .ExecuteUpdateAsync(s => s.SetProperty(c => c.Title, title));
     }
 
-    public async Task AddMessageAsync(string conversationId, string role, string content, string userId, string? toolCallsJson = null)
+    public async Task AddMessageAsync(string conversationId, string role, string content, string userId, string? toolCallsJson = null, string? toolCallId = null)
     {
         await using var transaction = await context.Database.BeginTransactionAsync();
 
@@ -58,6 +58,7 @@ public class ChatConversationRepository(ApplicationDbContext context) : IChatCon
             Role = role,
             Content = content,
             ToolCallsJson = toolCallsJson,
+            ToolCallId = toolCallId,
             CreatedAt = now
         });
         await context.SaveChangesAsync();

@@ -74,7 +74,7 @@ public partial class ChatBackgroundService(
     {
         using var scope = scopeFactory.CreateScope();
         var jobRepo = scope.ServiceProvider.GetRequiredService<IChatJobRepository>();
-        var chatService = scope.ServiceProvider.GetRequiredService<OllamaChatService>();
+        var chatService = scope.ServiceProvider.GetRequiredService<IChatService>();
         var userManager = scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<ApplicationUser>>();
 
         var pendingJobs = await jobRepo.GetPendingJobsAsync(MaxJobsPerCycle);
@@ -91,7 +91,7 @@ public partial class ChatBackgroundService(
     private async Task ProcessJobAsync(
         ChatJob job,
         IChatJobRepository jobRepo,
-        OllamaChatService chatService,
+        IChatService chatService,
         Microsoft.AspNetCore.Identity.UserManager<ApplicationUser> userManager,
         CancellationToken cancellationToken)
     {
