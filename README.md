@@ -77,13 +77,14 @@ Eine moderne **Blazor Server**-Webanwendung zur Reiseplanung und Verwaltung von 
 - Seitenpanel mit Ortsdetails
 
 ### 6. KI-Assistent (AI Trip Assistant)
-- **Chat-Interface** unter `/chat` mit einem lokalen Sprachmodell (Ollama)
+- **Chat-Interface** unter `/chat` mit konfigurierbarem KI-Backend:
+  - **Ollama** (lokal, Standard-Modell: `llama3.2`) oder **OpenAI-kompatible API** (z. B. `gpt-4o-mini`, `gpt-4o`, `gpt-3.5-turbo`) – wählbar über `AI:Provider` in `appsettings.json`
 - Der Assistent kann Reisen, Wunschlisten und Orte verwalten:
   - Reisen und Wunschlisten auflisten, anlegen, bearbeiten und löschen
   - Orte anlegen, bearbeiten, löschen und nach Kategorie filtern
-- Conversation-History je Browser-Tab (isoliert pro Sitzung)
+- **Conversation-History** persistent in der Datenbank gespeichert (pro Nutzer, mehrere Unterhaltungen)
+- **Hintergrundverarbeitung**: Anfragen werden als `ChatJob` in der Datenbank persistiert und vom `ChatBackgroundService` asynchron verarbeitet – verhindert SignalR-Timeouts bei langen LLM-Anfragen
 - Konfigurierbar über `appsettings.json` (Modell, Basis-URL, History-Länge)
-- Standard-Modell: `llama3.2`
 
 ### 7. MCP-Server (Model Context Protocol)
 - **MCP-Endpunkt** unter `/mcp` (HTTP-Transport)
@@ -134,7 +135,11 @@ TripPlanner.Web/
 │   ├── PlaceAnalysisResult.cs # Ergebnis der URL-Analyse
 │   ├── Trip.cs               # Reise mit Eigentümerschaft
 │   ├── SharedTrip.cs         # m:n User-Trip-Sharing
+│   ├── ShareLevel.cs         # Enum: Owner / Editor / Viewer (Wunschlisten-Sharing)
 │   ├── Accommodation.cs      # Unterkunft mit Check-in/-out
+│   ├── ChatConversation.cs   # Persistente Chat-Unterhaltung mit Nachrichten
+│   ├── ChatJob.cs            # Hintergrundjob für Chat-Verarbeitung
+│   ├── ChatJobStatus.cs      # Enum: Pending / Processing / Completed / Failed
 │   ├── UrlImportJob.cs       # Hintergrundjob für URL-Import
 │   ├── UrlImportJobStatus.cs # Status des Import-Jobs
 │   ├── GpxTrack.cs
@@ -143,19 +148,27 @@ TripPlanner.Web/
 │   ├── IWishlistRepository.cs / WishlistRepository.cs
 │   ├── IPlaceRepository.cs   / PlaceRepository.cs
 │   ├── ITripRepository.cs    / EfTripRepository.cs
-│   ├── IGpxRepository.cs     / EfGpxRepository.cs
+│   ├── IGpxRepository.cs     / GpxRepository.cs
+│   ├── IChatConversationRepository.cs / ChatConversationRepository.cs
+│   ├── IChatJobRepository.cs / ChatJobRepository.cs
 │   └── IUrlImportJobRepository.cs / UrlImportJobRepository.cs
 ├── Services/                 # Geschäftslogik
 │   ├── UserService.cs        # Authentifizierungs-Hilfsmethoden
 │   ├── GpxService.cs         # GPX-Parsing und Berechnungen
 │   ├── RoutingService.cs     # Distanz- und Zeitberechnungen
-│   ├── OllamaChatService.cs  # KI-Chatbot (Ollama)
-│   ├── OllamaPlaceAnalysisService.cs # KI-gestützte URL-Analyse
+│   ├── IChatService.cs       # Interface für Chat-Dienste
+│   ├── ChatServiceBase.cs    # Abstrakte Basisklasse für Chat (Tool-Calling, History)
+│   ├── OllamaChatService.cs  # KI-Chatbot via lokales Ollama-Modell
+│   ├── OllamaPlaceAnalysisService.cs # KI-gestützte URL-Analyse (Ollama)
+│   ├── ChatBackgroundService.cs      # Hosted Service für asynchrone Chat-Verarbeitung
 │   ├── UrlImportBackgroundService.cs # Hintergrunddienst für URL-Importe
 │   ├── NominatimGeocodingService.cs  # Geocoding via OpenStreetMap
 │   ├── WeatherService.cs     # Wettervorhersage via Open-Meteo
 │   ├── IGeocodingService.cs
-│   └── IPlaceAnalysisService.cs
+│   ├── IPlaceAnalysisService.cs
+│   └── OpenAI/               # Alternativer KI-Anbieter (OpenAI-kompatible API)
+│       ├── OpenAIChatService.cs
+│       └── OpenAIPlaceAnalysisService.cs
 └── Components/
     ├── Account/              # Authentifizierungsseiten (Login, Register, …)
     │   └── Pages/Manage/
@@ -178,7 +191,7 @@ TripPlanner.Web/
 - **Authentifizierung**: ASP.NET Core Identity (Cookie-basiert) + Passkeys (WebAuthn) + MCP API-Key
 - **UI-Bibliothek**: Microsoft Fluent UI Blazor Components 4.14.0
 - **Karte**: MapLibre GL JS (Integration in MapPage)
-- **KI/LLM**: Ollama (lokales Sprachmodell, Standard: `llama3.2`)
+- **KI/LLM**: Ollama (lokal, Standard: `llama3.2`) **oder** OpenAI-kompatible API – konfigurierbar über `AI:Provider`
 - **MCP**: ModelContextProtocol.AspNetCore 1.0.0
 - **Geocoding**: OpenStreetMap Nominatim API
 - **Wetter**: Open-Meteo API (kostenlos, keine Registrierung erforderlich)
@@ -204,8 +217,14 @@ TripPlanner.Web/
 #### OllamaChatService
 - Kommunikation mit lokalem Ollama-Server (`/api/chat`)
 - Integrierte Tool-Calls für Reisen, Wunschlisten und Orte (CRUD-Operationen, s. MCP-Sektion)
-- Conversation-History pro Blazor-Circuit (Browser-Tab-Isolierung)
+- Conversation-History persistent in der Datenbank gespeichert
 - Konfigurierbar über `Ollama`-Sektion in `appsettings.json`
+
+#### ChatBackgroundService
+- Hosted Background Service, der alle 3 Sekunden die Datenbank auf ausstehende `ChatJob`-Einträge prüft (Intervall und max. Jobs pro Zyklus sind hardcodierte Konstanten)
+- Verarbeitet bis zu 3 Jobs pro Zyklus und delegiert an den konfigurierten `IChatService`
+- Verhindert SignalR-Timeouts bei langen LLM-Antworten, da die Blazor-Komponente nur den Job erstellt und den Status per Polling abfragt
+- Setzt beim Start hängen gebliebene Jobs (Status `Processing`) automatisch zurück
 
 #### OllamaPlaceAnalysisService
 - Ruft URL ab und extrahiert Text der Webseite
@@ -237,6 +256,7 @@ TripPlanner.Web/
 - SharedWishlists: List<UserWishlist>
 - OwnedTrips: List<Trip>
 - SharedTrips: List<SharedTrip>
+- ChatConversations: List<ChatConversation>
 ```
 
 **Wishlist**
@@ -325,6 +345,26 @@ TripPlanner.Web/
 - SharedAt: DateTime
 ```
 
+**ChatConversation**
+```csharp
+- Id: string (GUID)
+- UserId: string (FK to ApplicationUser)
+- Title: string  // auto-generated or user-defined
+- Messages: List<ChatMessage>
+- CreatedAt, UpdatedAt: DateTime
+```
+
+**ChatJob**
+```csharp
+- Id: string (GUID)
+- ConversationId: string (FK to ChatConversation)
+- UserId: string
+- UserMessage: string
+- Status: ChatJobStatus (Pending / Processing / Completed / Failed)
+- ErrorMessage: string?
+- CreatedAt: DateTime / CompletedAt: DateTime?
+```
+
 ---
 
 ## Einrichtung & Entwicklung
@@ -333,7 +373,7 @@ TripPlanner.Web/
 - .NET 10 SDK
 - **SQL Server** (lokal oder per Docker)
 - Visual Studio 2022, VS Code oder Rider
-- **Ollama** (optional, für KI-Assistent und URL-Import)
+- **Ollama** (optional, für KI-Assistent mit lokalem Modell) **oder** OpenAI API-Key
 
 ### Erste Schritte
 
@@ -370,7 +410,9 @@ TripPlanner.Web/
    }
    ```
 
-4. **Ollama einrichten** (optional, für KI-Funktionen):
+4. **KI-Anbieter einrichten** (optional, für KI-Funktionen):
+
+   **Option A – Ollama (lokal):**
    ```bash
    # Ollama installieren: https://ollama.com
    ollama pull llama3.2
@@ -380,10 +422,29 @@ TripPlanner.Web/
    Konfiguration in `TripPlanner.Web/appsettings.json`:
    ```json
    {
+     "AI": {
+       "Provider": "Ollama"
+     },
      "Ollama": {
        "BaseUrl": "http://localhost:11434",
        "Model": "llama3.2",
        "MaxHistoryMessages": 40
+     }
+   }
+   ```
+
+   **Option B – OpenAI (Cloud):**
+   
+   Konfiguration in `TripPlanner.Web/appsettings.json`:
+   ```json
+   {
+     "AI": {
+       "Provider": "OpenAI"
+     },
+     "OpenAI": {
+       "BaseUrl": "https://api.openai.com",
+       "Model": "gpt-4o-mini",
+       "ApiKey": "<your-openai-api-key>"
      }
    }
    ```
@@ -409,7 +470,8 @@ Startet `apiservice` und `webfrontend` mit Health Checks.
 ```bash
 docker-compose up --build
 ```
-Startet SQL Server + Webanwendung; Web erreichbar auf Port `8980` (HTTP) und `8981` (HTTPS).
+Startet SQL Server + Ollama + Webanwendung; Web erreichbar auf Port `8980` (HTTP) und `8981` (HTTPS).  
+Das Docker-Compose-Setup startet standardmäßig Ollama und lädt beim ersten Start das `llama3.2`-Modell über den Service `ollama-model-init` automatisch herunter.
 
 ### Datenbankmigrationen
 Immer aus dem `TripPlanner.Web`-Verzeichnis ausführen:
@@ -457,7 +519,9 @@ dotnet test
 - Fluent UI Integration
 - Parallax-Heldenbereich auf der Startseite
 - Kartenansicht mit MapLibre GL JS
-- **KI-Assistent** (Ollama-Chat) mit Trip/Wishlist/Places-Tool-Calls
+- **KI-Assistent** (Ollama oder OpenAI) mit Trip/Wishlist/Places-Tool-Calls
+- **Chat-Hintergrundverarbeitung** via `ChatBackgroundService` (verhindert SignalR-Timeouts)
+- **Persistente Chat-Unterhaltungen** in der Datenbank (mehrere Konversationen pro Nutzer)
 - **MCP-Server** (`/mcp`) mit API-Key-Authentifizierung
 - **URL-Import**: KI-gestützte Ortsextraktion aus Webseiten
 - **Geocoding** via OpenStreetMap Nominatim
@@ -465,7 +529,7 @@ dotnet test
 
 ⚠️ **Bekannte Einschränkungen**:
 - Ältere `WishlistPage` (`/wishlist`) noch vorhanden (ersetzt durch `WishlistsPage` / `WishlistDetailPage`)
-- KI-Funktionen erfordern eine laufende Ollama-Instanz
+- KI-Funktionen erfordern entweder eine laufende Ollama-Instanz (lokal) oder einen gültigen OpenAI API-Key
 
 🔄 **Noch ausstehend**:
 1. Drag-and-Drop für Tagesplanung
