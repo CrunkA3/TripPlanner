@@ -229,6 +229,7 @@ public abstract partial class ChatServiceBase(
                           $"longitude {_userLongitude.Value.ToString("F4", CultureInfo.InvariantCulture)}.");
             sb.AppendLine("Use the get_weather tool to look up current or forecasted weather for any location.");
         }
+        sb.AppendLine("Keep names and titles short");
         sb.AppendLine("Use the Places from Wishlists and Trips");
         sb.AppendLine("Think ahead and make sensible suggestions");
         sb.Append("Always be concise and helpful.");
