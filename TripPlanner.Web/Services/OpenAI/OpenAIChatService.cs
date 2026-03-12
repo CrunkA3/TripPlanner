@@ -1,6 +1,5 @@
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using TripPlanner.Web.Repositories;
 
 namespace TripPlanner.Web.Services.OpenAI;
@@ -20,40 +19,6 @@ public partial class OpenAIChatService(
     WeatherService weatherService)
     : ChatServiceBase(configuration, logger, tripRepository, wishlistRepository, placeRepository, conversationRepository, weatherService)
 {
-
-    // ── OpenAI SSE streaming response types ──────────────────────────────────────
-
-    private sealed class OpenAIStreamChunk
-    {
-        [JsonPropertyName("choices")] public List<OpenAIStreamChoice> Choices { get; set; } = [];
-    }
-
-    private sealed class OpenAIStreamChoice
-    {
-        [JsonPropertyName("delta")] public OpenAIStreamDelta Delta { get; set; } = new();
-        [JsonPropertyName("finish_reason")] public string? FinishReason { get; set; }
-    }
-
-    private sealed class OpenAIStreamDelta
-    {
-        [JsonPropertyName("role")] public string? Role { get; set; }
-        [JsonPropertyName("content")] public string? Content { get; set; }
-        [JsonPropertyName("tool_calls")] public List<OpenAIStreamToolCallDelta>? ToolCalls { get; set; }
-    }
-
-    private sealed class OpenAIStreamToolCallDelta
-    {
-        [JsonPropertyName("index")] public int Index { get; set; }
-        [JsonPropertyName("id")] public string? Id { get; set; }
-        [JsonPropertyName("function")] public OpenAIStreamToolCallFunctionDelta? Function { get; set; }
-    }
-
-    private sealed class OpenAIStreamToolCallFunctionDelta
-    {
-        [JsonPropertyName("name")] public string? Name { get; set; }
-        [JsonPropertyName("arguments")] public string? Arguments { get; set; }
-    }
-
     // ── Inference ────────────────────────────────────────────────────────────────
 
     /// <summary>
