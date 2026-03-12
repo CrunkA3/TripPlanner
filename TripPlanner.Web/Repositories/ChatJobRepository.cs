@@ -20,7 +20,7 @@ public class ChatJobRepository(ApplicationDbContext context) : IChatJobRepositor
     }
 
     public Task<ChatJob?> GetByIdAsync(string id, string userId) =>
-        context.ChatJobs.FirstOrDefaultAsync(j => j.Id == id && j.UserId == userId);
+        context.ChatJobs.AsNoTracking().FirstOrDefaultAsync(j => j.Id == id && j.UserId == userId);
 
     public Task<ChatJob?> GetActiveJobForConversationAsync(string conversationId, string userId) =>
         context.ChatJobs

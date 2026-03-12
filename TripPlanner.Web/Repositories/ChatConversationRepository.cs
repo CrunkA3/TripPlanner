@@ -14,6 +14,7 @@ public class ChatConversationRepository(ApplicationDbContext context) : IChatCon
 
     public Task<ChatConversation?> GetByIdAsync(string id, string userId) =>
         context.ChatConversations
+            .AsNoTracking()
             .Include(c => c.Messages)
             .FirstOrDefaultAsync(c => c.Id == id && c.UserId == userId);
 
