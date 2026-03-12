@@ -19,6 +19,12 @@ public partial class MarkdownSection : FluentComponentBase
     [Inject]
     protected IJSRuntime JSRuntime { get; set; } = default!;
 
+    [Inject]
+    protected NavigationManager NavigationManager { get; set; } = default!;
+
+    [Inject]
+    protected IHttpClientFactory HttpClientFactory { get; set; } = default!;
+
 
     /// <summary>
     /// Gets or sets the Markdown content
@@ -100,6 +106,22 @@ public partial class MarkdownSection : FluentComponentBase
     /// <returns>MarkupString</returns>
     private async Task<MarkupString> MarkdownToMarkupStringAsync()
     {
+        if (!string.IsNullOrEmpty(FromAsset))
+        {
+            try
+            {
+                var httpClient = HttpClientFactory.CreateClient();
+                var assetPath = FromAsset.StartsWith('/') ? FromAsset : $"/{FromAsset}";
+                var url = NavigationManager.BaseUri.TrimEnd('/') + assetPath;
+                var markdown = await httpClient.GetStringAsync(url);
+                return ConvertToMarkupString(markdown);
+            }
+            catch (HttpRequestException ex)
+            {
+                return new MarkupString($"<p>Error loading asset '{FromAsset}': {ex.Message}</p>");
+            }
+        }
+
         return ConvertToMarkupString(Content);
     }
     private static MarkupString ConvertToMarkupString(string? value)
