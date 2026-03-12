@@ -22,6 +22,13 @@ public class ChatJobRepository(ApplicationDbContext context) : IChatJobRepositor
     public Task<ChatJob?> GetByIdAsync(string id, string userId) =>
         context.ChatJobs.FirstOrDefaultAsync(j => j.Id == id && j.UserId == userId);
 
+    public Task<ChatJob?> GetActiveJobForConversationAsync(string conversationId, string userId) =>
+        context.ChatJobs
+            .Where(j => j.ConversationId == conversationId && j.UserId == userId
+                        && (j.Status == ChatJobStatus.Pending || j.Status == ChatJobStatus.Processing))
+            .OrderByDescending(j => j.CreatedAt)
+            .FirstOrDefaultAsync();
+
     public Task<List<ChatJob>> GetPendingJobsAsync(int maxCount = 5) =>
         context.ChatJobs
             .Where(j => j.Status == ChatJobStatus.Pending)
