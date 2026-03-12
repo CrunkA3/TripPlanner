@@ -24,10 +24,29 @@ public partial class OpenAIChatService(
 
     private sealed class OpenAIRequestMessage
     {
-        [JsonPropertyName("role")] public string Role { get; set; } = string.Empty;
-        [JsonPropertyName("content")] public string? Content { get; set; }
+        /// <summary>
+        /// Gets or sets the role associated with the user or entity.
+        /// </summary>
+        [JsonPropertyName("role")]
+        public string Role { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Gets or sets the textual content associated with this instance.
+        /// </summary>
+        [JsonPropertyName("content")]
+        public string? Content { get; set; }
+
+        /// <summary>
+        /// Gets or sets the collection of tool calls associated with the request.
+        /// </summary>
+        /// <remarks>Each tool call in the collection represents an invocation of a tool as part of the
+        /// request. The property may be null if no tool calls are present.</remarks>
         [JsonPropertyName("tool_calls"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public List<OpenAIRequestToolCall>? ToolCalls { get; set; }
+
+        /// <summary>
+        /// Gets or sets the identifier of the tool call associated with this object.
+        /// </summary>
         [JsonPropertyName("tool_call_id"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? ToolCallId { get; set; }
     }
@@ -169,7 +188,7 @@ public partial class OpenAIChatService(
             catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "Failed to call OpenAI /v1/chat/completions");
+                LogOpenAICallFailed(ex);
                 var errMsg = $"I'm sorry, I couldn't connect to the AI service: {ex.Message}";
                 History.Add(new ChatMessage { Role = "assistant", Content = errMsg });
                 await ConversationRepository.AddMessageAsync(CurrentConversationId, "assistant", errMsg, userId);
@@ -225,8 +244,8 @@ public partial class OpenAIChatService(
             foreach (var toolCall in toolCalls)
             {
                 var toolResult = await ExecuteToolAsync(toolCall, userId, ct);
-                logger.LogInformation("Tool {Tool} returned: {Result}", toolCall.Function.Name,
-                    toolResult[..Math.Min(200, toolResult.Length)]);
+                LogToolResult(toolCall.Function.Name, toolResult[..Math.Min(200, toolResult.Length)]);
+
                 History.Add(new ChatMessage { Role = "tool", Content = toolResult, ToolCallId = toolCall.Id });
                 // Persist tool_call_id so reloaded conversations can reconstruct the correct
                 // assistant→tool mapping without relying on positional heuristics.
@@ -257,8 +276,10 @@ public partial class OpenAIChatService(
     /// </summary>
     private static List<OpenAIRequestMessage> BuildOpenAIMessages(ChatMessage systemMessage, IReadOnlyList<ChatMessage> history)
     {
-        var result = new List<OpenAIRequestMessage>();
-        result.Add(ConvertToRequestMessage(systemMessage, toolCallIdOverride: null));
+        List<OpenAIRequestMessage> result =
+        [
+            ConvertToRequestMessage(systemMessage, toolCallIdOverride: null)
+        ];
 
         // Track pending tool-call IDs so we can assign them to the following tool-result
         // messages even when the IDs were not stored (e.g. conversations created via Ollama).
@@ -330,6 +351,17 @@ public partial class OpenAIChatService(
             ToolCallId = toolCallIdOverride ?? msg.ToolCallId
         };
 
+
+
+
     [LoggerMessage(Level = LogLevel.Debug, Message = "OpenAI chunk: {data}")]
     private partial void LogChunk(string data);
+
+
+    [LoggerMessage(level: LogLevel.Warning, Message = "Failed to call OpenAI /v1/chat/completions")]
+    private partial void LogOpenAICallFailed(Exception ex);
+
+
+    [LoggerMessage(level: LogLevel.Information, Message = "Tool {tool} returned: {result}")]
+    private partial void LogToolResult(string tool, string result);
 }
