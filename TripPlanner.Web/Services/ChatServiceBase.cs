@@ -1,3 +1,4 @@
+using Microsoft.FluentUI.AspNetCore.Components.Extensions;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
@@ -221,13 +222,16 @@ public abstract partial class ChatServiceBase(
         sb.AppendLine("You are a helpful travel planning assistant for TripPlanner.");
         sb.AppendLine("You help users manage their trips, wishlists, and places.");
         sb.AppendLine("Use the available tools to access and modify the user's data.");
-        sb.AppendLine($"Today's date is {DateTime.UtcNow:yyyy-MM-dd} (UTC).");
+        sb.AppendLine($"Today's date and time is {DateTime.UtcNow:yyyy-MM-dd HH:mm} (UTC).");
         if (_userLatitude.HasValue && _userLongitude.HasValue)
         {
             sb.AppendLine($"The user's current location is latitude {_userLatitude.Value.ToString("F4", CultureInfo.InvariantCulture)}, " +
                           $"longitude {_userLongitude.Value.ToString("F4", CultureInfo.InvariantCulture)}.");
             sb.AppendLine("Use the get_weather tool to look up current or forecasted weather for any location.");
         }
+        sb.AppendLine("Keep names and titles short");
+        sb.AppendLine("Use the Places from Wishlists and Trips");
+        sb.AppendLine("Think ahead and make sensible suggestions");
         sb.Append("Always be concise and helpful.");
         return new ChatMessage { Role = "system", Content = sb.ToString() };
     }
@@ -384,14 +388,28 @@ public abstract partial class ChatServiceBase(
 
     private async Task<string> CreateTripAsync(string name, string? description, string? startDate, string? endDate, string userId)
     {
+        if (!DateTime.TryParseExact(startDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var sd) ) return "no valid start date";
+        if (!DateTime.TryParseExact(endDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var ed)) return "no valid end date";
+
+        var dateDiff = ed - sd;
+        if (dateDiff.TotalDays < 0)
+            return "End date cannot be before start date.";
+
         var trip = new Trip
         {
             Name = name,
             Description = description ?? string.Empty,
             OwnerId = userId,
-            StartDate = startDate is not null && DateTime.TryParseExact(startDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var sd) ? sd : null,
-            EndDate = endDate is not null && DateTime.TryParseExact(endDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var ed) ? ed : null
+            StartDate = sd,
+            EndDate = ed,
+            Days = [.. Enumerable.Range(0, (int)dateDiff.TotalDays + 1)
+                .Select(i => new TripDay
+                {
+                    DayNumber = i + 1,
+                    Date = sd.AddDays(i)
+                })]
         };
+
         var created = await tripRepository.AddAsync(trip);
         return JsonSerializer.Serialize(new { created.Id, created.Name, Message = "Trip created successfully." });
     }

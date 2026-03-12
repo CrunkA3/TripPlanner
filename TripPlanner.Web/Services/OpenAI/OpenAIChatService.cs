@@ -1,9 +1,8 @@
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using TripPlanner.Web.Repositories;
 
-namespace TripPlanner.Web.Services;
+namespace TripPlanner.Web.Services.OpenAI;
 
 /// <summary>
 /// Chat service implementation backed by the OpenAI Chat Completions API.
@@ -20,65 +19,6 @@ public partial class OpenAIChatService(
     WeatherService weatherService)
     : ChatServiceBase(configuration, logger, tripRepository, wishlistRepository, placeRepository, conversationRepository, weatherService)
 {
-    // ── OpenAI request message types ─────────────────────────────────────────────
-
-    private sealed class OpenAIRequestMessage
-    {
-        [JsonPropertyName("role")] public string Role { get; set; } = string.Empty;
-        [JsonPropertyName("content")] public string? Content { get; set; }
-        [JsonPropertyName("tool_calls"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public List<OpenAIRequestToolCall>? ToolCalls { get; set; }
-        [JsonPropertyName("tool_call_id"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public string? ToolCallId { get; set; }
-    }
-
-    private sealed class OpenAIRequestToolCall
-    {
-        [JsonPropertyName("id")] public string Id { get; set; } = string.Empty;
-        [JsonPropertyName("type")] public string Type { get; set; } = "function";
-        [JsonPropertyName("function")] public OpenAIRequestToolCallFunction Function { get; set; } = new();
-    }
-
-    private sealed class OpenAIRequestToolCallFunction
-    {
-        [JsonPropertyName("name")] public string Name { get; set; } = string.Empty;
-        // OpenAI requires arguments as a JSON string, not an object.
-        [JsonPropertyName("arguments")] public string Arguments { get; set; } = string.Empty;
-    }
-
-    // ── OpenAI SSE streaming response types ──────────────────────────────────────
-
-    private sealed class OpenAIStreamChunk
-    {
-        [JsonPropertyName("choices")] public List<OpenAIStreamChoice> Choices { get; set; } = [];
-    }
-
-    private sealed class OpenAIStreamChoice
-    {
-        [JsonPropertyName("delta")] public OpenAIStreamDelta Delta { get; set; } = new();
-        [JsonPropertyName("finish_reason")] public string? FinishReason { get; set; }
-    }
-
-    private sealed class OpenAIStreamDelta
-    {
-        [JsonPropertyName("role")] public string? Role { get; set; }
-        [JsonPropertyName("content")] public string? Content { get; set; }
-        [JsonPropertyName("tool_calls")] public List<OpenAIStreamToolCallDelta>? ToolCalls { get; set; }
-    }
-
-    private sealed class OpenAIStreamToolCallDelta
-    {
-        [JsonPropertyName("index")] public int Index { get; set; }
-        [JsonPropertyName("id")] public string? Id { get; set; }
-        [JsonPropertyName("function")] public OpenAIStreamToolCallFunctionDelta? Function { get; set; }
-    }
-
-    private sealed class OpenAIStreamToolCallFunctionDelta
-    {
-        [JsonPropertyName("name")] public string? Name { get; set; }
-        [JsonPropertyName("arguments")] public string? Arguments { get; set; }
-    }
-
     // ── Inference ────────────────────────────────────────────────────────────────
 
     /// <summary>
@@ -169,7 +109,7 @@ public partial class OpenAIChatService(
             catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "Failed to call OpenAI /v1/chat/completions");
+                LogOpenAICallFailed(ex);
                 var errMsg = $"I'm sorry, I couldn't connect to the AI service: {ex.Message}";
                 History.Add(new ChatMessage { Role = "assistant", Content = errMsg });
                 await ConversationRepository.AddMessageAsync(CurrentConversationId, "assistant", errMsg, userId);
@@ -225,8 +165,8 @@ public partial class OpenAIChatService(
             foreach (var toolCall in toolCalls)
             {
                 var toolResult = await ExecuteToolAsync(toolCall, userId, ct);
-                logger.LogInformation("Tool {Tool} returned: {Result}", toolCall.Function.Name,
-                    toolResult[..Math.Min(200, toolResult.Length)]);
+                LogToolResult(toolCall.Function.Name, toolResult[..Math.Min(200, toolResult.Length)]);
+
                 History.Add(new ChatMessage { Role = "tool", Content = toolResult, ToolCallId = toolCall.Id });
                 // Persist tool_call_id so reloaded conversations can reconstruct the correct
                 // assistant→tool mapping without relying on positional heuristics.
@@ -257,8 +197,10 @@ public partial class OpenAIChatService(
     /// </summary>
     private static List<OpenAIRequestMessage> BuildOpenAIMessages(ChatMessage systemMessage, IReadOnlyList<ChatMessage> history)
     {
-        var result = new List<OpenAIRequestMessage>();
-        result.Add(ConvertToRequestMessage(systemMessage, toolCallIdOverride: null));
+        List<OpenAIRequestMessage> result =
+        [
+            ConvertToRequestMessage(systemMessage, toolCallIdOverride: null)
+        ];
 
         // Track pending tool-call IDs so we can assign them to the following tool-result
         // messages even when the IDs were not stored (e.g. conversations created via Ollama).
@@ -330,6 +272,17 @@ public partial class OpenAIChatService(
             ToolCallId = toolCallIdOverride ?? msg.ToolCallId
         };
 
+
+
+
     [LoggerMessage(Level = LogLevel.Debug, Message = "OpenAI chunk: {data}")]
     private partial void LogChunk(string data);
+
+
+    [LoggerMessage(level: LogLevel.Warning, Message = "Failed to call OpenAI /v1/chat/completions")]
+    private partial void LogOpenAICallFailed(Exception ex);
+
+
+    [LoggerMessage(level: LogLevel.Information, Message = "Tool {tool} returned: {result}")]
+    private partial void LogToolResult(string tool, string result);
 }

@@ -48,18 +48,22 @@
             {
                 var isActive = conv.Id == ChatService.CurrentConversationId;
                 <FluentStack Orientation="Orientation.Horizontal"
-                             Style="@($"border-radius: 6px; padding: 2px 4px; background: {(isActive ? "var(--accent-fill-rest)" : "transparent")}; align-items: center;")">
-                    <FluentButton Appearance="Appearance.Stealth"
+                             Style="@($"border-radius: 6px; padding: 2px 4px; align-items: center;")">
+                    <FluentButton Appearance="@(isActive? Appearance.Accent: Appearance.Stealth)"
                                   OnClick="@(() => SelectConversation(conv.Id))"
-                                  Style="@($"flex: 1; text-align: left; overflow: hidden; color: {(isActive ? "var(--foreground-on-accent-rest)" : "inherit")}; min-width: 0;")">
+                                  Style="@($"flex: 1; text-align: left; overflow: hidden; min-width: 0;")">
                         <span style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.85rem;">@conv.Title</span>
                         <span style="display: block; font-size: 0.7rem; opacity: 0.7;">@FormatDate(conv.UpdatedAt ?? conv.CreatedAt)</span>
                     </FluentButton>
-                    <FluentButton Appearance="Appearance.Stealth"
-                                  IconStart="@(new Icons.Regular.Size16.Delete())"
-                                  Title="Delete conversation"
-                                  OnClick="@(() => DeleteConversation(conv.Id))"
-                                  Style="@($"flex-shrink: 0; color: {(isActive ? "var(--foreground-on-accent-rest)" : "inherit")};")" />
+
+                    @if (isActive)
+                    {
+                        <FluentButton Appearance="Appearance.Stealth"
+                                      IconStart="@(new Icons.Regular.Size16.Delete().WithColor(Color.Error))"
+                                      Title="Delete conversation"
+                                      OnClick="@(() => DeleteConversation(conv.Id))"
+                                      Style="flex-shrink: 0; color: var(--foreground-on-accent-rest);" />
+                    }
                 </FluentStack>
             }
             @if (!_conversations.Any())
@@ -103,7 +107,7 @@
                 {
                     <div style="display: flex; justify-content: flex-end;">
                         <FluentCard Style="max-width: 85%; background: var(--accent-fill-rest); color: var(--foreground-on-accent-rest); padding: 10px 14px; border-radius: 12px 12px 4px 12px;">
-                            <FluentLabel Style="color: inherit; white-space: pre-wrap; word-break: break-word;">@msg.Content</FluentLabel>
+                            <MarkdownSection Content="@msg.Content" />
                         </FluentCard>
                     </div>
                 }
@@ -111,7 +115,7 @@
                 {
                     <div style="display: flex; justify-content: flex-start;">
                         <FluentCard Style="max-width: 90%; padding: 10px 14px; border-radius: 12px 12px 12px 4px;">
-                            <pre style="white-space: pre-wrap; font-family: inherit; margin: 0; word-break: break-word;">@msg.Content</pre>
+                            <MarkdownSection Content="@msg.Content" />
                         </FluentCard>
                     </div>
                 }
@@ -165,7 +169,7 @@
             }
         </div>
 
-        <FluentCard Class="chat-input-card" Style="max-height: 200px; overflow: hidden;">
+        <FluentCard Class="chat-input-card">
             <FluentStack Orientation="Orientation.Horizontal" Style="gap: 8px; align-items: flex-end;">
                 <FluentTextArea @bind-Value="@_userInput"
                                 Placeholder="Ask me about your trips, wishlists, or places…"
