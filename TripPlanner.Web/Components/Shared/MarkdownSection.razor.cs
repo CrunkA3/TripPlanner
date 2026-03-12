@@ -106,15 +106,14 @@ public partial class MarkdownSection : FluentComponentBase
     {
         if (!string.IsNullOrWhiteSpace(value))
         {
-            var builder = new MarkdownPipelineBuilder()
-                    .UseAdvancedExtensions();
+            var pipeline = new MarkdownPipelineBuilder()
+                    .UseAdvancedExtensions()
+                    .DisableHtml()
+                    .Build();
 
-            var pipeline = builder.Build();
-
-            // Convert markdown string to HTML
+            // Convert markdown string to HTML, with raw HTML disabled to prevent XSS
             var html = Markdown.ToHtml(value, pipeline);
 
-            // Return sanitized HTML as a MarkupString that Blazor can render
             return new MarkupString(html);
         }
 
