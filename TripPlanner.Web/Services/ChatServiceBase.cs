@@ -733,20 +733,18 @@ public abstract partial class ChatServiceBase(
             fromStop.Id, toStop.Id, departure, Math.Clamp(results, 1, 6), ct);
 
         if (journeys.Count == 0)
-            return $"No connections found from '{fromStop.Name}' to '{toStop.Name}' around {departure:yyyy-MM-dd HH:mm} UTC.";
+            return $"No connections found from '{fromStop.Name}' to '{toStop.Name}' around {departure:yyyy-MM-dd HH:mm zzz}.";
 
         var sb = new StringBuilder();
         sb.AppendLine($"Transit connections from {fromStop.Name} to {toStop.Name}:");
         foreach (var j in journeys)
         {
-            var localDep = j.Departure.ToLocalTime();
-            var localArr = j.Arrival.ToLocalTime();
             var h = (int)j.Duration.TotalHours;
             var m = j.Duration.Minutes;
             var durationStr = h > 0 ? $"{h}h {m}min" : $"{m}min";
             var linesStr = j.Lines.Count > 0 ? string.Join(" → ", j.Lines) : "walk";
             var transfers = j.Transfers == 0 ? "direct" : $"{j.Transfers} transfer{(j.Transfers == 1 ? "" : "s")}";
-            sb.AppendLine($"  {localDep:HH:mm} → {localArr:HH:mm}  ({durationStr}, {transfers})  [{linesStr}]");
+            sb.AppendLine($"  {j.Departure:HH:mm zzz} → {j.Arrival:HH:mm zzz}  ({durationStr}, {transfers})  [{linesStr}]");
         }
         return sb.ToString();
     }
