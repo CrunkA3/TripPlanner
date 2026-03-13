@@ -20,11 +20,28 @@ public class BrowserTimeZoneService
 
         try
         {
+            // .NET 6+ handles IANA IDs on Windows and Windows IDs on non-Windows natively.
             _timeZone = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
         }
-        catch (TimeZoneNotFoundException)
+        catch (Exception ex) when (ex is TimeZoneNotFoundException or InvalidTimeZoneException)
         {
-            _timeZone = TimeZoneInfo.Utc;
+            // Fallback: browsers supply IANA IDs (e.g. "Europe/Berlin"). On older OS/runtime
+            // combinations an explicit IANA→Windows conversion may be required.
+            if (TimeZoneInfo.TryConvertIanaIdToWindowsId(timeZoneId, out var windowsId))
+            {
+                try
+                {
+                    _timeZone = TimeZoneInfo.FindSystemTimeZoneById(windowsId);
+                }
+                catch
+                {
+                    _timeZone = TimeZoneInfo.Utc;
+                }
+            }
+            else
+            {
+                _timeZone = TimeZoneInfo.Utc;
+            }
         }
         IsInitialized = true;
     }
