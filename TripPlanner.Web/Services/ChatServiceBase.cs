@@ -20,7 +20,8 @@ public abstract partial class ChatServiceBase(
     IWishlistRepository wishlistRepository,
     IPlaceRepository placeRepository,
     IChatConversationRepository conversationRepository,
-    WeatherService weatherService) : IChatService
+    WeatherService weatherService,
+    TransitService transitService) : IChatService
 {
     // ── Inner message/tool-call types ────────────────────────────────────────────
     // These are deliberately kept internal so subclasses can share the same types.
@@ -229,6 +230,7 @@ public abstract partial class ChatServiceBase(
                           $"longitude {_userLongitude.Value.ToString("F4", CultureInfo.InvariantCulture)}.");
             sb.AppendLine("Use the get_weather tool to look up current or forecasted weather for any location.");
         }
+        sb.AppendLine("Use the search_transit_connections tool to find public-transit (ÖPNV/train/bus) connections between any two stations or cities.");
         sb.AppendLine("Keep names and titles short");
         sb.AppendLine("Use the Places from Wishlists and Trips");
         sb.AppendLine("Think ahead and make sensible suggestions");
@@ -285,6 +287,11 @@ public abstract partial class ChatServiceBase(
                 "get_weather" => TryGetDouble(args, "latitude", out var wLat) && TryGetDouble(args, "longitude", out var wLon)
                     ? await GetWeatherAsync(wLat, wLon, Str(args, "date"))
                     : "Missing required parameters: latitude, longitude",
+                "search_transit_connections" => Str(args, "from") is { } transitFrom && !string.IsNullOrWhiteSpace(transitFrom)
+                    && Str(args, "to") is { } transitTo && !string.IsNullOrWhiteSpace(transitTo)
+                    ? await SearchTransitConnectionsAsync(transitFrom, transitTo, Str(args, "departure"),
+                        TryGetInt(args, "results", out var transitResults) ? transitResults : 3, ct)
+                    : "Missing required parameters: from, to",
                 _ => $"Unknown tool: {name}"
             };
         }
@@ -317,6 +324,29 @@ public abstract partial class ChatServiceBase(
         {
             if (val.ValueKind == JsonValueKind.Number) { value = val.GetDouble(); return true; }
             if (val.ValueKind == JsonValueKind.String && double.TryParse(val.GetString(), NumberStyles.Float, CultureInfo.InvariantCulture, out value)) return true;
+        }
+        value = 0;
+        return false;
+    }
+
+    protected static bool TryGetInt(JsonElement args, string key, out int value)
+    {
+        if (args.ValueKind == JsonValueKind.Object && args.TryGetProperty(key, out var val))
+        {
+            if (val.ValueKind == JsonValueKind.Number)
+            {
+                if (val.TryGetInt32(out value)) return true;
+                // Handle whole-number doubles like 3.0 that TryGetInt32 rejects
+                var d = val.GetDouble();
+                if (d == Math.Floor(d) && d is >= int.MinValue and <= int.MaxValue)
+                {
+                    value = (int)d;
+                    return true;
+                }
+            }
+            if (val.ValueKind == JsonValueKind.String &&
+                int.TryParse(val.GetString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out value))
+                return true;
         }
         value = 0;
         return false;
@@ -674,6 +704,51 @@ public abstract partial class ChatServiceBase(
         return sb.ToString();
     }
 
+    // ── Transit tool ─────────────────────────────────────────────────────────────
+
+    private async Task<string> SearchTransitConnectionsAsync(
+        string from, string to, string? departureStr, int results, CancellationToken ct)
+    {
+        DateTimeOffset departure;
+        if (departureStr is not null)
+        {
+            if (!DateTimeOffset.TryParse(departureStr, CultureInfo.InvariantCulture,
+                    DateTimeStyles.AssumeUniversal, out departure))
+                return $"Invalid departure format '{departureStr}'. Use ISO 8601, e.g. '2024-06-15T09:00'.";
+        }
+        else
+        {
+            departure = DateTimeOffset.UtcNow;
+        }
+
+        var fromStop = await transitService.FindStopAsync(from, ct);
+        if (fromStop is null)
+            return $"Could not find a transit stop matching '{from}'. Try a more specific name.";
+
+        var toStop = await transitService.FindStopAsync(to, ct);
+        if (toStop is null)
+            return $"Could not find a transit stop matching '{to}'. Try a more specific name.";
+
+        var journeys = await transitService.SearchJourneysAsync(
+            fromStop.Id, toStop.Id, departure, Math.Clamp(results, 1, 6), ct);
+
+        if (journeys.Count == 0)
+            return $"No connections found from '{fromStop.Name}' to '{toStop.Name}' around {departure:yyyy-MM-dd HH:mm zzz}.";
+
+        var sb = new StringBuilder();
+        sb.AppendLine($"Transit connections from {fromStop.Name} to {toStop.Name}:");
+        foreach (var j in journeys)
+        {
+            var h = (int)j.Duration.TotalHours;
+            var m = j.Duration.Minutes;
+            var durationStr = h > 0 ? $"{h}h {m}min" : $"{m}min";
+            var linesStr = j.Lines.Count > 0 ? string.Join(" → ", j.Lines) : "walk";
+            var transfers = j.Transfers == 0 ? "direct" : $"{j.Transfers} transfer{(j.Transfers == 1 ? "" : "s")}";
+            sb.AppendLine($"  {j.Departure:HH:mm zzz} → {j.Arrival:HH:mm zzz}  ({durationStr}, {transfers})  [{linesStr}]");
+        }
+        return sb.ToString();
+    }
+
     // ── Tool definitions ─────────────────────────────────────────────────────────
 
     protected static readonly object[] ToolDefinitions = BuildToolDefinitions();
@@ -776,6 +851,15 @@ public abstract partial class ChatServiceBase(
                 ("longitude", "number", "Longitude of the location."),
                 ("date", "string", "Optional date in yyyy-MM-dd format. If omitted, the full 7-day forecast is returned.")),
             ["latitude", "longitude"]),
+
+        MakeTool("search_transit_connections",
+            "Search for public-transit (ÖPNV/train/bus) connections between two stations or cities using the Deutsche Bahn network. Returns departure time, arrival time, duration, number of transfers, and the lines used.",
+            Props(
+                ("from", "string", "Name of the origin station, stop, or city (e.g. 'Berlin Hbf', 'München')."),
+                ("to", "string", "Name of the destination station, stop, or city."),
+                ("departure", "string", "Optional departure date/time in ISO 8601 format (e.g. '2024-06-15T09:00'). Defaults to now."),
+                ("results", "integer", "Optional number of connections to return (1–6, default 3).")),
+            ["from", "to"]),
     ];
 
     private static Dictionary<string, object> Props(params (string Name, string Type, string Desc)[] props) =>
