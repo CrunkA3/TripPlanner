@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+using Microsoft.Extensions.Caching.Memory;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 
@@ -9,10 +9,19 @@ namespace TripPlanner.Web.Services;
 /// Deutsche Bahn transport.rest API (https://v6.db.transport.rest).
 /// No API key is required.
 /// </summary>
-public class TransitService(IHttpClientFactory httpClientFactory, ILogger<TransitService> logger)
+public class TransitService(IHttpClientFactory httpClientFactory, IMemoryCache cache, ILogger<TransitService> logger)
 {
-    private readonly ConcurrentDictionary<string, TransitStop?> _stopCache =
-        new(StringComparer.OrdinalIgnoreCase);
+    private const string CacheKeyPrefix = "transit:stop:";
+    private static readonly MemoryCacheEntryOptions StopHitOptions = new()
+    {
+        SlidingExpiration = TimeSpan.FromHours(24),
+        Size = 1
+    };
+    private static readonly MemoryCacheEntryOptions StopMissOptions = new()
+    {
+        SlidingExpiration = TimeSpan.FromHours(1),
+        Size = 1
+    };
 
     /// <summary>Looks up a stop/station by name and returns its Hafas ID and display name.</summary>
     public async Task<TransitStop?> FindStopAsync(string name, CancellationToken ct = default)
@@ -20,8 +29,8 @@ public class TransitService(IHttpClientFactory httpClientFactory, ILogger<Transi
         if (string.IsNullOrWhiteSpace(name))
             return null;
 
-        var cacheKey = name.Trim();
-        if (_stopCache.TryGetValue(cacheKey, out var cached))
+        var cacheKey = CacheKeyPrefix + name.Trim().ToLowerInvariant();
+        if (cache.TryGetValue(cacheKey, out TransitStop? cached))
             return cached;
 
         try
@@ -33,12 +42,12 @@ public class TransitService(IHttpClientFactory httpClientFactory, ILogger<Transi
             var first = results?.FirstOrDefault(r => r.Type is "stop" or "station");
             if (first?.Id is null || first.Name is null)
             {
-                _stopCache[cacheKey] = null;
+                cache.Set<TransitStop?>(cacheKey, null, StopMissOptions);
                 return null;
             }
 
             var stop = new TransitStop(first.Id, first.Name);
-            _stopCache[cacheKey] = stop;
+            cache.Set(cacheKey, stop, StopHitOptions);
             return stop;
         }
         catch (OperationCanceledException) { throw; }
