@@ -12,11 +12,20 @@ public class BrowserTimeZoneService
     /// <summary>Gets whether the timezone has been initialized from the browser.</summary>
     public bool IsInitialized { get; private set; }
 
+    /// <summary>
+    /// Gets the original IANA timezone identifier supplied by the browser (e.g. "Europe/Berlin").
+    /// Falls back to <see cref="TimeZoneInfo.Utc"/>.<see cref="TimeZoneInfo.Id"/> until initialized.
+    /// </summary>
+    public string IanaTimeZoneId { get; private set; } = TimeZoneInfo.Utc.Id;
+
     /// <summary>Sets the timezone from an IANA or Windows timezone identifier.</summary>
     public void SetTimeZone(string timeZoneId)
     {
         if (string.IsNullOrWhiteSpace(timeZoneId))
             return;
+
+        // Always persist the original browser-supplied ID for display purposes.
+        IanaTimeZoneId = timeZoneId;
 
         try
         {
