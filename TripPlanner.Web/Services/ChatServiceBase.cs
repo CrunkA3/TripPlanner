@@ -21,7 +21,8 @@ public abstract partial class ChatServiceBase(
     IPlaceRepository placeRepository,
     IChatConversationRepository conversationRepository,
     WeatherService weatherService,
-    TransitService transitService) : IChatService
+    TransitService transitService,
+    BrowserTimeZoneService browserTimeZoneService) : IChatService
 {
     // ── Inner message/tool-call types ────────────────────────────────────────────
     // These are deliberately kept internal so subclasses can share the same types.
@@ -223,7 +224,10 @@ public abstract partial class ChatServiceBase(
         sb.AppendLine("You are a helpful travel planning assistant for TripPlanner.");
         sb.AppendLine("You help users manage their trips, wishlists, and places.");
         sb.AppendLine("Use the available tools to access and modify the user's data.");
-        sb.AppendLine($"Today's date and time is {DateTime.UtcNow:yyyy-MM-dd HH:mm} (UTC).");
+        var localNow = browserTimeZoneService.GetLocalNow();
+        var offsetSign = localNow.Offset >= TimeSpan.Zero ? "+" : "-";
+        var offsetStr = $"UTC{offsetSign}{localNow.Offset.Duration():hh\\:mm}";
+        sb.AppendLine($"Today's date and time is {localNow:yyyy-MM-dd HH:mm} ({browserTimeZoneService.IanaTimeZoneId}, {offsetStr}).");
         if (_userLatitude.HasValue && _userLongitude.HasValue)
         {
             sb.AppendLine($"The user's current location is latitude {_userLatitude.Value.ToString("F4", CultureInfo.InvariantCulture)}, " +

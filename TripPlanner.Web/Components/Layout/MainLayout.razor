@@ -1,4 +1,6 @@
 ﻿@inherits LayoutComponentBase
+@inject IJSRuntime JS
+@inject BrowserTimeZoneService BrowserTimeZoneService
 
 @if (_isInteractive)
 {
@@ -39,13 +41,22 @@
     private string? currentUrl;
 
 
-    protected override Task OnAfterRenderAsync(bool firstRender)
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
             _isInteractive = true;
             StateHasChanged();
+
+            try
+            {
+                var timezone = await JS.InvokeAsync<string>("browserInfo.getTimezone");
+                BrowserTimeZoneService.SetTimeZone(timezone);
+            }
+            catch
+            {
+                // Ignore JS interop errors during prerendering or if JS is unavailable
+            }
         }
-        return Task.CompletedTask;
     }
 }

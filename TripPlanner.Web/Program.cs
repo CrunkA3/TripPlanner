@@ -23,6 +23,7 @@ builder.AddServiceDefaults();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 builder.Services.AddFluentUIComponents();
+builder.Services.AddLocalization();
 builder.Services.AddMemoryCache(o => o.SizeLimit = 500);
 
 builder.Services.AddCascadingAuthenticationState();
@@ -148,6 +149,7 @@ builder.Services.AddScoped<RoutingService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<WeatherService>();
 builder.Services.AddScoped<TransitService>();
+builder.Services.AddScoped<BrowserTimeZoneService>();
 builder.Services.AddScoped<IGeocodingService, NominatimGeocodingService>();
 
 var aiProvider = builder.Configuration["AI:Provider"] ?? "Ollama";
@@ -193,7 +195,20 @@ else
 }
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
-
+app.UseRequestLocalization(options =>
+{
+    // Accept any culture the browser declares via Accept-Language.
+    // Without an explicit SupportedCultures list the middleware skips culture negotiation
+    // and always falls back to the default, so we enumerate all available cultures.
+    var allCultureNames = System.Globalization.CultureInfo
+        .GetCultures(System.Globalization.CultureTypes.AllCultures)
+        .Where(c => !string.IsNullOrEmpty(c.Name))
+        .Select(c => c.Name)
+        .ToArray();
+    options.AddSupportedCultures(allCultureNames);
+    options.AddSupportedUICultures(allCultureNames);
+    options.SetDefaultCulture("en-US");
+});
 app.UseAntiforgery();
 
 app.MapStaticAssets();
