@@ -193,7 +193,7 @@
     private void OnStartDateChanged(string value)
     {
         _startDateString = value;
-        if (EditingTrip != null && DateTime.TryParse(value, out var date))
+        if (EditingTrip != null && DateTimeOffset.TryParse(value, out var date))
         {
             EditingTrip.StartDate = date;
         }
@@ -202,7 +202,7 @@
     private void OnEndDateChanged(string value)
     {
         _endDateString = value;
-        if (EditingTrip != null && DateTime.TryParse(value, out var date))
+        if (EditingTrip != null && DateTimeOffset.TryParse(value, out var date))
         {
             EditingTrip.EndDate = date;
         }

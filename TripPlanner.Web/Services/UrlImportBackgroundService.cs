@@ -114,7 +114,7 @@ public class UrlImportBackgroundService(
             {
                 job.Status = UrlImportJobStatus.Failed;
                 job.ErrorMessage = "The AI analysis returned no result for this URL.";
-                job.ProcessedAt = DateTime.UtcNow;
+                job.ProcessedAt = DateTimeOffset.UtcNow;
                 await jobRepo.UpdateAsync(job);
                 logger.LogWarning("Job {JobId}: analysis returned null for URL {Url}", job.Id, job.Url);
                 return;
@@ -133,14 +133,14 @@ public class UrlImportBackgroundService(
                 WishlistId = job.WishlistId,
                 Url = job.Url,
                 NeedsReview = true,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTimeOffset.UtcNow
             };
 
             var created = await placeRepo.AddAsync(place);
 
             job.Status = UrlImportJobStatus.Completed;
             job.CreatedPlaceId = created.Id;
-            job.ProcessedAt = DateTime.UtcNow;
+            job.ProcessedAt = DateTimeOffset.UtcNow;
             job.ErrorMessage = null;
             await jobRepo.UpdateAsync(job);
 
@@ -158,7 +158,7 @@ public class UrlImportBackgroundService(
         {
             job.Status = UrlImportJobStatus.Failed;
             job.ErrorMessage = ex.Message;
-            job.ProcessedAt = DateTime.UtcNow;
+            job.ProcessedAt = DateTimeOffset.UtcNow;
             await jobRepo.UpdateAsync(job);
             logger.LogWarning(ex, "Job {JobId}: failed to process URL {Url}", job.Id, job.Url);
         }

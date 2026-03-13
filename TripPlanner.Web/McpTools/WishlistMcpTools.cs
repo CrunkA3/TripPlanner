@@ -76,7 +76,7 @@ public class WishlistMcpTools(IWishlistRepository wishlistRepository, IHttpConte
         {
             Name = name,
             Description = description,
-            UpdatedAt = DateTime.UtcNow
+            UpdatedAt = DateTimeOffset.UtcNow
         };
         // Share with owner
         wishlist.SharedWith.Add(new UserWishlist

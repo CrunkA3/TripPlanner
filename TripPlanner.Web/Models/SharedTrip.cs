@@ -10,5 +10,5 @@ public class SharedTrip
     public string TripId { get; set; } = string.Empty;
     public Trip? Trip { get; set; }
     
-    public DateTime SharedAt { get; set; } = DateTime.UtcNow;
+    public DateTimeOffset SharedAt { get; set; } = DateTimeOffset.UtcNow;
 }

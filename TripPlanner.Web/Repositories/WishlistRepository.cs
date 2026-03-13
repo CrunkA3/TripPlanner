@@ -41,7 +41,7 @@ public class WishlistRepository : IWishlistRepository
 
     public async Task<Wishlist> UpdateAsync(Wishlist wishlist)
     {
-        wishlist.UpdatedAt = DateTime.UtcNow;
+        wishlist.UpdatedAt = DateTimeOffset.UtcNow;
         _context.Wishlists.Update(wishlist);
         await _context.SaveChangesAsync();
         return wishlist;

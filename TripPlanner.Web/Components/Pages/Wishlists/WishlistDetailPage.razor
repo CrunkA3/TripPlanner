@@ -280,7 +280,7 @@ else
                 Url = url,
                 CreatedByUserId = currentUserId,
                 Status = UrlImportJobStatus.Pending,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTimeOffset.UtcNow
             };
             await UrlImportJobRepository.AddAsync(job);
         }

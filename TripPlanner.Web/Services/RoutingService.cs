@@ -97,7 +97,7 @@ public class RoutingService
 public class TripDayAnalysis
 {
     public int DayNumber { get; set; }
-    public DateTime? Date { get; set; }
+    public DateTimeOffset? Date { get; set; }
     public int TotalScheduledMinutes { get; set; }
     public int TotalTravelMinutes { get; set; }
     public int TotalMinutes { get; set; }

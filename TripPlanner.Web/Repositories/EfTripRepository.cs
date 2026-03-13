@@ -49,7 +49,7 @@ public class EfTripRepository : ITripRepository
 
     public async Task<Trip> UpdateAsync(Trip trip)
     {
-        trip.UpdatedAt = DateTime.UtcNow;
+        trip.UpdatedAt = DateTimeOffset.UtcNow;
         _context.Entry(trip).CurrentValues.SetValues(trip);
         await _context.SaveChangesAsync();
         return trip;
@@ -138,7 +138,7 @@ public class EfTripRepository : ITripRepository
 
     public async Task<Accommodation> UpdateAccommodationAsync(Accommodation accommodation)
     {
-        accommodation.UpdatedAt = DateTime.UtcNow;
+        accommodation.UpdatedAt = DateTimeOffset.UtcNow;
         _context.Accommodations.Update(accommodation);
         await _context.SaveChangesAsync();
         return accommodation;

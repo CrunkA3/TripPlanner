@@ -16,10 +16,10 @@ public class Wishlist
     public string? Description { get; set; }
 
     [Required]
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 
     [Required]
-    public DateTime? UpdatedAt { get; set; }
+    public DateTimeOffset? UpdatedAt { get; set; }
 
     // Navigation properties
     public List<Place> Places { get; set; } = [];
@@ -36,5 +36,5 @@ public class UserWishlist
 
     public ShareLevel Level { get; set; }
 
-    public DateTime SharedAt { get; set; } = DateTime.UtcNow;
+    public DateTimeOffset SharedAt { get; set; } = DateTimeOffset.UtcNow;
 }

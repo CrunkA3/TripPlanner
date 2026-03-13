@@ -108,12 +108,12 @@
                 <FluentTextField @bind-Value="@EditingPlace.LongitudeString" Label="Longitude" Style="width: 100%;" />
 
                 <FluentStack Orientation="Orientation.Horizontal" Width="100%" Style="gap: 8px;">
-                    <FluentDatePicker Label="Visit Date" Value="@EditingPlace.VisitDate" ValueChanged="@(d => EditingPlace.VisitDate = d.HasValue ? d.Value.Date + (EditingPlace.VisitDate?.TimeOfDay ?? TimeSpan.Zero) : null)" Style="flex: 1;" />
-                    <FluentTimePicker Label="Visit Time" Value="@EditingPlace.VisitDate" ValueChanged="@(t => EditingPlace.VisitDate = t.HasValue ? (EditingPlace.VisitDate?.Date ?? DateTime.Today) + t.Value.TimeOfDay : null)" Style="flex: 1;" />
+                    <FluentDatePicker Label="Visit Date" Value="@EditingPlace.VisitDate?.DateTime" ValueChanged="@(d => EditingPlace.VisitDate = d.HasValue ? (DateTimeOffset?)(d.Value.Date + (EditingPlace.VisitDate?.TimeOfDay ?? TimeSpan.Zero)) : null)" Style="flex: 1;" />
+                    <FluentTimePicker Label="Visit Time" Value="@EditingPlace.VisitDate?.DateTime" ValueChanged="@(t => EditingPlace.VisitDate = t.HasValue ? (DateTimeOffset?)((EditingPlace.VisitDate?.Date ?? DateTime.Today) + t.Value.TimeOfDay) : null)" Style="flex: 1;" />
                 </FluentStack>
                 <FluentStack Orientation="Orientation.Horizontal" Width="100%" Style="gap: 8px;">
-                    <FluentDatePicker Label="Visit Date End" Value="@EditingPlace.VisitDateEnd" ValueChanged="@(d => EditingPlace.VisitDateEnd = d.HasValue ? d.Value.Date + (EditingPlace.VisitDateEnd?.TimeOfDay ?? TimeSpan.Zero) : null)" Style="flex: 1;" />
-                    <FluentTimePicker Label="Visit Time End" Value="@EditingPlace.VisitDateEnd" ValueChanged="@(t => EditingPlace.VisitDateEnd = t.HasValue ? (EditingPlace.VisitDateEnd?.Date ?? DateTime.Today) + t.Value.TimeOfDay : null)" Style="flex: 1;" />
+                    <FluentDatePicker Label="Visit Date End" Value="@EditingPlace.VisitDateEnd?.DateTime" ValueChanged="@(d => EditingPlace.VisitDateEnd = d.HasValue ? (DateTimeOffset?)(d.Value.Date + (EditingPlace.VisitDateEnd?.TimeOfDay ?? TimeSpan.Zero)) : null)" Style="flex: 1;" />
+                    <FluentTimePicker Label="Visit Time End" Value="@EditingPlace.VisitDateEnd?.DateTime" ValueChanged="@(t => EditingPlace.VisitDateEnd = t.HasValue ? (DateTimeOffset?)((EditingPlace.VisitDateEnd?.Date ?? DateTime.Today) + t.Value.TimeOfDay) : null)" Style="flex: 1;" />
                 </FluentStack>
                 @if (EditingPlace.VisitDate.HasValue && EditingPlace.VisitDateEnd.HasValue && EditingPlace.VisitDateEnd < EditingPlace.VisitDate)
                 {
@@ -180,8 +180,8 @@
     private IQueryable<Place>? FilteredPlaces => Places?
         .Where(p => !FilterCategory.HasValue || p.Category == FilterCategory.Value)
         .Where(p => !FilterHasGpx.GetValueOrDefault(false) || p.GpxTrackId != null)
-        .Where(p => FilterDateFrom == null || (p.VisitDate.HasValue && p.VisitDate.Value >= FilterDateFrom.Value))
-        .Where(p => FilterDateTo == null || (p.VisitDate.HasValue && p.VisitDate.Value <= FilterDateTo.Value));
+        .Where(p => FilterDateFrom == null || (p.VisitDate.HasValue && p.VisitDate.Value.DateTime >= FilterDateFrom.Value))
+        .Where(p => FilterDateTo == null || (p.VisitDate.HasValue && p.VisitDate.Value.DateTime <= FilterDateTo.Value));
 
     private List<GpxTrack> GpxTracks { get; set; } = new();
     private bool IsLoading { get; set; } = true;
@@ -374,7 +374,7 @@
             {
                 // Parse the GPX file
                 var gpxTrack = GpxService.ParseGpxContent(result.Content, result.FileName);
-                gpxTrack.CreatedAt = DateTime.UtcNow;
+                gpxTrack.CreatedAt = DateTimeOffset.UtcNow;
 
                 // Save the GPX track
                 await GpxRepository.AddAsync(gpxTrack);

@@ -509,7 +509,7 @@ public abstract partial class ChatServiceBase(
         {
             Name = name,
             Description = description,
-            UpdatedAt = DateTime.UtcNow
+            UpdatedAt = DateTimeOffset.UtcNow
         };
         wishlist.SharedWith.Add(new UserWishlist
         {
@@ -659,7 +659,7 @@ public abstract partial class ChatServiceBase(
         if (Str(args, "visit_date") is { } vd && DateTime.TryParseExact(vd, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var vdDt)) place.VisitDate = vdDt;
         if (Str(args, "tags") is { } t)
             place.Tags = t.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
-        place.UpdatedAt = DateTime.UtcNow;
+        place.UpdatedAt = DateTimeOffset.UtcNow;
         await placeRepository.UpdateAsync(place);
         return "Place updated successfully.";
     }

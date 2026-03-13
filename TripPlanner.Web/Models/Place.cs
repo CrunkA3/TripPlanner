@@ -28,11 +28,11 @@ public class Place
 
     public string? Notes { get; set; }
     public string? Url { get; set; }
-    public DateTime? VisitDate { get; set; }
-    public DateTime? VisitDateEnd { get; set; }
+    public DateTimeOffset? VisitDate { get; set; }
+    public DateTimeOffset? VisitDateEnd { get; set; }
 
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime? UpdatedAt { get; set; }
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset? UpdatedAt { get; set; }
 
     /// <summary>
     /// When true, this place was created automatically via URL analysis and needs manual review.

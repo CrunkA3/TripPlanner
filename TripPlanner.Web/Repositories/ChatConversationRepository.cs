@@ -24,7 +24,7 @@ public class ChatConversationRepository(ApplicationDbContext context) : IChatCon
         {
             UserId = userId,
             Title = title,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTimeOffset.UtcNow
         };
         context.ChatConversations.Add(conversation);
         await context.SaveChangesAsync();
@@ -42,7 +42,7 @@ public class ChatConversationRepository(ApplicationDbContext context) : IChatCon
     {
         await using var transaction = await context.Database.BeginTransactionAsync();
 
-        var now = DateTime.UtcNow;
+        var now = DateTimeOffset.UtcNow;
 
         // Use the affected-row count to both validate ownership and advance UpdatedAt
         // in a single round-trip, eliminating the separate AnyAsync check.
@@ -77,6 +77,6 @@ public class ChatConversationRepository(ApplicationDbContext context) : IChatCon
     {
         await context.ChatConversations
             .Where(c => c.Id == id && c.UserId == userId)
-            .ExecuteUpdateAsync(s => s.SetProperty(c => c.UpdatedAt, DateTime.UtcNow));
+            .ExecuteUpdateAsync(s => s.SetProperty(c => c.UpdatedAt, DateTimeOffset.UtcNow));
     }
 }

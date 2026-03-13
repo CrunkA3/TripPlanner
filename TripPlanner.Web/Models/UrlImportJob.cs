@@ -30,6 +30,6 @@ public class UrlImportJob
     /// <summary>The raw response returned by the AI model for this job.</summary>
     public string? AiResponse { get; set; }
 
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime? ProcessedAt { get; set; }
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset? ProcessedAt { get; set; }
 }

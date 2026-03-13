@@ -522,9 +522,9 @@
         }
     }
 
-    private static string FormatDate(DateTime dt)
+    private static string FormatDate(DateTimeOffset dt)
     {
-        var now = DateTime.UtcNow;
+        var now = DateTimeOffset.UtcNow;
         var diff = now - dt;
         if (diff.TotalMinutes < 1) return "just now";
         if (diff.TotalHours < 1) return $"{(int)diff.TotalMinutes}m ago";

@@ -132,7 +132,7 @@ public class PlaceMcpTools(IPlaceRepository placeRepository, IWishlistRepository
         if (visitDate is not null) place.VisitDate = DateTime.TryParseExact(visitDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var vd) ? vd : place.VisitDate;
         if (tags is not null) place.Tags = tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
 
-        place.UpdatedAt = DateTime.UtcNow;
+        place.UpdatedAt = DateTimeOffset.UtcNow;
         await placeRepository.UpdateAsync(place);
         return "Place updated successfully.";
     }

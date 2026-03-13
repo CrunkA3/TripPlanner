@@ -10,8 +10,8 @@ public class Accommodation
     public string? Address { get; set; }
 
     // Planned check-in / check-out
-    public DateTime? PlannedCheckIn { get; set; }
-    public DateTime? PlannedCheckOut { get; set; }
+    public DateTimeOffset? PlannedCheckIn { get; set; }
+    public DateTimeOffset? PlannedCheckOut { get; set; }
 
     // Earliest possible times
     public TimeOnly? EarliestCheckIn { get; set; }
@@ -25,6 +25,6 @@ public class Accommodation
 
     public string? Notes { get; set; }
 
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime? UpdatedAt { get; set; }
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset? UpdatedAt { get; set; }
 }
