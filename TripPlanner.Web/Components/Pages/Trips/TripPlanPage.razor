@@ -277,7 +277,7 @@
                     var wayPoints = currentPlaces.ToList();
                     if (day.DayNumber == 1 && CurrentUser is not null && CurrentUser.HomeLatitude.HasValue && CurrentUser.HomeLongitude.HasValue)
                     {
-                        wayPoints.Add((time: (DateTimeOffset?)day.Date.Value.Date, order: -2, Latitude: CurrentUser.HomeLatitude.Value, Longitude: CurrentUser.HomeLongitude.Value));
+                        wayPoints.Add((time: (DateTimeOffset?)new DateTimeOffset(day.Date.Value.Date, day.Date.Value.Offset), order: -2, Latitude: CurrentUser.HomeLatitude.Value, Longitude: CurrentUser.HomeLongitude.Value));
                     }
 
                     foreach (var acc in PlanningTrip.Accommodations)
@@ -286,8 +286,8 @@
                         {
                             var accTimeStart = acc.PlannedCheckIn.Value;
                             var accTimeEnd = acc.PlannedCheckOut.Value;
-                            var dayStart = (DateTimeOffset)day.Date.Value.Date;
-                            var dayEnd = (DateTimeOffset)day.Date.Value.Date.AddDays(1).AddTicks(-1);
+                            var dayStart = new DateTimeOffset(day.Date.Value.Date, day.Date.Value.Offset);
+                            var dayEnd = new DateTimeOffset(day.Date.Value.Date.AddDays(1).AddTicks(-1), day.Date.Value.Offset);
 
                             if (accTimeStart <= dayEnd && accTimeEnd >= dayStart)
                             {
