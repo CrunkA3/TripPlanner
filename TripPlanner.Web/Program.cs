@@ -23,6 +23,7 @@ builder.AddServiceDefaults();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 builder.Services.AddFluentUIComponents();
+builder.Services.AddLocalization();
 builder.Services.AddMemoryCache(o => o.SizeLimit = 500);
 
 builder.Services.AddCascadingAuthenticationState();
@@ -148,6 +149,7 @@ builder.Services.AddScoped<RoutingService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<WeatherService>();
 builder.Services.AddScoped<TransitService>();
+builder.Services.AddScoped<BrowserTimeZoneService>();
 builder.Services.AddScoped<IGeocodingService, NominatimGeocodingService>();
 
 var aiProvider = builder.Configuration["AI:Provider"] ?? "Ollama";
@@ -193,7 +195,10 @@ else
 }
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
-
+app.UseRequestLocalization(options =>
+{
+    options.SetDefaultCulture("en-US");
+});
 app.UseAntiforgery();
 
 app.MapStaticAssets();
