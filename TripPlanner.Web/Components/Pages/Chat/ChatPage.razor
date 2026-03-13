@@ -219,23 +219,26 @@
     protected override async Task OnParametersSetAsync()
     {
         if (_currentUser is null) return;
-        if (string.Equals(ConversationId, ChatService.CurrentConversationId, StringComparison.OrdinalIgnoreCase)) return;
 
-        // Cancel any in-progress polling and clear stale job state from the previous conversation.
-        _pollingCts?.Cancel();
-        _pollingCts?.Dispose();
-        _pollingCts = null;
-        _activeJobId = null;
-        _isThinking = false;
-        _jobError = null;
-        _pendingUserMessage = null;
+        bool sameConversation = string.Equals(ConversationId, ChatService.CurrentConversationId, StringComparison.OrdinalIgnoreCase);
 
-        if (string.IsNullOrEmpty(ConversationId))
+        if (!sameConversation)
         {
-            ChatService.Clear();
-        }
-        else
-        {
+            // Cancel any in-progress polling and clear stale job state from the previous conversation.
+            _pollingCts?.Cancel();
+            _pollingCts?.Dispose();
+            _pollingCts = null;
+            _activeJobId = null;
+            _isThinking = false;
+            _jobError = null;
+            _pendingUserMessage = null;
+
+            if (string.IsNullOrEmpty(ConversationId))
+            {
+                ChatService.Clear();
+                return;
+            }
+
             var loaded = await ChatService.LoadConversationAsync(ConversationId, _currentUser.Id);
             if (!loaded)
             {
@@ -244,7 +247,15 @@
                 return;
             }
 
-            // Restore thinking state if a job is still running (e.g. after a page reload).
+            _shouldScrollToBottom = true;
+        }
+
+        // Restore thinking state if a job is still running. This runs even when sameConversation=true
+        // to handle the case where the component was recreated by the navigation (e.g. after the first
+        // message in a new chat) and therefore has no local state, even though ChatService already has
+        // the correct CurrentConversationId.
+        if (!string.IsNullOrEmpty(ConversationId) && _activeJobId is null)
+        {
             var activeJob = await ChatJobRepository.GetActiveJobForConversationAsync(ConversationId, _currentUser.Id);
             if (activeJob is not null)
             {
@@ -252,9 +263,16 @@
                 _pendingUserMessage = activeJob.UserMessage;
                 _isThinking = true;
                 StartPolling();
+                _shouldScrollToBottom = true;
             }
-
-            _shouldScrollToBottom = true;
+            else if (sameConversation && !ChatService.Messages.Any())
+            {
+                // The component was recreated for the same conversation (e.g. after first-message
+                // navigation) but the job already completed before we could find it as active.
+                // Load the conversation from DB so the persisted messages are visible immediately.
+                await ChatService.LoadConversationAsync(ConversationId, _currentUser.Id);
+                _shouldScrollToBottom = true;
+            }
         }
     }
 
@@ -301,15 +319,14 @@
         _jobError = null;
         await ResetTextAreaHeightAsync();
 
+        bool isNewConversation = ChatService.CurrentConversationId is null;
+
         // Ensure a conversation exists before creating the job so we have a ConversationId.
-        if (ChatService.CurrentConversationId is null)
+        if (isNewConversation)
         {
             var title = message.Length > 80 ? message[..77] + "…" : message;
             var conversation = await ConversationRepository.CreateAsync(_currentUser.Id, title);
             ChatService.SetCurrentConversationId(conversation.Id);
-            Navigation.NavigateTo($"/chat/{conversation.Id}", replace: true);
-            // Refresh the sidebar so the new conversation appears immediately.
-            _conversations = await ConversationRepository.GetByUserAsync(_currentUser.Id);
         }
 
         // Save the user message to the database so the background service can load it.
@@ -321,8 +338,17 @@
         _pendingUserMessage = message;
         _isThinking = true;
         _shouldScrollToBottom = true;
-        StateHasChanged();
 
+        if (isNewConversation)
+        {
+            // Refresh the sidebar so the new conversation appears immediately.
+            _conversations = await ConversationRepository.GetByUserAsync(_currentUser.Id);
+            // Navigate only after the job and message are persisted. This way, if Blazor recreates the
+            // component for the new route, OnParametersSetAsync can restore the pending state from DB.
+            Navigation.NavigateTo($"/chat/{ChatService.CurrentConversationId}", replace: true);
+        }
+
+        StateHasChanged();
         StartPolling();
     }
 
