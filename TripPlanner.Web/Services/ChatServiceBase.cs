@@ -607,7 +607,7 @@ public abstract partial class ChatServiceBase(
             Description = Str(args, "description") ?? string.Empty,
             Notes = Str(args, "notes"),
             Url = Str(args, "url"),
-            VisitDate = Str(args, "visit_date") is { } vd && DateTime.TryParseExact(vd, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var vdDt) ? vdDt : null,
+            VisitDate = Str(args, "visit_date") is { } vd && DateTime.TryParseExact(vd, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var vdDt) ? new DateTimeOffset(vdDt, TimeSpan.Zero) : null,
             Tags = Str(args, "tags")?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList() ?? []
         };
         var created = await placeRepository.AddAsync(place);
@@ -639,7 +639,7 @@ public abstract partial class ChatServiceBase(
             Description = Str(args, "description") ?? string.Empty,
             Notes = Str(args, "notes"),
             Url = Str(args, "url"),
-            VisitDate = Str(args, "visit_date") is { } vd && DateTime.TryParseExact(vd, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var vdDt) ? vdDt : null,
+            VisitDate = Str(args, "visit_date") is { } vd && DateTime.TryParseExact(vd, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var vdDt) ? new DateTimeOffset(vdDt, TimeSpan.Zero) : null,
             Tags = Str(args, "tags")?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList() ?? []
         };
         var created = await placeRepository.AddAsync(place);
@@ -656,7 +656,7 @@ public abstract partial class ChatServiceBase(
         if (Str(args, "description") is { } d) place.Description = d;
         if (Str(args, "notes") is { } no) place.Notes = no;
         if (Str(args, "url") is { } u) place.Url = u;
-        if (Str(args, "visit_date") is { } vd && DateTime.TryParseExact(vd, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var vdDt)) place.VisitDate = vdDt;
+        if (Str(args, "visit_date") is { } vd && DateTime.TryParseExact(vd, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var vdDt)) place.VisitDate = new DateTimeOffset(vdDt, TimeSpan.Zero);
         if (Str(args, "tags") is { } t)
             place.Tags = t.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
         place.UpdatedAt = DateTimeOffset.UtcNow;
