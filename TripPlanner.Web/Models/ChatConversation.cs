@@ -15,9 +15,9 @@ public class ChatConversation
     public string Title { get; set; } = "New Conversation";
 
     [Required]
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 
-    public DateTime? UpdatedAt { get; set; }
+    public DateTimeOffset? UpdatedAt { get; set; }
 
     // Navigation properties
     public List<ChatMessage> Messages { get; set; } = [];
@@ -45,5 +45,5 @@ public class ChatMessage
     public string? ToolCallId { get; set; }
 
     [Required]
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }

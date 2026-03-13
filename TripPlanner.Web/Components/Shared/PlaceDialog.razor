@@ -107,12 +107,12 @@
             <FluentTab Label="Schedule" Icon="@(new Icons.Regular.Size16.CalendarLtr())">
                 <FluentStack Orientation="Orientation.Vertical" Style="padding: 8px 0;">
                     <FluentStack Orientation="Orientation.Horizontal" Style="width: 100%; gap: 8px;">
-                        <FluentDatePicker Label="Start Date" Value="@Content.VisitDate" ValueChanged="@(d => Content.VisitDate = d.HasValue ? d.Value.Date + (Content.VisitDate?.TimeOfDay ?? TimeSpan.Zero) : null)" Style="flex: 1;" />
-                        <FluentTimePicker Label="Start Time" Value="@Content.VisitDate" ValueChanged="@(t => Content.VisitDate = t.HasValue ? (Content.VisitDate?.Date ?? DateTime.Today) + t.Value.TimeOfDay : null)" Style="flex: 1;" />
+                        <FluentDatePicker Label="Start Date" Value="@Content.VisitDate?.DateTime" ValueChanged="@(d => Content.VisitDate = d.HasValue ? (DateTimeOffset?)new DateTimeOffset(d.Value.Date + (Content.VisitDate?.TimeOfDay ?? TimeSpan.Zero), Content.VisitDate?.Offset ?? TimeSpan.Zero) : null)" Style="flex: 1;" />
+                        <FluentTimePicker Label="Start Time" Value="@Content.VisitDate?.DateTime" ValueChanged="@(t => Content.VisitDate = t.HasValue ? (DateTimeOffset?)new DateTimeOffset((Content.VisitDate?.Date ?? DateTime.Today) + t.Value.TimeOfDay, Content.VisitDate?.Offset ?? TimeSpan.Zero) : null)" Style="flex: 1;" />
                     </FluentStack>
                     <FluentStack Orientation="Orientation.Horizontal" Style="width: 100%; gap: 8px;">
-                        <FluentDatePicker Label="End Date" Value="@Content.VisitDateEnd" ValueChanged="@(d => Content.VisitDateEnd = d.HasValue ? d.Value.Date + (Content.VisitDateEnd?.TimeOfDay ?? TimeSpan.Zero) : null)" Style="flex: 1;" />
-                        <FluentTimePicker Label="End Time" Value="@Content.VisitDateEnd" ValueChanged="@(t => Content.VisitDateEnd = t.HasValue ? (Content.VisitDateEnd?.Date ?? DateTime.Today) + t.Value.TimeOfDay : null)" Style="flex: 1;" />
+                        <FluentDatePicker Label="End Date" Value="@Content.VisitDateEnd?.DateTime" ValueChanged="@(d => Content.VisitDateEnd = d.HasValue ? (DateTimeOffset?)new DateTimeOffset(d.Value.Date + (Content.VisitDateEnd?.TimeOfDay ?? TimeSpan.Zero), Content.VisitDateEnd?.Offset ?? TimeSpan.Zero) : null)" Style="flex: 1;" />
+                        <FluentTimePicker Label="End Time" Value="@Content.VisitDateEnd?.DateTime" ValueChanged="@(t => Content.VisitDateEnd = t.HasValue ? (DateTimeOffset?)new DateTimeOffset((Content.VisitDateEnd?.Date ?? DateTime.Today) + t.Value.TimeOfDay, Content.VisitDateEnd?.Offset ?? TimeSpan.Zero) : null)" Style="flex: 1;" />
                     </FluentStack>
                     @if (Content.VisitDate.HasValue && Content.VisitDateEnd.HasValue && Content.VisitDateEnd < Content.VisitDate)
                     {
@@ -442,7 +442,7 @@
             {
                 // Parse the GPX file
                 var gpxTrack = GpxService.ParseGpxContent(result.Content, result.FileName);
-                gpxTrack.CreatedAt = DateTime.UtcNow;
+                gpxTrack.CreatedAt = DateTimeOffset.UtcNow;
 
                 // Save the GPX track
                 await GpxRepository.AddAsync(gpxTrack);

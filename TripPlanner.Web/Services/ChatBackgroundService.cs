@@ -114,7 +114,7 @@ public partial class ChatBackgroundService(
             {
                 job.Status = ChatJobStatus.Failed;
                 job.ErrorMessage = "Conversation not found.";
-                job.CompletedAt = DateTime.UtcNow;
+                job.CompletedAt = DateTimeOffset.UtcNow;
                 await jobRepo.UpdateAsync(job);
                 LogConversationNotFound(job.Id, job.ConversationId);
                 return;
@@ -124,7 +124,7 @@ public partial class ChatBackgroundService(
             await chatService.RunInferenceAsync(job.UserId, cancellationToken);
 
             job.Status = ChatJobStatus.Completed;
-            job.CompletedAt = DateTime.UtcNow;
+            job.CompletedAt = DateTimeOffset.UtcNow;
             await jobRepo.UpdateAsync(job);
 
             LogJobCompleted(job.Id);
@@ -140,7 +140,7 @@ public partial class ChatBackgroundService(
         {
             job.Status = ChatJobStatus.Failed;
             job.ErrorMessage = ex.Message;
-            job.CompletedAt = DateTime.UtcNow;
+            job.CompletedAt = DateTimeOffset.UtcNow;
             await jobRepo.UpdateAsync(job);
             logger.LogWarning(ex, "Chat job {JobId} failed.", job.Id);
         }

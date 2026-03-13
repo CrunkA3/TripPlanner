@@ -168,7 +168,7 @@ else
     {
         if (currentUserId != null)
         {
-            newWishlist.SharedWith.Add(new UserWishlist { Level = ShareLevel.Owner, UserId = currentUserId, SharedAt = DateTime.Now });
+            newWishlist.SharedWith.Add(new UserWishlist { Level = ShareLevel.Owner, UserId = currentUserId, SharedAt = DateTimeOffset.UtcNow });
             await WishlistRepository.AddAsync(newWishlist);
             await LoadWishlists();
             hideCreateDialog = true;

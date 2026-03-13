@@ -9,7 +9,7 @@ public class GpxTrack
     public double TotalDistance { get; set; }
     public double ElevationGain { get; set; }
     public double ElevationLoss { get; set; }
-    public DateTime? CreatedAt { get; set; }
+    public DateTimeOffset? CreatedAt { get; set; }
 }
 
 public class GpxPoint
@@ -19,6 +19,6 @@ public class GpxPoint
     public double Latitude { get; set; }
     public double Longitude { get; set; }
     public double? Elevation { get; set; }
-    public DateTime? Time { get; set; }
+    public DateTimeOffset? Time { get; set; }
     public int Order { get; set; }
 }

@@ -113,7 +113,7 @@ public class PlaceRepository : IPlaceRepository
 
     public async Task<Place> UpdateAsync(Place place)
     {
-        place.UpdatedAt = DateTime.UtcNow;
+        place.UpdatedAt = DateTimeOffset.UtcNow;
 
         // Sync images: load existing, add new, update existing, remove deleted
         var existingImages = await _context.PlaceImages

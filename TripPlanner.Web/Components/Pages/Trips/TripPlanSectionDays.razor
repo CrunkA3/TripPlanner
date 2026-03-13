@@ -98,7 +98,7 @@
     public EventCallback OnSaveTripPlan { get; set; }
 
     [Parameter, EditorRequired]
-    public EventCallback<(TripPlace tripPlace, string? timeString, DateTime? date)> OnUpdateScheduledTime { get; set; }
+    public EventCallback<(TripPlace tripPlace, string? timeString, DateTimeOffset? date)> OnUpdateScheduledTime { get; set; }
 
     [Parameter, EditorRequired]
     public EventCallback<(string dayId, string placeId)> OnRemovePlaceFromDay { get; set; }

@@ -281,7 +281,7 @@
                     var wayPoints = currentPlaces.ToList();
                     if (day.DayNumber == 1 && CurrentUser is not null && CurrentUser.HomeLatitude.HasValue && CurrentUser.HomeLongitude.HasValue)
                     {
-                        wayPoints.Add((time: day.Date.Value.Date, order: -2, Latitude: CurrentUser.HomeLatitude.Value, Longitude: CurrentUser.HomeLongitude.Value));
+                        wayPoints.Add((time: (DateTimeOffset?)new DateTimeOffset(day.Date.Value.Date, day.Date.Value.Offset), order: -2, Latitude: CurrentUser.HomeLatitude.Value, Longitude: CurrentUser.HomeLongitude.Value));
                     }
 
                     foreach (var acc in PlanningTrip.Accommodations)
@@ -290,8 +290,8 @@
                         {
                             var accTimeStart = acc.PlannedCheckIn.Value;
                             var accTimeEnd = acc.PlannedCheckOut.Value;
-                            var dayStart = day.Date.Value.Date;
-                            var dayEnd = day.Date.Value.Date.AddDays(1).AddTicks(-1);
+                            var dayStart = new DateTimeOffset(day.Date.Value.Date, day.Date.Value.Offset);
+                            var dayEnd = new DateTimeOffset(day.Date.Value.Date.AddDays(1).AddTicks(-1), day.Date.Value.Offset);
 
                             if (accTimeStart <= dayEnd && accTimeEnd >= dayStart)
                             {
@@ -390,7 +390,7 @@
 
         var tasks = daysWithLocation.Select(async x =>
         {
-            var date = DateOnly.FromDateTime(x.Value);
+            var date = DateOnly.FromDateTime(x.Value.DateTime);
             var weather = await WeatherService.GetWeatherForDateAsync(
                 x.firstPlace!.Latitude, x.firstPlace.Longitude, date);
             return (x.Id, weather);
@@ -439,7 +439,7 @@
         if (PlanningTrip == null)
             return;
 
-        PlanningTrip.UpdatedAt = DateTime.UtcNow;
+        PlanningTrip.UpdatedAt = DateTimeOffset.UtcNow;
         await TripRepository.UpdateAsync(PlanningTrip);
 
         PlanningTrip = null;
@@ -525,7 +525,7 @@
         await UpdateMapContent();
     }
 
-    private void UpdateScheduledTime(TripPlace tripPlace, string? timeString, DateTime? dayDate)
+    private void UpdateScheduledTime(TripPlace tripPlace, string? timeString, DateTimeOffset? dayDate)
     {
         if (string.IsNullOrEmpty(timeString))
         {
@@ -608,7 +608,7 @@
             OnHandleDragEnter = EventCallback.Factory.Create<string>(this, (dayId) => HandleDragEnter(dayId)),
             OnHandleDragLeave = EventCallback.Factory.Create(this, () => HandleDragLeave()),
             OnHandleDrop = EventCallback.Factory.Create<string>(this, (dayId) => HandleDrop(dayId)),
-            OnUpdateScheduledTime = EventCallback.Factory.Create<(TripPlace tripPlace, string? timeString, DateTime? date)>(this, (args) => UpdateScheduledTime(args.tripPlace, args.timeString, args.date)),
+            OnUpdateScheduledTime = EventCallback.Factory.Create<(TripPlace tripPlace, string? timeString, DateTimeOffset? date)>(this, (args) => UpdateScheduledTime(args.tripPlace, args.timeString, args.date)),
             OnRemovePlaceFromDay = EventCallback.Factory.Create<(string dayId, string placeId)>(this, (args) => RemovePlaceFromDay(args.dayId, args.placeId)),
             OnSaveTripPlan = EventCallback.Factory.Create(this, () => SaveTripPlan()),
             CurrentDropTarget = CurrentDropTarget
@@ -685,8 +685,8 @@
         if (EditingAccommodation == null || string.IsNullOrWhiteSpace(EditingAccommodation.Name))
             return;
 
-        EditingAccommodation.PlannedCheckIn = DateTime.TryParse(_plannedCheckInString, out var ci) ? ci : null;
-        EditingAccommodation.PlannedCheckOut = DateTime.TryParse(_plannedCheckOutString, out var co) ? co : null;
+        EditingAccommodation.PlannedCheckIn = DateTimeOffset.TryParse(_plannedCheckInString, out var ci) ? ci : null;
+        EditingAccommodation.PlannedCheckOut = DateTimeOffset.TryParse(_plannedCheckOutString, out var co) ? co : null;
         EditingAccommodation.EarliestCheckIn = TimeOnly.TryParse(_earliestCheckInString, out var eci) ? eci : null;
         EditingAccommodation.LatestCheckOut = TimeOnly.TryParse(_latestCheckOutString, out var lco) ? lco : null;
 

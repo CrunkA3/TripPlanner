@@ -8,5 +8,5 @@ public class PlaceImage
     public byte[] ImageData { get; set; } = Array.Empty<byte>();
     public string ImageContentType { get; set; } = string.Empty;
     public int SortOrder { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }

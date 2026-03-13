@@ -1,6 +1,7 @@
 @page "/trips"
 
 @using Microsoft.AspNetCore.Authorization
+@using System.Globalization
 @using TripPlanner.Web.Models
 @using TripPlanner.Web.Repositories
 @using TripPlanner.Web.Services
@@ -193,18 +194,18 @@
     private void OnStartDateChanged(string value)
     {
         _startDateString = value;
-        if (EditingTrip != null && DateTime.TryParse(value, out var date))
+        if (EditingTrip != null && DateTime.TryParseExact(value, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt))
         {
-            EditingTrip.StartDate = date;
+            EditingTrip.StartDate = new DateTimeOffset(dt, TimeSpan.Zero);
         }
     }
     
     private void OnEndDateChanged(string value)
     {
         _endDateString = value;
-        if (EditingTrip != null && DateTime.TryParse(value, out var date))
+        if (EditingTrip != null && DateTime.TryParseExact(value, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt))
         {
-            EditingTrip.EndDate = date;
+            EditingTrip.EndDate = new DateTimeOffset(dt, TimeSpan.Zero);
         }
     }
 

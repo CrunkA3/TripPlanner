@@ -102,7 +102,7 @@ public class PlaceMcpTools(IPlaceRepository placeRepository, IWishlistRepository
             Description = description ?? string.Empty,
             Notes = notes,
             Url = url,
-            VisitDate = visitDate is not null && DateTime.TryParseExact(visitDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var vd) ? vd : null,
+            VisitDate = visitDate is not null && DateTime.TryParseExact(visitDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var vd) ? new DateTimeOffset(vd, TimeSpan.Zero) : null,
             Tags = tags?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList() ?? []
         };
 
@@ -129,10 +129,10 @@ public class PlaceMcpTools(IPlaceRepository placeRepository, IWishlistRepository
         if (description is not null) place.Description = description;
         if (notes is not null) place.Notes = notes;
         if (url is not null) place.Url = url;
-        if (visitDate is not null) place.VisitDate = DateTime.TryParseExact(visitDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var vd) ? vd : place.VisitDate;
+        if (visitDate is not null) place.VisitDate = DateTime.TryParseExact(visitDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var vd) ? new DateTimeOffset(vd, TimeSpan.Zero) : place.VisitDate;
         if (tags is not null) place.Tags = tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
 
-        place.UpdatedAt = DateTime.UtcNow;
+        place.UpdatedAt = DateTimeOffset.UtcNow;
         await placeRepository.UpdateAsync(place);
         return "Place updated successfully.";
     }
