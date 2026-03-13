@@ -14,12 +14,12 @@ public class TransitService(IHttpClientFactory httpClientFactory, IMemoryCache c
     private const string CacheKeyPrefix = "transit:stop:";
     private static readonly MemoryCacheEntryOptions StopHitOptions = new()
     {
-        SlidingExpiration = TimeSpan.FromHours(24),
+        AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(24),
         Size = 1
     };
     private static readonly MemoryCacheEntryOptions StopMissOptions = new()
     {
-        SlidingExpiration = TimeSpan.FromHours(1),
+        AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1),
         Size = 1
     };
 
