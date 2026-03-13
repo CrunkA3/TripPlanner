@@ -124,6 +124,14 @@ builder.Services.AddHttpClient("Nominatim", client =>
     client.DefaultRequestHeaders.UserAgent.ParseAdd("TripPlanner/1.0 (https://github.com/CrunkA3/TripPlanner)");
 });
 
+// Register HttpClient for Deutsche Bahn transport.rest API (free ÖPNV/transit search, no API key required)
+builder.Services.AddHttpClient("DbTransit", client =>
+{
+    client.BaseAddress = new Uri("https://v6.db.transport.rest/");
+    client.Timeout = TimeSpan.FromSeconds(15);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("TripPlanner/1.0 (https://github.com/CrunkA3/TripPlanner)");
+});
+
 // Register TripPlanner repositories (EF Core)
 builder.Services.AddScoped<IPlaceRepository, PlaceRepository>();
 builder.Services.AddScoped<ITripRepository, EfTripRepository>();
@@ -138,6 +146,7 @@ builder.Services.AddScoped<GpxService>();
 builder.Services.AddScoped<RoutingService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<WeatherService>();
+builder.Services.AddScoped<TransitService>();
 builder.Services.AddScoped<IGeocodingService, NominatimGeocodingService>();
 
 var aiProvider = builder.Configuration["AI:Provider"] ?? "Ollama";
