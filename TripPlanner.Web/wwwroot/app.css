@@ -547,3 +547,10 @@ table {
     border-top: 1px solid var(--neutral-stroke-rest);
     max-height: 200px;
 }
+
+.chat-input-card fluent-text-area::part(control) {
+    field-sizing: content;
+    min-height: 1lh;
+    max-height: 150px;
+    overflow-y: auto;
+}
