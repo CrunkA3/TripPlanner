@@ -333,8 +333,20 @@ public abstract partial class ChatServiceBase(
     {
         if (args.ValueKind == JsonValueKind.Object && args.TryGetProperty(key, out var val))
         {
-            if (val.ValueKind == JsonValueKind.Number && val.TryGetInt32(out value)) return true;
-            if (val.ValueKind == JsonValueKind.String && int.TryParse(val.GetString(), out value)) return true;
+            if (val.ValueKind == JsonValueKind.Number)
+            {
+                if (val.TryGetInt32(out value)) return true;
+                // Handle whole-number doubles like 3.0 that TryGetInt32 rejects
+                var d = val.GetDouble();
+                if (d == Math.Floor(d) && d is >= int.MinValue and <= int.MaxValue)
+                {
+                    value = (int)d;
+                    return true;
+                }
+            }
+            if (val.ValueKind == JsonValueKind.String &&
+                int.TryParse(val.GetString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out value))
+                return true;
         }
         value = 0;
         return false;
@@ -848,7 +860,7 @@ public abstract partial class ChatServiceBase(
                 ("from", "string", "Name of the origin station, stop, or city (e.g. 'Berlin Hbf', 'München')."),
                 ("to", "string", "Name of the destination station, stop, or city."),
                 ("departure", "string", "Optional departure date/time in ISO 8601 format (e.g. '2024-06-15T09:00'). Defaults to now."),
-                ("results", "number", "Optional number of connections to return (1–6, default 3).")),
+                ("results", "integer", "Optional number of connections to return (1–6, default 3).")),
             ["from", "to"]),
     ];
 
