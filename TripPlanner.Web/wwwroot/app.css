@@ -548,9 +548,11 @@ table {
     max-height: 200px;
 }
 
-.chat-input-card fluent-text-area::part(control) {
-    field-sizing: content;
-    min-height: 1lh;
-    max-height: 150px;
-    overflow-y: auto;
+@supports (field-sizing: content) {
+    .chat-input-card fluent-text-area::part(control) {
+        field-sizing: content;
+        min-height: 1lh;
+        max-height: 150px;
+        overflow-y: auto;
+    }
 }

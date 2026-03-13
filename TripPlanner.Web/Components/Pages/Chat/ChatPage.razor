@@ -171,8 +171,9 @@
 
         <FluentCard Class="chat-input-card">
             <FluentStack Orientation="Orientation.Horizontal" Style="gap: 8px; align-items: flex-end;">
-                <FluentTextArea Value="@_userInput"
-                                @oninput="@(e => _userInput = e.Value?.ToString() ?? string.Empty)"
+                <FluentTextArea @ref="_textAreaRef"
+                                Value="@_userInput"
+                                @oninput="OnTextAreaInput"
                                 Placeholder="Ask me about your trips, wishlists, or places…"
                                 Style="flex: 1; resize: none;"
                                 Rows="1"
@@ -199,6 +200,7 @@
     private bool _showSidebar;
     private ApplicationUser? _currentUser;
     private List<ChatConversation> _conversations = [];
+    private FluentTextArea? _textAreaRef;
 
     // Background job tracking
     private string? _activeJobId;
@@ -297,6 +299,7 @@
         var message = _userInput.Trim();
         _userInput = string.Empty;
         _jobError = null;
+        await ResetTextAreaHeightAsync();
 
         // Ensure a conversation exists before creating the job so we have a ConversationId.
         if (ChatService.CurrentConversationId is null)
@@ -439,6 +442,12 @@
             StateHasChanged();
     }
 
+    private async Task OnTextAreaInput(ChangeEventArgs e)
+    {
+        _userInput = e.Value?.ToString() ?? string.Empty;
+        await AutoResizeTextAreaAsync();
+    }
+
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
         if (e.Key == "Enter" && !e.ShiftKey && !_isThinking)
@@ -454,6 +463,32 @@
         try
         {
             await JS.InvokeVoidAsync("chatInterop.scrollToBottom", "chat-messages");
+        }
+        catch
+        {
+            // Ignore JS interop errors (e.g. during prerendering)
+        }
+    }
+
+    private async Task AutoResizeTextAreaAsync()
+    {
+        try
+        {
+            if (_textAreaRef?.Element is { } el)
+                await JS.InvokeVoidAsync("chatInterop.autoResizeTextArea", el);
+        }
+        catch
+        {
+            // Ignore JS interop errors (e.g. during prerendering)
+        }
+    }
+
+    private async Task ResetTextAreaHeightAsync()
+    {
+        try
+        {
+            if (_textAreaRef?.Element is { } el)
+                await JS.InvokeVoidAsync("chatInterop.resetTextAreaHeight", el);
         }
         catch
         {
