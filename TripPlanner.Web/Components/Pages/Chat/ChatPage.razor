@@ -265,6 +265,14 @@
                 StartPolling();
                 _shouldScrollToBottom = true;
             }
+            else if (sameConversation && !ChatService.Messages.Any())
+            {
+                // The component was recreated for the same conversation (e.g. after first-message
+                // navigation) but the job already completed before we could find it as active.
+                // Load the conversation from DB so the persisted messages are visible immediately.
+                await ChatService.LoadConversationAsync(ConversationId, _currentUser.Id);
+                _shouldScrollToBottom = true;
+            }
         }
     }
 
