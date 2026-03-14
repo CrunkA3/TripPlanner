@@ -61,7 +61,8 @@
         background: rgba(0, 0, 0, 0.65);
     }
 
-.place-card-image-header:hover .carousel-btn {
+.place-card-image-header:hover .carousel-btn,
+.place-card-image-header:focus-within .carousel-btn {
     opacity: 1;
 }
 
@@ -88,6 +89,8 @@
     height: 7px;
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.5);
+    border: none;
+    padding: 0;
     cursor: pointer;
     transition: background 0.2s ease;
     display: block;

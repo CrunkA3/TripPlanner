@@ -15,7 +15,9 @@
                     @{
                         var sortedImages = place.Images.OrderBy(i => i.SortOrder).ToList();
                         var imageCount = sortedImages.Count;
-                        var currentIdx = _currentImageIndex.GetValueOrDefault(place.Id, 0);
+                        var currentIdx = imageCount > 0
+                            ? Math.Clamp(_currentImageIndex.GetValueOrDefault(place.Id, 0), 0, imageCount - 1)
+                            : 0;
                         var currentImg = imageCount > 0 ? sortedImages[currentIdx] : null;
                         var showImage = currentImg is not null &&
                             currentImg.ImageData.Length > 0 &&
@@ -33,15 +35,18 @@
                     }
                     @if (imageCount > 1)
                     {
-                        <button class="carousel-btn carousel-prev" @onclick:stopPropagation="true" @onclick="@(() => NavigateImage(place, -1))" aria-label="Previous image">&#8249;</button>
-                        <button class="carousel-btn carousel-next" @onclick:stopPropagation="true" @onclick="@(() => NavigateImage(place, 1))" aria-label="Next image">&#8250;</button>
+                        <button type="button" class="carousel-btn carousel-prev" @onclick:stopPropagation="true" @onclick="@(() => NavigateImage(place, -1))" aria-label="Previous image">&#8249;</button>
+                        <button type="button" class="carousel-btn carousel-next" @onclick:stopPropagation="true" @onclick="@(() => NavigateImage(place, 1))" aria-label="Next image">&#8250;</button>
                         <div class="carousel-dots">
                             @for (int i = 0; i < imageCount; i++)
                             {
                                 var dotIdx = i;
-                                <span class="carousel-dot @(dotIdx == currentIdx ? "carousel-dot-active" : "")"
-                                      @onclick:stopPropagation="true"
-                                      @onclick="@(() => SetImageIndex(place, dotIdx))"></span>
+                                <button type="button"
+                                        class="carousel-dot @(dotIdx == currentIdx ? "carousel-dot-active" : "")"
+                                        @onclick:stopPropagation="true"
+                                        @onclick="@(() => SetImageIndex(place, dotIdx))"
+                                        aria-label="@($"Show image {dotIdx + 1} of {imageCount}")"
+                                        aria-current="@(dotIdx == currentIdx ? "true" : null)"></button>
                             }
                         </div>
                     }
@@ -224,15 +229,19 @@
             return;
         try
         {
-            foreach (var place in Places.Where(p => p.Images.Count > 1))
+            // Marshal index mutations and re-render onto the Blazor renderer thread to
+            // avoid races with UI event handlers that also modify _currentImageIndex.
+            await InvokeAsync(() =>
             {
-                _currentImageIndex[place.Id] = (_currentImageIndex.GetValueOrDefault(place.Id) + 1) % place.Images.Count;
-            }
-            // InvokeAsync may throw ObjectDisposedException or TaskCanceledException when the
-            // component has been disposed; both are safe to ignore here.
-            await InvokeAsync(StateHasChanged);
+                foreach (var place in Places.Where(p => p.Images.Count > 1))
+                {
+                    _currentImageIndex[place.Id] = (_currentImageIndex.GetValueOrDefault(place.Id) + 1) % place.Images.Count;
+                }
+                StateHasChanged();
+            });
         }
-        catch (Exception) when (_carouselTimer == null) { }
+        catch (ObjectDisposedException) { }
+        catch (TaskCanceledException) { }
         finally
         {
             Interlocked.Exchange(ref _carouselTickRunning, 0);
@@ -279,7 +288,12 @@
 
     public void Dispose()
     {
-        _carouselTimer?.Stop();
-        _carouselTimer?.Dispose();
+        if (_carouselTimer != null)
+        {
+            _carouselTimer.Elapsed -= OnCarouselTick;
+            _carouselTimer.Stop();
+            _carouselTimer.Dispose();
+            _carouselTimer = null;
+        }
     }
 }
