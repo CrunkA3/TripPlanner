@@ -92,10 +92,9 @@ public abstract partial class ChatServiceBase(
     public string? CurrentConversationId { get; private set; }
 
     public IReadOnlyList<DisplayMessage> Messages =>
-        History
+        [.. History
             .Where(m => m.Role is "user" or "assistant" && !string.IsNullOrEmpty(m.Content))
-            .Select(m => new DisplayMessage(m.Role, m.Content))
-            .ToList();
+            .Select(m => new DisplayMessage(m.Role, m.Content))];
 
     // ── Public API ───────────────────────────────────────────────────────────────
 
@@ -248,7 +247,7 @@ public abstract partial class ChatServiceBase(
     {
         var name = toolCall.Function.Name;
         var args = toolCall.Function.Arguments;
-        logger.LogDebug("Executing tool: {Tool}", name);
+        LogToolExecution(name);
 
         try
         {
@@ -422,7 +421,7 @@ public abstract partial class ChatServiceBase(
 
     private async Task<string> CreateTripAsync(string name, string? description, string? startDate, string? endDate, string userId)
     {
-        if (!DateTime.TryParseExact(startDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var sd) ) return "no valid start date";
+        if (!DateTime.TryParseExact(startDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var sd)) return "no valid start date";
         if (!DateTime.TryParseExact(endDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var ed)) return "no valid end date";
 
         var dateDiff = ed - sd;
@@ -549,7 +548,7 @@ public abstract partial class ChatServiceBase(
     {
         var places = await placeRepository.GetAllByUserAsync(userId);
         if (category is not null && Enum.TryParse<PlaceCategory>(category, true, out var cat))
-            places = places.Where(p => p.Category == cat).ToList();
+            places = [.. places.Where(p => p.Category == cat)];
         return JsonSerializer.Serialize(places.Select(p => new
         {
             p.Id,
@@ -558,10 +557,10 @@ public abstract partial class ChatServiceBase(
             p.Latitude,
             p.Longitude,
             p.Description,
-            WishlistId = p.WishlistId,
+            p.WishlistId,
             WishlistName = p.Wishlist?.Name,
             VisitDate = p.VisitDate?.ToString("yyyy-MM-dd"),
-            Tags = p.Tags
+            p.Tags
         }));
     }
 
@@ -579,10 +578,10 @@ public abstract partial class ChatServiceBase(
             place.Description,
             place.Notes,
             place.Url,
-            WishlistId = place.WishlistId,
+            place.WishlistId,
             WishlistName = place.Wishlist?.Name,
             VisitDate = place.VisitDate?.ToString("yyyy-MM-dd"),
-            Tags = place.Tags
+            place.Tags
         });
     }
 
@@ -662,7 +661,7 @@ public abstract partial class ChatServiceBase(
         if (Str(args, "url") is { } u) place.Url = u;
         if (Str(args, "visit_date") is { } vd && DateTime.TryParseExact(vd, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var vdDt)) place.VisitDate = new DateTimeOffset(vdDt, TimeSpan.Zero);
         if (Str(args, "tags") is { } t)
-            place.Tags = t.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+            place.Tags = [.. t.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)];
         place.UpdatedAt = DateTimeOffset.UtcNow;
         await placeRepository.UpdateAsync(place);
         return "Place updated successfully.";
@@ -886,4 +885,8 @@ public abstract partial class ChatServiceBase(
                 }
             }
         };
+
+
+    [LoggerMessage(level: LogLevel.Debug, "Executing tool: {Tool}")]
+    private partial void LogToolExecution(string tool);
 }
