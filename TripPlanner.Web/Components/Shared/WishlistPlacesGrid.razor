@@ -63,7 +63,13 @@
                         <FluentBadge BackgroundColor="@IPlaceRepository.GetCategoryColor(place.Category)" Color="white">@place.Category</FluentBadge>
                         @if (place.NeedsReview)
                         {
-                            <FluentBadge BackgroundColor="var(--warning-fill-rest, #f0a500)" Color="white" title="This place was created automatically and needs review.">⚠️ Review</FluentBadge>
+                            <FluentBadge BackgroundColor="var(--warning-fill-rest, #f0a500)" Color="white" title="This place was created automatically and needs review.">
+                                ⚠️ Review
+                                @if (CanShowPlaceActions(place) && OnRemoveReview.HasDelegate)
+                                {
+                                    <FluentButton Appearance="Appearance.Lightweight" IconEnd="@(new Icons.Regular.Size12.Dismiss())" OnClick="@(() => OnRemoveReview.InvokeAsync(place.Id))" Style="padding: 0; margin-left: 4px;" title="Mark as reviewed"></FluentButton>
+                                }
+                            </FluentBadge>
                         }
                         @if (place.Wishlist is not null)
                         {
@@ -147,6 +153,9 @@
 
     [Parameter]
     public EventCallback<string> OnDeletePlace { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnRemoveReview { get; set; }
 
     private Dictionary<string, string> _imageSrcCache = new();
 

@@ -187,7 +187,7 @@ else
         }
         else
         {
-            <WishlistPlacesGrid Places="places" CanEdit="@canEdit" OnEditPlace="EditPlace" OnDeletePlace="DeletePlace" OnNotesPlace="OpenNotes" />
+            <WishlistPlacesGrid Places="places" CanEdit="@canEdit" OnEditPlace="EditPlace" OnDeletePlace="DeletePlace" OnNotesPlace="OpenNotes" OnRemoveReview="RemoveReview" />
         }
     </FluentStack>
 }
@@ -384,6 +384,18 @@ else
         if (result.Cancelled) return;
 
         await PlaceRepository.DeleteAsync(placeId, currentUserId);
+        await LoadPlaces();
+    }
+
+    private async Task RemoveReview(string placeId)
+    {
+        if (currentUserId is null || !canEdit) return;
+
+        var place = places?.FirstOrDefault(p => p.Id == placeId);
+        if (place is null) return;
+
+        place.NeedsReview = false;
+        await PlaceRepository.UpdateAsync(place);
         await LoadPlaces();
     }
 }
