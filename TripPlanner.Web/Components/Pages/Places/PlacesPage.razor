@@ -72,7 +72,7 @@
     }
     else
     {
-        <WishlistPlacesGrid CanEdit="true" Places="FilteredPlaces" OnEditPlace="EditPlace" OnDeletePlace="DeletePlace" OnNotesPlace="OpenNotes" />
+        <WishlistPlacesGrid CanEdit="true" Places="FilteredPlaces" OnEditPlace="EditPlace" OnDeletePlace="DeletePlace" OnNotesPlace="OpenNotes" OnRemoveReview="RemoveReview" />
     }
 </FluentStack>
 
@@ -317,6 +317,14 @@
         if (result.Cancelled) return;
 
         await PlaceRepository.DeleteAsync(placeId, CurrentUser.Id);
+        await LoadPlaces();
+    }
+
+    private async Task RemoveReview(string placeId)
+    {
+        if (CurrentUser is null) return;
+
+        await PlaceRepository.MarkAsReviewedAsync(placeId, CurrentUser.Id);
         await LoadPlaces();
     }
 

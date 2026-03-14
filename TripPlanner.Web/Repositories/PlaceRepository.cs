@@ -143,6 +143,32 @@ public class PlaceRepository : IPlaceRepository
         return place;
     }
 
+    public async Task<bool> MarkAsReviewedAsync(string id, string userId)
+    {
+        var userWishlistIds = _context.UserWishlists
+            .Where(w => w.UserId == userId)
+            .Select(w => w.WishlistId);
+
+        var ownedTripIds = _context.Trips
+            .Where(t => t.OwnerId == userId)
+            .Select(t => t.Id);
+
+        var sharedTripIds = _context.SharedTrips
+            .Where(st => st.UserId == userId)
+            .Select(st => st.TripId);
+
+        var updatedAt = DateTimeOffset.UtcNow;
+        var count = await _context.Places
+            .Where(p => p.Id == id && (
+                (p.WishlistId != null && userWishlistIds.Contains(p.WishlistId)) ||
+                (p.TripId != null && (ownedTripIds.Contains(p.TripId) || sharedTripIds.Contains(p.TripId)))))
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(p => p.NeedsReview, false)
+                .SetProperty(p => p.UpdatedAt, updatedAt));
+
+        return count > 0;
+    }
+
     public async Task DeleteAsync(string id, string userId)
     {
         var place = await GetByIdAsync(id, userId);

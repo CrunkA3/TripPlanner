@@ -16,6 +16,7 @@ public interface IPlaceRepository
     Task<bool> HasAccessAsync(string id, string userId);
     Task<Place> AddAsync(Place place);
     Task<Place> UpdateAsync(Place place);
+    Task<bool> MarkAsReviewedAsync(string id, string userId);
     Task DeleteAsync(string id, string userId);
     Task<List<Place>> FilterAsync(PlaceCategory? category = null, List<string>? tags = null, bool? hasGpxTrack = null);
     Task<List<Place>> GetByWishlistIdAsync(string wishlistId);

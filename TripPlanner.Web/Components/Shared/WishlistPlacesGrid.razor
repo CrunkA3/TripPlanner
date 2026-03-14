@@ -63,7 +63,13 @@
                         <FluentBadge BackgroundColor="@IPlaceRepository.GetCategoryColor(place.Category)" Color="white">@place.Category</FluentBadge>
                         @if (place.NeedsReview)
                         {
-                            <FluentBadge BackgroundColor="var(--warning-fill-rest, #f0a500)" Color="white" title="This place was created automatically and needs review.">⚠️ Review</FluentBadge>
+                            <FluentBadge BackgroundColor="var(--warning-fill-rest, #f0a500)" Color="white" title="This place was created automatically and needs review.">
+                                ⚠️ Review
+                                @if (CanUserEditPlace(place) && OnRemoveReview.HasDelegate)
+                                {
+                                    <FluentButton Appearance="Appearance.Lightweight" IconEnd="@(new Icons.Regular.Size12.Dismiss())" OnClick="@(() => OnRemoveReview.InvokeAsync(place.Id))" Style="min-width: 20px; min-height: 20px; padding: 2px; margin-left: 4px;" title="Mark as reviewed" aria-label="Mark as reviewed"></FluentButton>
+                                }
+                            </FluentBadge>
                         }
                         @if (place.Wishlist is not null)
                         {
@@ -148,6 +154,9 @@
     [Parameter]
     public EventCallback<string> OnDeletePlace { get; set; }
 
+    [Parameter]
+    public EventCallback<string> OnRemoveReview { get; set; }
+
     private Dictionary<string, string> _imageSrcCache = new();
 
     private string? currentUserId;
@@ -172,11 +181,14 @@
         Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
         (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
 
-    private bool CanShowPlaceActions(Place place) =>
+    private bool CanUserEditPlace(Place place) =>
         CanEdit &&
         place.Wishlist is not null &&
-        place.Wishlist.SharedWith.Any(sw => sw.Level <= ShareLevel.Editor && sw.UserId == currentUserId) &&
-        (OnEditPlace.HasDelegate || OnDeletePlace.HasDelegate || OnNotesPlace.HasDelegate);
+        place.Wishlist.SharedWith.Any(sw => sw.Level <= ShareLevel.Editor && sw.UserId == currentUserId);
+
+    private bool CanShowPlaceActions(Place place) =>
+        CanUserEditPlace(place) &&
+        (OnEditPlace.HasDelegate || OnDeletePlace.HasDelegate || OnNotesPlace.HasDelegate || OnRemoveReview.HasDelegate);
 
     private string GetImageSrc(Place place)
     {
