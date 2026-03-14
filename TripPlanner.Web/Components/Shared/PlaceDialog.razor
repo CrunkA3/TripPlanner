@@ -491,7 +491,7 @@
 
         try
         {
-            _suggestion = (await PlaceAnalysisService.AnalyzeUrlAsync(Content.Url))?.Suggestion;
+            _suggestion = (await PlaceAnalysisService.AnalyzeUrlAsync(Content.Url, CurrentUser?.PreferredLanguage))?.Suggestion;
             if (_suggestion == null)
                 _analyzeError = "The AI could not extract place information from this URL.";
         }

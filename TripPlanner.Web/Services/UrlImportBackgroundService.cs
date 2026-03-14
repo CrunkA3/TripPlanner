@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Identity;
 using TripPlanner.Web.Data;
 using TripPlanner.Web.Models;
 using TripPlanner.Web.Repositories;
@@ -78,6 +79,7 @@ public class UrlImportBackgroundService(
         var jobRepo = scope.ServiceProvider.GetRequiredService<IUrlImportJobRepository>();
         var placeRepo = scope.ServiceProvider.GetRequiredService<IPlaceRepository>();
         var analysisService = scope.ServiceProvider.GetRequiredService<IPlaceAnalysisService>();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
         var pendingJobs = await jobRepo.GetPendingJobsAsync(maxCount: MaxJobsPerCycle);
 
@@ -86,7 +88,7 @@ public class UrlImportBackgroundService(
             if (cancellationToken.IsCancellationRequested)
                 break;
 
-            await ProcessJobAsync(job, jobRepo, placeRepo, analysisService, cancellationToken);
+            await ProcessJobAsync(job, jobRepo, placeRepo, analysisService, userManager, cancellationToken);
         }
     }
 
@@ -95,6 +97,7 @@ public class UrlImportBackgroundService(
         IUrlImportJobRepository jobRepo,
         IPlaceRepository placeRepo,
         IPlaceAnalysisService analysisService,
+        UserManager<ApplicationUser> userManager,
         CancellationToken cancellationToken)
     {
         logger.LogInformation("Processing URL import job {JobId} for URL: {Url}", job.Id, job.Url);
@@ -105,7 +108,8 @@ public class UrlImportBackgroundService(
 
         try
         {
-            var result = await analysisService.AnalyzeUrlAsync(job.Url, cancellationToken);
+            var user = await userManager.FindByIdAsync(job.CreatedByUserId);
+            var result = await analysisService.AnalyzeUrlAsync(job.Url, user?.PreferredLanguage, cancellationToken);
 
             job.AiPrompt = result?.Prompt;
             job.AiResponse = result?.RawResponse;

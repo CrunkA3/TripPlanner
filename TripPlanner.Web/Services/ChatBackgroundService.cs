@@ -107,6 +107,8 @@ public partial class ChatBackgroundService(
             var user = await userManager.FindByIdAsync(job.UserId);
             if (user?.HomeLatitude is not null && user.HomeLongitude is not null)
                 chatService.SetUserLocation(user.HomeLatitude.Value, user.HomeLongitude.Value);
+            if (!string.IsNullOrWhiteSpace(user?.PreferredLanguage))
+                chatService.SetUserLanguage(user.PreferredLanguage);
 
             // Load the conversation history from the database (which already contains the user message).
             var loaded = await chatService.LoadConversationAsync(job.ConversationId, job.UserId);

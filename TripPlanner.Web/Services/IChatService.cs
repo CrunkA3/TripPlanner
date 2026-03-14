@@ -7,6 +7,7 @@ public interface IChatService
     string? CurrentConversationId { get; }
     IReadOnlyList<DisplayMessage> Messages { get; }
     void SetUserLocation(double latitude, double longitude);
+    void SetUserLanguage(string? language);
     void Clear();
     void SetCurrentConversationId(string conversationId);
     Task<bool> LoadConversationAsync(string conversationId, string userId);

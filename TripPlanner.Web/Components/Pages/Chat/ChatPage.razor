@@ -281,6 +281,8 @@
         if (firstRender)
         {
             await TrySetUserLocationAsync();
+            if (!string.IsNullOrWhiteSpace(_currentUser?.PreferredLanguage))
+                ChatService.SetUserLanguage(_currentUser.PreferredLanguage);
         }
 
         if (_shouldScrollToBottom)

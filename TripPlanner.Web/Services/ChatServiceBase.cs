@@ -73,12 +73,19 @@ public abstract partial class ChatServiceBase(
 
     private double? _userLatitude;
     private double? _userLongitude;
+    private string? _userLanguage;
 
     /// <summary>Stores the user's current geographic position for inclusion in the system prompt.</summary>
     public void SetUserLocation(double latitude, double longitude)
     {
         _userLatitude = latitude;
         _userLongitude = longitude;
+    }
+
+    /// <summary>Stores the user's preferred language (IETF tag, e.g. "de", "en") for inclusion in the system prompt.</summary>
+    public void SetUserLanguage(string? language)
+    {
+        _userLanguage = language;
     }
 
     // Default maximum number of messages kept in the conversation history (≈ 20 turns).
@@ -237,6 +244,8 @@ public abstract partial class ChatServiceBase(
         sb.AppendLine("Keep names and titles short");
         sb.AppendLine("Use the Places from Wishlists and Trips");
         sb.AppendLine("Think ahead and make sensible suggestions");
+        if (!string.IsNullOrWhiteSpace(_userLanguage))
+            sb.AppendLine($"Always respond in the user's preferred language: {_userLanguage}.");
         sb.Append("Always be concise and helpful.");
         return new ChatMessage { Role = "system", Content = sb.ToString() };
     }

@@ -24,6 +24,14 @@
             <FluentValidationMessage For="() => Input.DisplayName" class="text-danger" />
             <FluentTextField Name="Input.PhoneNumber" @bind-Value="Input.PhoneNumber" Placeholder="Please enter your phone number." Label="Phone number" Style="width: 100%" />
             <FluentValidationMessage For="() => Input.PhoneNumber" class="text-danger" />
+            <FluentSelect TOption="string" Name="Input.PreferredLanguage" @bind-Value="Input.PreferredLanguage" Label="Preferred language (for AI responses)" Style="width: 100%">
+                <FluentOption TOption="string" Value="">— Not set —</FluentOption>
+                @foreach (var lang in SupportedLanguages)
+                {
+                    <FluentOption TOption="string" Value="@lang.Code">@lang.Label</FluentOption>
+                }
+            </FluentSelect>
+            <FluentValidationMessage For="() => Input.PreferredLanguage" class="text-danger" />
             <p style="margin-top: 10px; text-align: end;">
                 <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent">Save</FluentButton>
             </p>
@@ -36,6 +44,30 @@
     private string? username;
     private string? phoneNumber;
     private string? displayName;
+    private string? preferredLanguage;
+
+    private static readonly (string Code, string Label)[] SupportedLanguages =
+    [
+        ("de", "Deutsch"),
+        ("en", "English"),
+        ("fr", "Français"),
+        ("es", "Español"),
+        ("it", "Italiano"),
+        ("pt", "Português"),
+        ("nl", "Nederlands"),
+        ("pl", "Polski"),
+        ("cs", "Čeština"),
+        ("sv", "Svenska"),
+        ("da", "Dansk"),
+        ("fi", "Suomi"),
+        ("nb", "Norsk"),
+        ("tr", "Türkçe"),
+        ("ru", "Русский"),
+        ("zh", "中文"),
+        ("ja", "日本語"),
+        ("ko", "한국어"),
+        ("ar", "العربية"),
+    ];
 
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
@@ -57,9 +89,11 @@
         username = await UserManager.GetUserNameAsync(user);
         phoneNumber = await UserManager.GetPhoneNumberAsync(user);
         displayName = user.DisplayName;
+        preferredLanguage = user.PreferredLanguage;
 
         Input.PhoneNumber ??= phoneNumber;
         Input.DisplayName ??= displayName;
+        Input.PreferredLanguage ??= preferredLanguage;
     }
 
     private async Task OnValidSubmitAsync()
@@ -91,6 +125,18 @@
             }
         }
 
+        var normalizedLanguage = string.IsNullOrWhiteSpace(Input.PreferredLanguage) ? null : Input.PreferredLanguage;
+        if (normalizedLanguage != preferredLanguage)
+        {
+            user.PreferredLanguage = normalizedLanguage;
+            var updateResult = await UserManager.UpdateAsync(user);
+            if (!updateResult.Succeeded)
+            {
+                RedirectManager.RedirectToCurrentPageWithStatus("Error: Failed to set preferred language.", HttpContext);
+                return;
+            }
+        }
+
         await SignInManager.RefreshSignInAsync(user);
         RedirectManager.RedirectToCurrentPageWithStatus("Your profile has been updated", HttpContext);
     }
@@ -104,5 +150,9 @@
         [Phone]
         [Display(Name = "Phone number")]
         public string? PhoneNumber { get; set; }
+
+        [MaxLength(10)]
+        [Display(Name = "Preferred language")]
+        public string? PreferredLanguage { get; set; }
     }
 }

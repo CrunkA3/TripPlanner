@@ -12,6 +12,14 @@ public class ApplicationUser : IdentityUser
     public double? HomeLongitude { get; set; }
     public string? HomeLocationName { get; set; }
 
+    /// <summary>
+    /// The user's preferred language as an IETF language tag (e.g. "en", "de", "fr").
+    /// Used to instruct AI services to respond in this language.
+    /// Null means no explicit preference.
+    /// </summary>
+    [MaxLength(10)]
+    public string? PreferredLanguage { get; set; }
+
     [MaxLength(64)]
     /// <summary>
     /// SHA-256 hash (64 lowercase hex characters) of the user's MCP API key.

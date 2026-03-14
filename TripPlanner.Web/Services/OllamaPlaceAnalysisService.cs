@@ -29,7 +29,7 @@ public class OllamaPlaceAnalysisService : IPlaceAnalysisService
 
     private sealed record OllamaStreamChunk(string? Response, bool Done);
 
-    public async Task<PlaceAnalysisResult?> AnalyzeUrlAsync(string url, CancellationToken cancellationToken = default)
+    public async Task<PlaceAnalysisResult?> AnalyzeUrlAsync(string url, string? language = null, CancellationToken cancellationToken = default)
     {
         // Step 1: Fetch the page content
         string pageContent;
@@ -66,7 +66,7 @@ public class OllamaPlaceAnalysisService : IPlaceAnalysisService
             - "latitude": number or null (geographic latitude if explicitly mentioned on the page)
             - "longitude": number or null (geographic longitude if explicitly mentioned on the page)
             - "tags": array of strings (2-5 relevant travel tags like "hiking", "family", "outdoor", etc.)
-
+            {(string.IsNullOrWhiteSpace(language) ? "" : $"\nWrite the \"name\", \"description\", and \"tags\" fields in the following language: {language}.")}
             Web page content:
             {pageContent}
             """;
