@@ -324,11 +324,7 @@
     {
         if (CurrentUser is null) return;
 
-        var place = await PlaceRepository.GetByIdAsync(placeId, CurrentUser.Id);
-        if (place is null) return;
-
-        place.NeedsReview = false;
-        await PlaceRepository.UpdateAsync(place);
+        await PlaceRepository.MarkAsReviewedAsync(placeId, CurrentUser.Id);
         await LoadPlaces();
     }
 

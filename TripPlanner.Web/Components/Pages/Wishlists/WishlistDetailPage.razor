@@ -391,11 +391,7 @@ else
     {
         if (currentUserId is null || !canEdit) return;
 
-        var place = places?.FirstOrDefault(p => p.Id == placeId);
-        if (place is null) return;
-
-        place.NeedsReview = false;
-        await PlaceRepository.UpdateAsync(place);
+        await PlaceRepository.MarkAsReviewedAsync(placeId, currentUserId);
         await LoadPlaces();
     }
 }

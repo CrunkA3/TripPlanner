@@ -67,7 +67,7 @@
                                 ⚠️ Review
                                 @if (CanUserEditPlace(place) && OnRemoveReview.HasDelegate)
                                 {
-                                    <FluentButton Appearance="Appearance.Lightweight" IconEnd="@(new Icons.Regular.Size12.Dismiss())" OnClick="@(() => OnRemoveReview.InvokeAsync(place.Id))" Style="padding: 0; margin-left: 4px;" title="Mark as reviewed" aria-label="Mark as reviewed"></FluentButton>
+                                    <FluentButton Appearance="Appearance.Lightweight" IconEnd="@(new Icons.Regular.Size12.Dismiss())" OnClick="@(() => OnRemoveReview.InvokeAsync(place.Id))" Style="min-width: 20px; min-height: 20px; padding: 2px; margin-left: 4px;" title="Mark as reviewed" aria-label="Mark as reviewed"></FluentButton>
                                 }
                             </FluentBadge>
                         }
