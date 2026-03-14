@@ -14,7 +14,6 @@ public partial class MarkdownSection : FluentComponentBase
     // private IJSObjectReference _jsModule = default!;
     private bool _markdownChanged = false;
     private string? _content;
-    private string? _fromAsset;
 
     [Inject]
     protected IJSRuntime JSRuntime { get; set; } = default!;
@@ -37,23 +36,6 @@ public partial class MarkdownSection : FluentComponentBase
         }
     }
 
-    /// <summary>
-    /// Gets or sets asset to read the Markdown from
-    /// </summary>
-    [Parameter]
-    public string? FromAsset
-    {
-        get => _fromAsset;
-        set
-        {
-            if (_fromAsset is not null && !_fromAsset.Equals(value))
-            {
-                _markdownChanged = true;
-            }
-            _fromAsset = value;
-        }
-    }
-
     [Parameter]
     public EventCallback OnContentConverted { get; set; }
 
@@ -61,7 +43,7 @@ public partial class MarkdownSection : FluentComponentBase
 
     protected override void OnInitialized()
     {
-        if (Content is null && string.IsNullOrEmpty(FromAsset))
+        if (Content is null)
         {
             throw new ArgumentException("You need to provide either Content or FromAsset parameter");
         }
