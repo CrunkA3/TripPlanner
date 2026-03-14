@@ -65,9 +65,9 @@
                         {
                             <FluentBadge BackgroundColor="var(--warning-fill-rest, #f0a500)" Color="white" title="This place was created automatically and needs review.">
                                 ⚠️ Review
-                                @if (CanShowPlaceActions(place) && OnRemoveReview.HasDelegate)
+                                @if (CanUserEditPlace(place) && OnRemoveReview.HasDelegate)
                                 {
-                                    <FluentButton Appearance="Appearance.Lightweight" IconEnd="@(new Icons.Regular.Size12.Dismiss())" OnClick="@(() => OnRemoveReview.InvokeAsync(place.Id))" Style="padding: 0; margin-left: 4px;" title="Mark as reviewed"></FluentButton>
+                                    <FluentButton Appearance="Appearance.Lightweight" IconEnd="@(new Icons.Regular.Size12.Dismiss())" OnClick="@(() => OnRemoveReview.InvokeAsync(place.Id))" Style="padding: 0; margin-left: 4px;" title="Mark as reviewed" aria-label="Mark as reviewed"></FluentButton>
                                 }
                             </FluentBadge>
                         }
@@ -181,11 +181,14 @@
         Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
         (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
 
-    private bool CanShowPlaceActions(Place place) =>
+    private bool CanUserEditPlace(Place place) =>
         CanEdit &&
         place.Wishlist is not null &&
-        place.Wishlist.SharedWith.Any(sw => sw.Level <= ShareLevel.Editor && sw.UserId == currentUserId) &&
-        (OnEditPlace.HasDelegate || OnDeletePlace.HasDelegate || OnNotesPlace.HasDelegate);
+        place.Wishlist.SharedWith.Any(sw => sw.Level <= ShareLevel.Editor && sw.UserId == currentUserId);
+
+    private bool CanShowPlaceActions(Place place) =>
+        CanUserEditPlace(place) &&
+        (OnEditPlace.HasDelegate || OnDeletePlace.HasDelegate || OnNotesPlace.HasDelegate || OnRemoveReview.HasDelegate);
 
     private string GetImageSrc(Place place)
     {
