@@ -2,6 +2,8 @@
 @using TripPlanner.Web.Services
 @using TripPlanner.Web.Repositories
 
+@implements IDisposable
+
 @inject UserService UserService
 
 <FluentGrid Spacing="3" Justify="JustifyContent.FlexStart">
@@ -10,14 +12,37 @@
         <FluentGridItem xs="12" md="6" lg="3" xl="2" xxl="2">
             <div class="place-card" style="@("border-top-color: " + IPlaceRepository.GetCategoryColor(place.Category))">
                 <div class="place-card-image-header">
-                    @if (HasValidImage(place))
+                    @{
+                        var sortedImages = place.Images.OrderBy(i => i.SortOrder).ToList();
+                        var imageCount = sortedImages.Count;
+                        var currentIdx = _currentImageIndex.GetValueOrDefault(place.Id, 0);
+                        var currentImg = imageCount > 0 ? sortedImages[currentIdx] : null;
+                        var showImage = currentImg is not null &&
+                            currentImg.ImageData.Length > 0 &&
+                            System.Text.RegularExpressions.Regex.IsMatch(currentImg.ImageContentType, @"^image/[a-zA-Z0-9\-\+\.]+$");
+                    }
+                    @if (showImage && currentImg is not null)
                     {
-                        <img src="@GetImageSrc(place)" alt="@place.Name" />
+                        <img @key="@currentImg.Id" src="@GetImageSrc(currentImg)" alt="@place.Name" />
                     }
                     else
                     {
                         <div class="place-card-placeholder @IPlaceRepository.GetCategoryClass(place.Category)">
                             <FluentIcon Value="@IPlaceRepository.GetCategoryIcon(place.Category)" Width="40px" Color="Color.Fill" />
+                        </div>
+                    }
+                    @if (imageCount > 1)
+                    {
+                        <button class="carousel-btn carousel-prev" @onclick:stopPropagation="true" @onclick="@(() => NavigateImage(place, -1))" aria-label="Previous image">&#8249;</button>
+                        <button class="carousel-btn carousel-next" @onclick:stopPropagation="true" @onclick="@(() => NavigateImage(place, 1))" aria-label="Next image">&#8250;</button>
+                        <div class="carousel-dots">
+                            @for (int i = 0; i < imageCount; i++)
+                            {
+                                var dotIdx = i;
+                                <span class="carousel-dot @(dotIdx == currentIdx ? "carousel-dot-active" : "")"
+                                      @onclick:stopPropagation="true"
+                                      @onclick="@(() => SetImageIndex(place, dotIdx))"></span>
+                            }
                         </div>
                     }
                     @if (place.HasGpxTrack)
@@ -158,6 +183,11 @@
     public EventCallback<string> OnRemoveReview { get; set; }
 
     private Dictionary<string, string> _imageSrcCache = new();
+    private Dictionary<string, int> _currentImageIndex = new();
+    private System.Timers.Timer? _carouselTimer;
+    private int _carouselTickRunning = 0;
+
+    private const int CarouselIntervalMs = 4000;
 
     private string? currentUserId;
 
@@ -169,12 +199,59 @@
     protected override void OnParametersSet()
     {
         _imageSrcCache.Clear();
+        _currentImageIndex.Clear();
+
+        var needsTimer = Places.Any(p => p.Images.Count > 1);
+        if (needsTimer && _carouselTimer == null)
+        {
+            _carouselTimer = new System.Timers.Timer(CarouselIntervalMs);
+            _carouselTimer.Elapsed += OnCarouselTick;
+            _carouselTimer.AutoReset = true;
+            _carouselTimer.Start();
+        }
+        else if (!needsTimer && _carouselTimer != null)
+        {
+            _carouselTimer.Stop();
+            _carouselTimer.Dispose();
+            _carouselTimer = null;
+        }
     }
 
-    private bool HasValidImage(Place place) =>
-        place.Images.FirstOrDefault() is { } img &&
-        img.ImageData.Length > 0 &&
-        System.Text.RegularExpressions.Regex.IsMatch(img.ImageContentType, @"^image/[a-zA-Z0-9\-\+\.]+$");
+    private async void OnCarouselTick(object? sender, System.Timers.ElapsedEventArgs e)
+    {
+        // Prevent overlapping ticks if a previous tick is still awaiting StateHasChanged
+        if (Interlocked.CompareExchange(ref _carouselTickRunning, 1, 0) != 0)
+            return;
+        try
+        {
+            foreach (var place in Places.Where(p => p.Images.Count > 1))
+            {
+                _currentImageIndex[place.Id] = (_currentImageIndex.GetValueOrDefault(place.Id) + 1) % place.Images.Count;
+            }
+            // InvokeAsync may throw ObjectDisposedException or TaskCanceledException when the
+            // component has been disposed; both are safe to ignore here.
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception) when (_carouselTimer == null) { }
+        finally
+        {
+            Interlocked.Exchange(ref _carouselTickRunning, 0);
+        }
+    }
+
+    private void NavigateImage(Place place, int delta)
+    {
+        var count = place.Images.Count;
+        if (count <= 1) return;
+        var current = _currentImageIndex.GetValueOrDefault(place.Id, 0);
+        _currentImageIndex[place.Id] = (current + delta + count) % count;
+    }
+
+    private void SetImageIndex(Place place, int index)
+    {
+        if (index >= 0 && index < place.Images.Count)
+            _currentImageIndex[place.Id] = index;
+    }
 
     private static bool IsSafeUrl(string? url) =>
         !string.IsNullOrWhiteSpace(url) &&
@@ -190,19 +267,19 @@
         CanUserEditPlace(place) &&
         (OnEditPlace.HasDelegate || OnDeletePlace.HasDelegate || OnNotesPlace.HasDelegate || OnRemoveReview.HasDelegate);
 
-    private string GetImageSrc(Place place)
+    private string GetImageSrc(PlaceImage img)
     {
-        if (!_imageSrcCache.TryGetValue(place.Id, out var src))
+        if (!_imageSrcCache.TryGetValue(img.Id, out var src))
         {
-            var img = place.Images.OrderBy(i => i.SortOrder).FirstOrDefault();
-            if (img is null) return string.Empty;
             src = $"data:{img.ImageContentType};base64,{Convert.ToBase64String(img.ImageData)}";
-            _imageSrcCache[place.Id] = src;
+            _imageSrcCache[img.Id] = src;
         }
         return src;
     }
 
-
-
-
+    public void Dispose()
+    {
+        _carouselTimer?.Stop();
+        _carouselTimer?.Dispose();
+    }
 }
