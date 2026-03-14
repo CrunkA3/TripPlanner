@@ -11,7 +11,7 @@ namespace TripPlanner.Web.Components.Shared;
 
 public partial class MarkdownSection : FluentComponentBase
 {
-    private IJSObjectReference _jsModule = default!;
+    // private IJSObjectReference _jsModule = default!;
     private bool _markdownChanged = false;
     private string? _content;
     private string? _fromAsset;
