@@ -37,7 +37,7 @@
                 <FluentOption TOption="string" Value="@trip.Id">@trip.Name</FluentOption>
             }
         </FluentSelect>
-        <FluentSelect TOption="string" Value="@SelectedWeatherDayStr" ValueChanged="@OnWeatherDayChanged" Label="Weather Day" Style="min-width: 160px;">
+        <FluentSelect TOption="string" Value="@SelectedWeatherDayStr" ValueChanged="@OnWeatherDayChanged" Label="Weather Day" Style="min-width: 160px;" Disabled="@(!ShowWeather)">
             @for (int i = 0; i < 7; i++)
             {
                 var day = i;
@@ -104,7 +104,7 @@
                                                     <FluentLabel Style="font-size: 0.875em;">
                                                         @place.Latitude.ToString("F4"), @place.Longitude.ToString("F4")
                                                     </FluentLabel>
-                                                    @if (weather != null)
+                                                    @if (ShowWeather && weather != null)
                                                     {
                                                         <FluentLabel Style="font-size: 0.875em;" title="@weather.GetDescription()">
                                                             @weather.GetSummary()
@@ -128,7 +128,7 @@
                                                     <FluentLabel Style="font-size: 0.875em;">
                                                         @place.Latitude.ToString("F4"), @place.Longitude.ToString("F4")
                                                     </FluentLabel>
-                                                    @if (weather != null)
+                                                    @if (ShowWeather && weather != null)
                                                     {
                                                         <FluentLabel Style="font-size: 0.875em;" title="@weather.GetDescription()">
                                                             @weather.GetSummary()
@@ -164,7 +164,7 @@
                                                     <FluentLabel Style="font-size: 0.875em;">
                                                         @tripPlace.Place.Latitude.ToString("F4"), @tripPlace.Place.Longitude.ToString("F4")
                                                     </FluentLabel>
-                                                    @if (weather != null)
+                                                    @if (ShowWeather && weather != null)
                                                     {
                                                         <FluentLabel Style="font-size: 0.875em;" title="@weather.GetDescription()">
                                                             @weather.GetSummary()
@@ -187,6 +187,7 @@
                     <FluentCheckbox Label="Show Wishlist Places" @bind-Value="@ShowWishlist" />
                     <FluentCheckbox Label="Show Trip Routes" @bind-Value="@ShowRoutes" />
                     <FluentCheckbox Label="Show GPX Tracks" @bind-Value="@ShowGpxTracks" />
+                    <FluentCheckbox Label="Show Weather" Value="@ShowWeather" ValueChanged="@OnShowWeatherChanged" />
                 </FluentStack>
                 
                 <FluentLabel Style="font-size: 0.875em; margin-top: 16px;">
@@ -216,6 +217,7 @@
     private string SelectedWeatherDayStr { get; set; } = "0";
     private Dictionary<string, DailyWeather> WeatherByPlaceId { get; set; } = new();
     private CancellationTokenSource? _weatherCts;
+    private bool ShowWeather { get; set; } = true;
 
     private bool isLandscape = true;
 
@@ -316,6 +318,12 @@
         await LoadWeather();
     }
 
+    private async Task OnShowWeatherChanged(bool value)
+    {
+        ShowWeather = value;
+        await UpdateMapContent();
+    }
+
     private async Task LoadWeather()
     {
         // Cancel any in-flight weather load so stale results never overwrite fresher ones.
@@ -387,7 +395,7 @@
                 foreach (var place in Places)
                 {
                     var color = IPlaceRepository.GetCategoryColor(place.Category);
-                    var weatherInfo = WeatherByPlaceId.TryGetValue(place.Id, out var w) ? w.GetSummary() : null;
+                    var weatherInfo = ShowWeather && WeatherByPlaceId.TryGetValue(place.Id, out var w) ? w.GetSummary() : null;
                     await JSRuntime.InvokeVoidAsync("mapInterop.addMarker",
                         place.Id, place.Latitude, place.Longitude,
                         place.Name, place.Category.ToString(), color, weatherInfo);
