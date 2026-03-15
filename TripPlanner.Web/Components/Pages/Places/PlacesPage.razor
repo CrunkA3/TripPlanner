@@ -47,6 +47,13 @@
             <FluentDatePicker Label="Visit Date From" @bind-Value="@FilterDateFrom" Style="min-width: 180px;" />
             <FluentDatePicker Label="Visit Date To" @bind-Value="@FilterDateTo" Style="min-width: 180px;" />
             
+            <FluentAutocomplete TOption="string"
+                                Label="Tags"
+                                Placeholder="Filter by tags…"
+                                OnOptionsSearch="@OnTagFilterSearchAsync"
+                                @bind-SelectedOptions="@FilterTags"
+                                Style="min-width: 200px;" />
+            
             <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size20.Filter())" OnClick="@ApplyFilters">
                 Apply Filters
             </FluentButton>
@@ -181,7 +188,8 @@
         .Where(p => !FilterCategory.HasValue || p.Category == FilterCategory.Value)
         .Where(p => !FilterHasGpx.GetValueOrDefault(false) || p.GpxTrackId != null)
         .Where(p => FilterDateFrom == null || (p.VisitDate.HasValue && p.VisitDate.Value.DateTime >= FilterDateFrom.Value))
-        .Where(p => FilterDateTo == null || (p.VisitDate.HasValue && p.VisitDate.Value.DateTime <= FilterDateTo.Value));
+        .Where(p => FilterDateTo == null || (p.VisitDate.HasValue && p.VisitDate.Value.DateTime <= FilterDateTo.Value))
+        .Where(p => !FilterTags.Any() || FilterTags.All(t => (p.Tags ?? Enumerable.Empty<string>()).Contains(t)));
 
     private List<GpxTrack> GpxTracks { get; set; } = new();
     private bool IsLoading { get; set; } = true;
@@ -193,6 +201,7 @@
     private bool FilterHasGpxValue { get; set; }
     private DateTime? FilterDateFrom { get; set; }
     private DateTime? FilterDateTo { get; set; }
+    private IEnumerable<string> FilterTags { get; set; } = Array.Empty<string>();
     private string NewTag { get; set; } = string.Empty;
     private string _selectedCategoryString = string.Empty;
 
@@ -205,6 +214,21 @@
         {
             EditingPlace.Category = category;
         }
+    }
+
+    private Task OnTagFilterSearchAsync(OptionsSearchEventArgs<string> e)
+    {
+        var allTags = Places?
+            .SelectMany(p => p.Tags)
+            .Distinct()
+            .OrderBy(t => t)
+            .ToList() ?? new List<string>();
+
+        e.Items = string.IsNullOrWhiteSpace(e.Text)
+            ? allTags.Where(t => !FilterTags.Contains(t))
+            : allTags.Where(t => t.Contains(e.Text, StringComparison.OrdinalIgnoreCase) && !FilterTags.Contains(t));
+
+        return Task.CompletedTask;
     }
 
     protected override async Task OnInitializedAsync()
@@ -252,6 +276,7 @@
         FilterHasGpxValue = false;
         FilterDateFrom = null;
         FilterDateTo = null;
+        FilterTags = Array.Empty<string>();
         await LoadPlaces();
     }
 

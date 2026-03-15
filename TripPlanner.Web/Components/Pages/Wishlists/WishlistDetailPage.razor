@@ -57,6 +57,23 @@ else
             </FluentCard>
         }
 
+        @if (places != null && places.Count > 0)
+        {
+            <FluentCard AreaRestricted="false">
+                <FluentStack Orientation="Orientation.Horizontal" Width="100%" Wrap="true">
+                    <FluentAutocomplete TOption="string"
+                                        Label="Filter by Tags"
+                                        Placeholder="Filter by tags…"
+                                        OnOptionsSearch="@OnTagFilterSearchAsync"
+                                        @bind-SelectedOptions="@FilterTags"
+                                        Style="min-width: 200px;" />
+                    <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size20.Eraser())" OnClick="@ClearTagFilter">
+                        Clear
+                    </FluentButton>
+                </FluentStack>
+            </FluentCard>
+        }
+
         @if (canEdit)
         {
             <FluentCard>
@@ -179,15 +196,15 @@ else
         {
             <FluentProgressRing>Loading places...</FluentProgressRing>
         }
-        else if (!places.Any())
+        else if (!FilteredPlaces.Any())
         {
             <FluentCard>
-                <p>This wishlist doesn't have any places yet. Click "Add Place" to start adding places.</p>
+                <p>@EmptyPlacesMessage</p>
             </FluentCard>
         }
         else
         {
-            <WishlistPlacesGrid Places="places" CanEdit="@canEdit" OnEditPlace="EditPlace" OnDeletePlace="DeletePlace" OnNotesPlace="OpenNotes" OnRemoveReview="RemoveReview" />
+            <WishlistPlacesGrid Places="FilteredPlaces" CanEdit="@canEdit" OnEditPlace="EditPlace" OnDeletePlace="DeletePlace" OnNotesPlace="OpenNotes" OnRemoveReview="RemoveReview" />
         }
     </FluentStack>
 }
@@ -209,6 +226,37 @@ else
 
     private string urlInputText = string.Empty;
     private string? urlSubmitError;
+
+    private IEnumerable<string> FilterTags { get; set; } = Array.Empty<string>();
+
+    private IEnumerable<Place> FilteredPlaces =>
+        places?.Where(p => !FilterTags.Any() || FilterTags.All(t => (p.Tags ?? Enumerable.Empty<string>()).Contains(t)))
+        ?? Enumerable.Empty<Place>();
+
+    private string EmptyPlacesMessage =>
+        places?.Count == 0
+            ? "This wishlist doesn't have any places yet. Click \"Add Place\" to start adding places."
+            : "No places match the selected tag filter.";
+
+    private Task OnTagFilterSearchAsync(OptionsSearchEventArgs<string> e)
+    {
+        var allTags = places?
+            .SelectMany(p => p.Tags)
+            .Distinct()
+            .OrderBy(t => t)
+            .ToList() ?? new List<string>();
+
+        e.Items = string.IsNullOrWhiteSpace(e.Text)
+            ? allTags.Where(t => !FilterTags.Contains(t))
+            : allTags.Where(t => t.Contains(e.Text, StringComparison.OrdinalIgnoreCase) && !FilterTags.Contains(t));
+
+        return Task.CompletedTask;
+    }
+
+    private void ClearTagFilter()
+    {
+        FilterTags = Array.Empty<string>();
+    }
 
 
 
