@@ -342,6 +342,11 @@
         }
 
         StateHasChanged();
+
+        if (MapInitialized)
+        {
+            await UpdateMapContent();
+        }
     }
 
     private async Task UpdateMapContent()
@@ -369,9 +374,10 @@
                 foreach (var place in Places)
                 {
                     var color = IPlaceRepository.GetCategoryColor(place.Category);
+                    var weatherInfo = WeatherByPlaceId.TryGetValue(place.Id, out var w) ? w.GetSummary() : null;
                     await JSRuntime.InvokeVoidAsync("mapInterop.addMarker",
                         place.Id, place.Latitude, place.Longitude,
-                        place.Name, place.Category.ToString(), color);
+                        place.Name, place.Category.ToString(), color, weatherInfo);
                 }
             }
 

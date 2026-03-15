@@ -101,8 +101,30 @@ window.mapInterop = {
         return div.innerHTML;
     },
 
-    addMarker: function (id, lat, lng, name, category, color) {
+    addMarker: function (id, lat, lng, name, category, color, weatherInfo) {
         if (!this.map) return;
+
+        var wrapper = document.createElement('div');
+        wrapper.style.display = 'flex';
+        wrapper.style.flexDirection = 'column';
+        wrapper.style.alignItems = 'center';
+        wrapper.style.cursor = 'pointer';
+
+        if (weatherInfo) {
+            var weatherLabel = document.createElement('div');
+            weatherLabel.style.backgroundColor = 'rgba(255,255,255,0.92)';
+            weatherLabel.style.padding = '2px 5px';
+            weatherLabel.style.borderRadius = '4px';
+            weatherLabel.style.fontSize = '11px';
+            weatherLabel.style.fontWeight = 'bold';
+            weatherLabel.style.boxShadow = '0 1px 3px rgba(0,0,0,0.3)';
+            weatherLabel.style.marginBottom = '2px';
+            weatherLabel.style.whiteSpace = 'nowrap';
+            weatherLabel.style.lineHeight = '1.2';
+            weatherLabel.textContent = weatherInfo;
+            wrapper.appendChild(weatherLabel);
+        }
+
         var el = document.createElement('div');
         el.style.width = '16px';
         el.style.height = '16px';
@@ -110,14 +132,18 @@ window.mapInterop = {
         el.style.backgroundColor = color;
         el.style.border = '2px solid white';
         el.style.boxShadow = '0 0 4px rgba(0,0,0,0.4)';
-        el.style.cursor = 'pointer';
+        wrapper.appendChild(el);
 
         var safeId = this.escapeHtml(id);
         var safeName = this.escapeHtml(name);
         var safeCategory = this.escapeHtml(category);
+        var weatherHtml = weatherInfo
+            ? '<br><span style="font-size:0.9em">' + this.escapeHtml(weatherInfo) + '</span>'
+            : '';
         var popupHtml =
             '<div style="min-width:120px">' +
             '<b>' + safeName + '</b><br><span style="font-size:0.85em">' + safeCategory + '</span>' +
+            weatherHtml +
             '<br><button onclick="window.mapInterop.onViewPlace(\'' + safeId + '\')" ' +
             'style="margin-top:6px;padding:2px 10px;font-size:0.8em;cursor:pointer;border:1px solid #888;border-radius:3px;background:#fff;">' +
             '&#128269; Details</button>' +
@@ -126,7 +152,7 @@ window.mapInterop = {
         var popup = new maplibregl.Popup({ offset: 10 })
             .setHTML(popupHtml);
 
-        var marker = new maplibregl.Marker({ element: el })
+        var marker = new maplibregl.Marker({ element: wrapper })
             .setLngLat([lng, lat])
             .setPopup(popup)
             .addTo(this.map);
