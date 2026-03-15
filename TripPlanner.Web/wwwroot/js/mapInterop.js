@@ -149,10 +149,10 @@ window.mapInterop = {
             '&#128269; Details</button>' +
             '</div>';
 
-        var popup = new maplibregl.Popup({ offset: 10 })
+        var popup = new maplibregl.Popup({ offset: 20 })
             .setHTML(popupHtml);
 
-        var marker = new maplibregl.Marker({ element: wrapper })
+        var marker = new maplibregl.Marker({ element: wrapper, anchor: 'bottom' })
             .setLngLat([lng, lat])
             .setPopup(popup)
             .addTo(this.map);
