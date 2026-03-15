@@ -129,7 +129,11 @@ public abstract partial class ChatServiceBase(
                 }
                 catch (JsonException ex)
                 {
-                    logger.LogWarning(ex, "Failed to deserialize ToolCallsJson for message in conversation {ConversationId}; tool calls will be omitted.", conversationId);
+                    var safeConversationId = conversationId
+                        .Replace(Environment.NewLine, string.Empty)
+                        .Replace("\r", string.Empty)
+                        .Replace("\n", string.Empty);
+                    logger.LogWarning(ex, "Failed to deserialize ToolCallsJson for message in conversation {ConversationId}; tool calls will be omitted.", safeConversationId);
                 }
             }
             History.Add(chatMsg);
