@@ -150,8 +150,11 @@ public abstract partial class ChatServiceBase(
             CurrentConversationId = conversation.Id;
         }
 
+        var conversationId = CurrentConversationId
+            ?? throw new InvalidOperationException("Conversation ID is null after creation.");
+
         History.Add(new ChatMessage { Role = "user", Content = userMessage });
-        await conversationRepository.AddMessageAsync(CurrentConversationId, "user", userMessage, userId);
+        await conversationRepository.AddMessageAsync(conversationId, "user", userMessage, userId);
         TrimHistory();
 
         return await RunInferenceAsync(userId, ct);
