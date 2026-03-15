@@ -47,7 +47,7 @@ public class WeatherService(IHttpClientFactory httpClientFactory, ILogger<Weathe
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to fetch weather forecast for {Latitude},{Longitude}", latitude, longitude);
+            logger.LogWarning(ex, "Failed to fetch weather forecast for requested coordinates.");
             return null;
         }
     }
