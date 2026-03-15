@@ -329,11 +329,14 @@
             ChatService.SetCurrentConversationId(conversation.Id);
         }
 
+        var conversationId = ChatService.CurrentConversationId
+            ?? throw new InvalidOperationException("Conversation ID is null after creation.");
+
         // Save the user message to the database so the background service can load it.
-        await ConversationRepository.AddMessageAsync(ChatService.CurrentConversationId!, "user", message, _currentUser.Id);
+        await ConversationRepository.AddMessageAsync(conversationId, "user", message, _currentUser.Id);
 
         // Create the background job.
-        var job = await ChatJobRepository.CreateAsync(ChatService.CurrentConversationId!, _currentUser.Id, message);
+        var job = await ChatJobRepository.CreateAsync(conversationId, _currentUser.Id, message);
         _activeJobId = job.Id;
         _pendingUserMessage = message;
         _isThinking = true;
@@ -345,7 +348,7 @@
             _conversations = await ConversationRepository.GetByUserAsync(_currentUser.Id);
             // Navigate only after the job and message are persisted. This way, if Blazor recreates the
             // component for the new route, OnParametersSetAsync can restore the pending state from DB.
-            Navigation.NavigateTo($"/chat/{ChatService.CurrentConversationId}", replace: true);
+            Navigation.NavigateTo($"/chat/{conversationId}", replace: true);
         }
 
         StateHasChanged();
