@@ -224,9 +224,8 @@ public class PlaceRepository : IPlaceRepository
             .SelectMany(t => t.Days.SelectMany(d => d.Places.Select(tp => tp.PlaceId)));
 
         var tags = await _context.Places
-            .Where(p => p.Wishlist != null && (
-                userWishlists.Any(swl => swl.WishlistId == p.WishlistId) ||
-                tripPlaces.Any(placeId => placeId == p.Id)))
+            .Where(p => (p.WishlistId != null && userWishlists.Any(swl => swl.WishlistId == p.WishlistId)) ||
+                tripPlaces.Any(placeId => placeId == p.Id))
             .Select(p => p.Tags)
             .ToListAsync();
 
