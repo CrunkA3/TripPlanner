@@ -20,6 +20,7 @@ public interface IPlaceRepository
     Task DeleteAsync(string id, string userId);
     Task<List<Place>> FilterAsync(PlaceCategory? category = null, List<string>? tags = null, bool? hasGpxTrack = null);
     Task<List<Place>> GetByWishlistIdAsync(string wishlistId);
+    Task<List<string>> GetAllTagsByUserAsync(string userId);
 
     static string GetCategoryColor(PlaceCategory category)
     {
