@@ -215,6 +215,7 @@
     private int SelectedWeatherDay { get; set; } = 0;
     private string SelectedWeatherDayStr { get; set; } = "0";
     private Dictionary<string, DailyWeather> WeatherByPlaceId { get; set; } = new();
+    private CancellationTokenSource? _weatherCts;
 
     private bool isLandscape = true;
 
@@ -317,6 +318,13 @@
 
     private async Task LoadWeather()
     {
+        // Cancel any in-flight weather load so stale results never overwrite fresher ones.
+        _weatherCts?.Cancel();
+        _weatherCts?.Dispose();
+        var cts = new CancellationTokenSource();
+        _weatherCts = cts;
+        var token = cts.Token;
+
         var targetDate = DateOnly.FromDateTime(DateTime.Today.AddDays(SelectedWeatherDay));
         WeatherByPlaceId.Clear();
 
@@ -335,6 +343,11 @@
         });
 
         var results = await Task.WhenAll(tasks);
+
+        // A newer LoadWeather call was started; discard these results.
+        if (token.IsCancellationRequested)
+            return;
+
         foreach (var (id, weather) in results)
         {
             if (weather != null)
@@ -453,6 +466,8 @@
 
     public async ValueTask DisposeAsync()
     {
+        _weatherCts?.Cancel();
+        _weatherCts?.Dispose();
         _dotNetRef?.Dispose();
         if (MapInitialized)
         {
