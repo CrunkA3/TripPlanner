@@ -214,4 +214,27 @@ public class PlaceRepository : IPlaceRepository
             .ToListAsync();
     }
 
+    public async Task<List<string>> GetAllTagsByUserAsync(string userId)
+    {
+        var userWishlists = _context.UserWishlists
+            .Where(w => w.UserId == userId);
+
+        var tripPlaces = _context.Trips
+            .Where(t => t.OwnerId == userId)
+            .SelectMany(t => t.Days.SelectMany(d => d.Places.Select(tp => tp.PlaceId)));
+
+        var tags = await _context.Places
+            .Where(p => (p.WishlistId != null && userWishlists.Any(swl => swl.WishlistId == p.WishlistId)) ||
+                tripPlaces.Any(placeId => placeId == p.Id))
+            .Select(p => p.Tags)
+            .ToListAsync();
+
+        return tags
+            .SelectMany(t => t)
+            .Where(t => !string.IsNullOrWhiteSpace(t))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(t => t)
+            .ToList();
+    }
+
 }
