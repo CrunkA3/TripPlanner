@@ -128,9 +128,9 @@
                     {
                         <FluentStack Orientation="Orientation.Horizontal" Style="flex-wrap: wrap; gap: 8px;">
                             @{var sortedImages = Content.Images.OrderBy(i => i.SortOrder).ToList();}
-                            @foreach (var img in sortedImages)
+                            @for (var idx = 0; idx < sortedImages.Count; idx++)
                             {
-                                var idx = sortedImages.IndexOf(img);
+                                var img = sortedImages[idx];
                                 <div style="position: relative; display: inline-block;">
                                     <img src="@GetImageSrc(img)" alt="Place image"
                                          style="width: 120px; height: 90px; object-fit: cover; border-radius: 4px; cursor: pointer;"
@@ -210,15 +210,15 @@
     <div class="lightbox-overlay" role="dialog" aria-modal="true" aria-label="Image preview"
          @ref="_lightboxRef" tabindex="-1"
          @onclick="CloseLightbox" @onkeydown="HandleLightboxKey">
-        <button class="lightbox-close" @onclick:stopPropagation="true" @onclick="CloseLightbox" aria-label="Close">&#10005;</button>
+        <button type="button" class="lightbox-close" @onclick:stopPropagation="true" @onclick="CloseLightbox" aria-label="Close">&#10005;</button>
         @if (_lightboxImages.Count > 1)
         {
-            <button class="lightbox-nav lightbox-prev" @onclick:stopPropagation="true" @onclick="@(() => NavigateLightbox(-1))" aria-label="Previous">&#8249;</button>
+            <button type="button" class="lightbox-nav lightbox-prev" @onclick:stopPropagation="true" @onclick="@(() => NavigateLightbox(-1))" aria-label="Previous">&#8249;</button>
         }
         <img class="lightbox-image" src="@GetImageSrc(lightboxImg)" alt="Place image" @onclick:stopPropagation="true" />
         @if (_lightboxImages.Count > 1)
         {
-            <button class="lightbox-nav lightbox-next" @onclick:stopPropagation="true" @onclick="@(() => NavigateLightbox(1))" aria-label="Next">&#8250;</button>
+            <button type="button" class="lightbox-nav lightbox-next" @onclick:stopPropagation="true" @onclick="@(() => NavigateLightbox(1))" aria-label="Next">&#8250;</button>
             <div class="lightbox-counter" @onclick:stopPropagation="true">@(_lightboxIndex + 1) / @_lightboxImages.Count</div>
         }
     </div>
@@ -422,7 +422,8 @@
         if (_focusLightbox)
         {
             _focusLightbox = false;
-            try { await JS.InvokeVoidAsync("focusElement", _lightboxRef); } catch { }
+            try { await JS.InvokeVoidAsync("focusElement", _lightboxRef); }
+            catch (Exception ex) { Logger.LogWarning(ex, "Failed to focus lightbox overlay."); }
         }
     }
     private async Task SavePlace()
