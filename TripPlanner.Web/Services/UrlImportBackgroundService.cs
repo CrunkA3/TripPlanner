@@ -78,7 +78,6 @@ public class UrlImportBackgroundService(
         var jobRepo = scope.ServiceProvider.GetRequiredService<IUrlImportJobRepository>();
         var placeRepo = scope.ServiceProvider.GetRequiredService<IPlaceRepository>();
         var analysisService = scope.ServiceProvider.GetRequiredService<IPlaceAnalysisService>();
-        var browserTimeZoneService = scope.ServiceProvider.GetRequiredService<BrowserTimeZoneService>();
 
         var pendingJobs = await jobRepo.GetPendingJobsAsync(maxCount: MaxJobsPerCycle);
 
@@ -87,7 +86,7 @@ public class UrlImportBackgroundService(
             if (cancellationToken.IsCancellationRequested)
                 break;
 
-            await ProcessJobAsync(job, jobRepo, placeRepo, analysisService, browserTimeZoneService, cancellationToken);
+            await ProcessJobAsync(job, jobRepo, placeRepo, analysisService, cancellationToken);
         }
     }
 
@@ -96,13 +95,9 @@ public class UrlImportBackgroundService(
         IUrlImportJobRepository jobRepo,
         IPlaceRepository placeRepo,
         IPlaceAnalysisService analysisService,
-        BrowserTimeZoneService browserTimeZoneService,
         CancellationToken cancellationToken)
     {
         logger.LogInformation("Processing URL import job {JobId} for URL: {Url}", job.Id, job.Url);
-
-        // Prime the scoped BrowserTimeZoneService with the language captured at job creation.
-        browserTimeZoneService.SetLanguage(job.LanguageTag);
 
         // Mark as Processing
         job.Status = UrlImportJobStatus.Processing;
@@ -110,7 +105,7 @@ public class UrlImportBackgroundService(
 
         try
         {
-            var result = await analysisService.AnalyzeUrlAsync(job.Url, cancellationToken);
+            var result = await analysisService.AnalyzeUrlAsync(job.Url, job.LanguageTag, cancellationToken);
 
             job.AiPrompt = result?.Prompt;
             job.AiResponse = result?.RawResponse;

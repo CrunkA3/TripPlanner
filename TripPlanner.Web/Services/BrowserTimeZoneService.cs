@@ -1,5 +1,7 @@
 namespace TripPlanner.Web.Services;
 
+using System.Globalization;
+
 /// <summary>
 /// Scoped service that holds the browser's IANA timezone and preferred language, allowing
 /// server-side components and AI prompts to use the user's local timezone and language.
@@ -30,19 +32,20 @@ public class BrowserTimeZoneService
         if (string.IsNullOrWhiteSpace(languageTag))
             return;
 
-        // Normalize and validate: accept only well-formed BCP 47 tags (letters, digits, hyphens)
-        // to prevent prompt-injection via crafted Accept-Language headers or navigator.language values.
         var trimmed = languageTag.Trim();
-        if (trimmed.Length > 35 || !Bcp47Pattern.IsMatch(trimmed))
-            return;
 
-        LanguageTag = trimmed;
+        // Validate via CultureInfo to ensure the tag is a recognised BCP 47 culture name
+        // and to prevent prompt-injection via crafted language values.
+        try
+        {
+            CultureInfo.GetCultureInfo(trimmed);
+            LanguageTag = trimmed;
+        }
+        catch (CultureNotFoundException)
+        {
+            // Unrecognized culture — keep the current value (default "en").
+        }
     }
-
-    // BCP 47 language tag: one or more subtags of [A-Za-z0-9], separated by hyphens.
-    // Examples: "en", "en-US", "zh-Hans-CN". Max length kept conservative at 35 chars.
-    private static readonly System.Text.RegularExpressions.Regex Bcp47Pattern =
-        new(@"^[A-Za-z0-9]+(-[A-Za-z0-9]+)*$", System.Text.RegularExpressions.RegexOptions.Compiled);
 
     /// <summary>Sets the timezone from an IANA or Windows timezone identifier.</summary>
     public void SetTimeZone(string timeZoneId)
