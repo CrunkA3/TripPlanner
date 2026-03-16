@@ -2,6 +2,7 @@
 
 body {
     --body-font: "Segoe UI Variable", "Segoe UI", sans-serif;
+    --app-header-height: 86px;
     font-family: var(--body-font);
     font-size: var(--type-ramp-base-font-size);
     line-height: var(--type-ramp-base-line-height);
@@ -13,14 +14,14 @@ body {
 }
 
 .main {
-    min-height: calc(100dvh - 86px);
+    min-height: calc(100dvh - var(--app-header-height));
     color: var(--neutral-foreground-rest);
     align-items: stretch !important;
 }
 
 .body-content {
     align-self: stretch;
-    height: calc(100dvh - 86px) !important;
+    height: calc(100dvh - var(--app-header-height)) !important;
     display: flex;
 }
 
@@ -534,8 +535,7 @@ table {
 .auth-wrapper {
     display: flex;
     margin: -0.5rem -1.5rem;
-    /* matches the 86px header height used throughout the app */
-    min-height: calc(100dvh - 86px);
+    min-height: calc(100dvh - var(--app-header-height));
     overflow: hidden;
 }
 
@@ -708,6 +708,10 @@ table {
 
 /* Responsive: hide illustration on small screens */
 @media (max-width: 767px) {
+    .auth-wrapper {
+        margin: 0;
+    }
+
     .auth-visual {
         display: none;
     }

@@ -129,8 +129,8 @@
     <div class="auth-form-panel">
         <div class="auth-form-card">
             <div class="auth-form-header">
-                <span class="auth-form-icon">🌿</span>
-                <h2>Start your journey</h2>
+                <span class="auth-form-icon" aria-hidden="true">🌿</span>
+                <h1>Start your journey</h1>
                 <p class="auth-form-subtitle">Create an account and begin planning</p>
             </div>
 
@@ -146,7 +146,7 @@
                     <FluentTextField type="password" Name="Input.ConfirmPassword" @bind-Value="Input.ConfirmPassword" AutoComplete="new-password" Required="true" Placeholder="password" Label="Confirm Password" Style="width: 100%" />
                     <FluentValidationMessage For="() => Input.ConfirmPassword" class="text-danger" />
                     <FluentCheckbox Name="Input.AcceptPrivacyPolicy" @bind-Value="Input.AcceptPrivacyPolicy" Label="" Required="true">
-                        I have read and agree to the <a href="/privacy" target="_blank">Privacy Policy</a>. <span aria-hidden="true" style="color:red">*</span>
+                        I have read and agree to the <a href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>. <span aria-hidden="true" style="color:red">*</span>
                     </FluentCheckbox>
                     <FluentValidationMessage For="() => Input.AcceptPrivacyPolicy" class="text-danger" />
                     <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Style="width: 100%" data-testid="submit-register-button">Create account →</FluentButton>
@@ -157,7 +157,7 @@
             <ExternalLoginPicker />
 
             <div class="auth-links">
-                <FluentAnchor Appearance="Appearance.Hypertext" Href="Account/Login">Already have an account? Sign in</FluentAnchor>
+                <FluentAnchor Appearance="Appearance.Hypertext" Href="@(NavigationManager.GetUriWithQueryParameters("Account/Login", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))">Already have an account? Sign in</FluentAnchor>
             </div>
         </div>
     </div>
