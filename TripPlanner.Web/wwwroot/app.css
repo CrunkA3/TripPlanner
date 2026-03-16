@@ -534,6 +534,7 @@ table {
 .auth-wrapper {
     display: flex;
     margin: -0.5rem -1.5rem;
+    /* matches the 86px header height used throughout the app */
     min-height: calc(100dvh - 86px);
     overflow: hidden;
 }
