@@ -12,44 +12,139 @@
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
 
-<PageTitle>Log in</PageTitle>
+<PageTitle>Log in — TripPlanner</PageTitle>
 
-<h1>Log in</h1>
-<FluentGrid>
-    <FluentGridItem xs="8" sm="4">
-        <StatusMessage Message="@errorMessage" />
-        <EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login">
-            <DataAnnotationsValidator />
-            <h2>Use a local account to log in.</h2>
-            <hr />
-            <FluentValidationSummary class="text-danger" role="alert" />
-            <FluentStack Orientation="Orientation.Vertical">
-                <FluentTextField Name="Input.Email" @bind-Value="Input.Email" AutoComplete="username" Required="true" Placeholder="name@example.com" Label="Email" Style="width: 100%" />
-                <FluentValidationMessage For="() => Input.Email" class="text-danger" />
-                <FluentTextField type="password" Name="Input.Password" @bind-Value="Input.Password" AutoComplete="current-password" Required="true" Placeholder="password" Label="Password" Style="width: 100%" />
-                <FluentValidationMessage For="() => Input.Password" class="text-danger" />
-                <FluentCheckbox Name="Input.RememberMe" @bind-Value="Input.RememberMe" Label="Remember me" />
-                <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Style="width: 100%" data-testid="submit-login-button">Log in</FluentButton>
-                <div>
-                    <p>
-                        <FluentAnchor Appearance="Appearance.Hypertext" Href="Account/ForgotPassword">Forgot your password?</FluentAnchor>
-                    </p>
-                    <p>
-                        <FluentAnchor Appearance="Appearance.Hypertext" Href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))">Register as a new user</FluentAnchor>
-                    </p>
-                    <p>
-                        <FluentAnchor Appearance="Appearance.Hypertext" Href="Account/ResendEmailConfirmation">Resend email confirmation</FluentAnchor>
-                    </p>
-                </div>
-            </FluentStack>
-        </EditForm>
-    </FluentGridItem>
-    <FluentGridItem xs="12" sm="8">
-        <h3>Use another service to log in.</h3>
-        <hr />
-        <ExternalLoginPicker />
-    </FluentGridItem>
-</FluentGrid>
+<div class="auth-wrapper">
+    <!-- Left: mountain illustration panel -->
+    <div class="auth-visual" aria-hidden="true">
+        <svg class="auth-scene" viewBox="0 0 600 800" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+            <defs>
+                <linearGradient id="login-sky" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#08111D" />
+                    <stop offset="55%" stop-color="#0F2340" />
+                    <stop offset="85%" stop-color="#1D3D64" />
+                    <stop offset="100%" stop-color="#2E5E48" />
+                </linearGradient>
+                <linearGradient id="login-mtn-far" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#2A4A6B" />
+                    <stop offset="100%" stop-color="#1A3244" />
+                </linearGradient>
+                <linearGradient id="login-mtn-mid" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#1E3D1C" />
+                    <stop offset="100%" stop-color="#0E2010" />
+                </linearGradient>
+                <linearGradient id="login-mtn-near" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#0C1C0B" />
+                    <stop offset="100%" stop-color="#050A05" />
+                </linearGradient>
+                <radialGradient id="login-moon-glow" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stop-color="#F0E6C8" stop-opacity="0.28" />
+                    <stop offset="100%" stop-color="#F0E6C8" stop-opacity="0" />
+                </radialGradient>
+            </defs>
+            <!-- Sky -->
+            <rect width="600" height="800" fill="url(#login-sky)" />
+            <!-- Stars -->
+            <circle class="auth-star-a" cx="45" cy="40" r="1.3" fill="white" opacity="0.85" />
+            <circle class="auth-star-b" cx="120" cy="25" r="0.9" fill="white" opacity="0.7" />
+            <circle class="auth-star-c" cx="200" cy="62" r="1.1" fill="white" opacity="0.85" />
+            <circle class="auth-star-a" cx="300" cy="30" r="1.4" fill="white" opacity="0.9" />
+            <circle class="auth-star-d" cx="380" cy="55" r="1.0" fill="white" opacity="0.7" />
+            <circle class="auth-star-b" cx="450" cy="20" r="1.2" fill="white" opacity="0.85" />
+            <circle class="auth-star-c" cx="520" cy="48" r="0.9" fill="white" opacity="0.8" />
+            <circle class="auth-star-a" cx="570" cy="72" r="1.1" fill="white" opacity="0.7" />
+            <circle class="auth-star-d" cx="70" cy="92" r="0.8" fill="white" opacity="0.65" />
+            <circle class="auth-star-b" cx="160" cy="80" r="1.0" fill="white" opacity="0.8" />
+            <circle class="auth-star-c" cx="245" cy="98" r="0.8" fill="white" opacity="0.65" />
+            <circle class="auth-star-a" cx="352" cy="76" r="1.2" fill="white" opacity="0.9" />
+            <circle class="auth-star-d" cx="492" cy="86" r="1.0" fill="white" opacity="0.75" />
+            <circle class="auth-star-b" cx="30" cy="132" r="0.9" fill="white" opacity="0.6" />
+            <circle class="auth-star-c" cx="92" cy="152" r="1.1" fill="white" opacity="0.7" />
+            <circle class="auth-star-a" cx="172" cy="122" r="0.8" fill="white" opacity="0.65" />
+            <circle class="auth-star-d" cx="422" cy="102" r="1.3" fill="white" opacity="0.8" />
+            <circle class="auth-star-b" cx="542" cy="132" r="0.9" fill="white" opacity="0.7" />
+            <circle class="auth-star-c" cx="262" cy="142" r="0.7" fill="white" opacity="0.55" />
+            <circle class="auth-star-a" cx="472" cy="152" r="1.0" fill="white" opacity="0.65" />
+            <!-- Moon glow + crescent -->
+            <circle cx="492" cy="88" r="52" fill="url(#login-moon-glow)" />
+            <circle cx="492" cy="88" r="28" fill="#F0E6C8" opacity="0.88" />
+            <circle cx="508" cy="80" r="23" fill="#0F2340" />
+            <!-- Horizon atmospheric glow -->
+            <ellipse cx="300" cy="495" rx="255" ry="58" fill="#2E7D52" opacity="0.14" />
+            <!-- Far mountains (snow-capped) -->
+            <path d="M0 445 L50 340 L80 362 L112 290 L146 330 L186 254 L232 310 L272 238 L312 290 L356 250 L396 295 L436 260 L476 306 L516 270 L556 312 L600 280 L600 505 L0 505 Z" fill="url(#login-mtn-far)" opacity="0.8" />
+            <!-- Snow caps -->
+            <path d="M112 290 L126 308 L136 326 L119 312 Z" fill="white" opacity="0.55" />
+            <path d="M186 254 L202 278 L212 296 L196 280 Z" fill="white" opacity="0.55" />
+            <path d="M272 238 L288 262 L296 282 L280 266 Z" fill="white" opacity="0.55" />
+            <path d="M356 250 L372 273 L380 290 L364 275 Z" fill="white" opacity="0.55" />
+            <path d="M436 260 L452 282 L460 300 L444 284 Z" fill="white" opacity="0.55" />
+            <!-- Mid mountains (forest) -->
+            <path d="M0 505 L26 432 L62 462 L92 402 L132 442 L172 376 L212 422 L252 362 L296 408 L336 372 L376 416 L416 382 L456 422 L496 386 L540 426 L580 396 L600 422 L600 572 L0 572 Z" fill="url(#login-mtn-mid)" />
+            <!-- Pine tree silhouette foreground -->
+            <path d="M0 572 L0 532 L12 550 L12 520 L22 540 L22 514 L32 532 L37 510 L46 528 L52 504 L62 524 L68 498 L78 520 L85 495 L95 516 L104 492 L110 514 L120 489 L128 511 L137 487 L145 509 L154 485 L163 508 L172 483 L182 506 L191 481 L200 504 L210 479 L219 503 L228 478 L237 502 L247 476 L256 500 L266 474 L275 498 L285 472 L294 496 L304 470 L313 494 L323 468 L332 492 L342 466 L351 490 L361 464 L370 488 L380 462 L389 486 L399 460 L408 484 L418 458 L427 482 L437 456 L446 480 L456 454 L465 478 L475 452 L484 476 L494 450 L503 474 L513 448 L522 472 L532 446 L541 470 L551 444 L560 468 L570 442 L579 466 L589 440 L600 464 L600 572 Z" fill="url(#login-mtn-near)" />
+            <!-- Ground -->
+            <rect x="0" y="572" width="600" height="228" fill="#050A05" />
+            <!-- Winding trail -->
+            <path class="auth-trail" d="M300 800 Q318 748 292 696 Q272 652 300 612 Q325 578 308 546 Q295 518 316 495" stroke="#E8844A" stroke-width="2.5" fill="none" opacity="0.72" stroke-dasharray="7 5" stroke-linecap="round" />
+            <!-- Hiker silhouette -->
+            <g transform="translate(313,490)" fill="#E8844A" opacity="0.9">
+                <circle cx="0" cy="-14" r="3.5" />
+                <line x1="0" y1="-10" x2="0" y2="2" stroke="#E8844A" stroke-width="2.5" />
+                <line x1="0" y1="2" x2="-4" y2="12" stroke="#E8844A" stroke-width="2" />
+                <line x1="0" y1="2" x2="3" y2="12" stroke="#E8844A" stroke-width="2" />
+                <line x1="0" y1="-6" x2="-6" y2="-1" stroke="#E8844A" stroke-width="2" />
+                <line x1="0" y1="-6" x2="5" y2="-2" stroke="#E8844A" stroke-width="2" />
+                <line x1="5" y1="-2" x2="7" y2="10" stroke="#E8844A" stroke-width="1.5" />
+            </g>
+        </svg>
+        <div class="auth-visual-content">
+            <span class="auth-brand-icon">🏔️</span>
+            <h1 class="auth-brand-name">TripPlanner</h1>
+            <p class="auth-brand-tagline">Every great journey begins<br />with a single step</p>
+            <div class="auth-feature-pills">
+                <span class="auth-pill">🥾 Hiking &amp; Trail Runs</span>
+                <span class="auth-pill">🗺️ Trip Planning</span>
+                <span class="auth-pill">📍 Wishlists &amp; Places</span>
+                <span class="auth-pill">🧭 GPX Tracks</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right: form panel -->
+    <div class="auth-form-panel">
+        <div class="auth-form-card">
+            <div class="auth-form-header">
+                <span class="auth-form-icon">⛰️</span>
+                <h2>Welcome back</h2>
+                <p class="auth-form-subtitle">Sign in to continue your adventure</p>
+            </div>
+
+            <StatusMessage Message="@errorMessage" />
+            <EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login">
+                <DataAnnotationsValidator />
+                <FluentValidationSummary class="text-danger" role="alert" />
+                <FluentStack Orientation="Orientation.Vertical">
+                    <FluentTextField Name="Input.Email" @bind-Value="Input.Email" AutoComplete="username" Required="true" Placeholder="name@example.com" Label="Email" Style="width: 100%" />
+                    <FluentValidationMessage For="() => Input.Email" class="text-danger" />
+                    <FluentTextField type="password" Name="Input.Password" @bind-Value="Input.Password" AutoComplete="current-password" Required="true" Placeholder="password" Label="Password" Style="width: 100%" />
+                    <FluentValidationMessage For="() => Input.Password" class="text-danger" />
+                    <FluentCheckbox Name="Input.RememberMe" @bind-Value="Input.RememberMe" Label="Remember me" />
+                    <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Style="width: 100%" data-testid="submit-login-button">Log in →</FluentButton>
+                </FluentStack>
+            </EditForm>
+
+            <div class="auth-form-divider"><span>or</span></div>
+            <ExternalLoginPicker />
+
+            <div class="auth-links">
+                <FluentAnchor Appearance="Appearance.Hypertext" Href="Account/ForgotPassword">Forgot your password?</FluentAnchor>
+                <FluentAnchor Appearance="Appearance.Hypertext" Href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))">Create an account</FluentAnchor>
+                <FluentAnchor Appearance="Appearance.Hypertext" Href="Account/ResendEmailConfirmation">Resend email confirmation</FluentAnchor>
+            </div>
+        </div>
+    </div>
+</div>
 
 @code {
     private string? errorMessage;

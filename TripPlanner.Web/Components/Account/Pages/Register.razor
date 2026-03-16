@@ -16,39 +16,152 @@
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
 
-<PageTitle>Register</PageTitle>
+<PageTitle>Register — TripPlanner</PageTitle>
 
-<h1>Register</h1>
+<div class="auth-wrapper">
+    <!-- Left: dawn mountain illustration panel -->
+    <div class="auth-visual" aria-hidden="true">
+        <svg class="auth-scene" viewBox="0 0 600 800" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+            <defs>
+                <linearGradient id="reg-sky" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#1A0830" />
+                    <stop offset="35%" stop-color="#3B1263" />
+                    <stop offset="65%" stop-color="#C0542A" />
+                    <stop offset="85%" stop-color="#E8944A" />
+                    <stop offset="100%" stop-color="#F5C16A" />
+                </linearGradient>
+                <linearGradient id="reg-mtn-far" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#5E3070" />
+                    <stop offset="100%" stop-color="#3A1C4A" />
+                </linearGradient>
+                <linearGradient id="reg-mtn-mid" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#2A4020" />
+                    <stop offset="100%" stop-color="#162512" />
+                </linearGradient>
+                <linearGradient id="reg-mtn-near" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#0E1A0D" />
+                    <stop offset="100%" stop-color="#060B05" />
+                </linearGradient>
+                <radialGradient id="reg-sun-glow" cx="50%" cy="100%" r="80%">
+                    <stop offset="0%" stop-color="#FFD080" stop-opacity="0.6" />
+                    <stop offset="60%" stop-color="#FF9040" stop-opacity="0.2" />
+                    <stop offset="100%" stop-color="#FF9040" stop-opacity="0" />
+                </radialGradient>
+                <radialGradient id="reg-sun-core" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stop-color="#FFEEAA" />
+                    <stop offset="50%" stop-color="#FFD060" />
+                    <stop offset="100%" stop-color="#FF9030" stop-opacity="0.6" />
+                </radialGradient>
+            </defs>
+            <!-- Sky gradient -->
+            <rect width="600" height="800" fill="url(#reg-sky)" />
+            <!-- Fading pre-dawn stars (upper region only) -->
+            <circle class="auth-star-b" cx="55" cy="38" r="1.1" fill="white" opacity="0.6" />
+            <circle class="auth-star-c" cx="135" cy="22" r="0.8" fill="white" opacity="0.5" />
+            <circle class="auth-star-a" cx="215" cy="58" r="0.9" fill="white" opacity="0.55" />
+            <circle class="auth-star-d" cx="318" cy="28" r="1.2" fill="white" opacity="0.65" />
+            <circle class="auth-star-b" cx="405" cy="48" r="0.8" fill="white" opacity="0.5" />
+            <circle class="auth-star-c" cx="462" cy="18" r="1.0" fill="white" opacity="0.55" />
+            <circle class="auth-star-a" cx="538" cy="42" r="0.7" fill="white" opacity="0.5" />
+            <circle class="auth-star-d" cx="82" cy="88" r="0.8" fill="white" opacity="0.4" />
+            <circle class="auth-star-b" cx="172" cy="76" r="0.9" fill="white" opacity="0.45" />
+            <circle class="auth-star-c" cx="375" cy="70" r="1.0" fill="white" opacity="0.5" />
+            <!-- Sun glow (horizon) -->
+            <ellipse cx="300" cy="485" rx="300" ry="200" fill="url(#reg-sun-glow)" />
+            <!-- Sun disk peeking over mountain ridge -->
+            <ellipse cx="300" cy="490" rx="48" ry="48" fill="url(#reg-sun-core)" opacity="0.92" />
+            <ellipse cx="300" cy="510" rx="80" ry="28" fill="#1A0830" opacity="1" />
+            <!-- Sun rays -->
+            <g stroke="#FFD060" stroke-width="1.5" opacity="0.35" stroke-linecap="round">
+                <line x1="300" y1="442" x2="300" y2="420" />
+                <line x1="268" y1="450" x2="255" y2="431" />
+                <line x1="332" y1="450" x2="345" y2="431" />
+                <line x1="248" y1="470" x2="228" y2="458" />
+                <line x1="352" y1="470" x2="372" y2="458" />
+                <line x1="240" y1="494" x2="218" y2="490" />
+                <line x1="360" y1="494" x2="382" y2="490" />
+            </g>
+            <!-- Far mountains (purple silhouette) -->
+            <path d="M0 450 L48 348 L78 368 L110 296 L144 335 L184 260 L230 316 L270 246 L310 296 L354 256 L394 300 L434 265 L474 310 L514 276 L554 316 L600 288 L600 510 L0 510 Z" fill="url(#reg-mtn-far)" opacity="0.85" />
+            <!-- Snow / sunrise-lit caps -->
+            <path d="M110 296 L124 314 L134 330 L117 318 Z" fill="#FFE0B0" opacity="0.65" />
+            <path d="M184 260 L200 282 L210 300 L194 285 Z" fill="#FFE0B0" opacity="0.65" />
+            <path d="M270 246 L286 268 L294 286 L278 270 Z" fill="#FFE0B0" opacity="0.65" />
+            <path d="M354 256 L370 278 L378 294 L362 278 Z" fill="#FFE0B0" opacity="0.65" />
+            <path d="M434 265 L450 286 L458 302 L442 286 Z" fill="#FFE0B0" opacity="0.65" />
+            <!-- Mid mountains (forest green) -->
+            <path d="M0 510 L24 438 L60 468 L90 408 L130 448 L170 382 L210 428 L250 368 L294 414 L334 378 L374 422 L414 388 L454 428 L494 392 L538 432 L578 402 L600 428 L600 576 L0 576 Z" fill="url(#reg-mtn-mid)" />
+            <!-- Pine tree silhouette foreground -->
+            <path d="M0 576 L0 536 L12 554 L12 524 L22 544 L22 518 L32 536 L37 514 L46 532 L52 508 L62 528 L68 502 L78 524 L85 499 L95 520 L104 496 L110 518 L120 493 L128 515 L137 491 L145 513 L154 489 L163 512 L172 487 L182 510 L191 485 L200 508 L210 483 L219 507 L228 482 L237 506 L247 480 L256 504 L266 478 L275 502 L285 476 L294 500 L304 474 L313 498 L323 472 L332 496 L342 470 L351 494 L361 468 L370 492 L380 466 L389 490 L399 464 L408 488 L418 462 L427 486 L437 460 L446 484 L456 458 L465 482 L475 456 L484 480 L494 454 L503 478 L513 452 L522 476 L532 450 L541 474 L551 448 L560 472 L570 446 L579 470 L589 444 L600 468 L600 576 Z" fill="url(#reg-mtn-near)" />
+            <!-- Ground -->
+            <rect x="0" y="576" width="600" height="224" fill="#060B05" />
+            <!-- Trail path -->
+            <path class="auth-trail" d="M300 800 Q316 750 290 698 Q270 654 298 614 Q324 580 306 548 Q293 520 314 496" stroke="#E8844A" stroke-width="2.5" fill="none" opacity="0.75" stroke-dasharray="7 5" stroke-linecap="round" />
+            <!-- Trail runner silhouette -->
+            <g transform="translate(312,492)" fill="#E8844A" opacity="0.9">
+                <circle cx="0" cy="-14" r="3.5" />
+                <!-- Body leaning forward (running posture) -->
+                <line x1="0" y1="-10" x2="-2" y2="1" stroke="#E8844A" stroke-width="2.5" />
+                <!-- Running legs -->
+                <line x1="-2" y1="1" x2="-8" y2="10" stroke="#E8844A" stroke-width="2" />
+                <line x1="-2" y1="1" x2="5" y2="8" stroke="#E8844A" stroke-width="2" />
+                <!-- Bent trailing leg -->
+                <line x1="5" y1="8" x2="8" y2="14" stroke="#E8844A" stroke-width="2" />
+                <!-- Arms (running swing) -->
+                <line x1="-1" y1="-5" x2="-7" y2="-1" stroke="#E8844A" stroke-width="2" />
+                <line x1="-1" y1="-5" x2="6" y2="-8" stroke="#E8844A" stroke-width="2" />
+            </g>
+        </svg>
+        <div class="auth-visual-content">
+            <span class="auth-brand-icon">🌄</span>
+            <h1 class="auth-brand-name">TripPlanner</h1>
+            <p class="auth-brand-tagline">A new dawn, a new adventure.<br />Your trail starts here.</p>
+            <div class="auth-feature-pills">
+                <span class="auth-pill">🏃 Trail Running</span>
+                <span class="auth-pill">🥾 Hiking Routes</span>
+                <span class="auth-pill">🗺️ Trip Planning</span>
+                <span class="auth-pill">📍 Wishlists</span>
+            </div>
+        </div>
+    </div>
 
-<FluentGrid>
-    <FluentGridItem xs="8" sm="4">
-        <StatusMessage Message="@Message" />
-        <EditForm Model="Input" asp-route-returnUrl="@ReturnUrl" method="post" OnValidSubmit="RegisterUser" FormName="register">
-            <DataAnnotationsValidator />
-            <h2>Create a new account.</h2>
-            <hr />
-            <FluentValidationSummary class="text-danger" role="alert" />
-            <FluentStack Orientation="Orientation.Vertical">
-                <FluentTextField Name="Input.Email" @bind-Value="Input.Email" AutoComplete="email" Required="true" Placeholder="name@example.com" Label="Email" Style="width: 100%" />
-                <FluentValidationMessage For="() => Input.Email" class="text-danger" />
-                <FluentTextField type="password" Name="Input.Password" @bind-Value="Input.Password" AutoComplete="new-password" Required="true" Placeholder="password" Label="Password" Style="width: 100%" />
-                <FluentValidationMessage For="() => Input.Password" class="text-danger" />
-                <FluentTextField type="password" Name="Input.ConfirmPassword" @bind-Value="Input.ConfirmPassword" AutoComplete="new-password" Required="true" Placeholder="password" Label="Confirm Password" Style="width: 100%" />
-                <FluentValidationMessage For="() => Input.ConfirmPassword" class="text-danger" />
-                <FluentCheckbox Name="Input.AcceptPrivacyPolicy" @bind-Value="Input.AcceptPrivacyPolicy" Label="" Required="true">
-                    I have read and agree to the <a href="/privacy" target="_blank">Privacy Policy</a>. <span aria-hidden="true" style="color:red">*</span>
-                </FluentCheckbox>
-                <FluentValidationMessage For="() => Input.AcceptPrivacyPolicy" class="text-danger" />
-                <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Style="width: 100%" data-testid="submit-register-button">Log in</FluentButton>
-            </FluentStack>
-        </EditForm>
-    </FluentGridItem>
-    <FluentGridItem xs="12" sm="8">
-        <h3>Use another service to log in.</h3>
-        <hr />
-        <ExternalLoginPicker />
-    </FluentGridItem>
-</FluentGrid>
+    <!-- Right: registration form panel -->
+    <div class="auth-form-panel">
+        <div class="auth-form-card">
+            <div class="auth-form-header">
+                <span class="auth-form-icon">🌿</span>
+                <h2>Start your journey</h2>
+                <p class="auth-form-subtitle">Create an account and begin planning</p>
+            </div>
+
+            <StatusMessage Message="@Message" />
+            <EditForm Model="Input" asp-route-returnUrl="@ReturnUrl" method="post" OnValidSubmit="RegisterUser" FormName="register">
+                <DataAnnotationsValidator />
+                <FluentValidationSummary class="text-danger" role="alert" />
+                <FluentStack Orientation="Orientation.Vertical">
+                    <FluentTextField Name="Input.Email" @bind-Value="Input.Email" AutoComplete="email" Required="true" Placeholder="name@example.com" Label="Email" Style="width: 100%" />
+                    <FluentValidationMessage For="() => Input.Email" class="text-danger" />
+                    <FluentTextField type="password" Name="Input.Password" @bind-Value="Input.Password" AutoComplete="new-password" Required="true" Placeholder="password" Label="Password" Style="width: 100%" />
+                    <FluentValidationMessage For="() => Input.Password" class="text-danger" />
+                    <FluentTextField type="password" Name="Input.ConfirmPassword" @bind-Value="Input.ConfirmPassword" AutoComplete="new-password" Required="true" Placeholder="password" Label="Confirm Password" Style="width: 100%" />
+                    <FluentValidationMessage For="() => Input.ConfirmPassword" class="text-danger" />
+                    <FluentCheckbox Name="Input.AcceptPrivacyPolicy" @bind-Value="Input.AcceptPrivacyPolicy" Label="" Required="true">
+                        I have read and agree to the <a href="/privacy" target="_blank">Privacy Policy</a>. <span aria-hidden="true" style="color:red">*</span>
+                    </FluentCheckbox>
+                    <FluentValidationMessage For="() => Input.AcceptPrivacyPolicy" class="text-danger" />
+                    <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Style="width: 100%" data-testid="submit-register-button">Create account →</FluentButton>
+                </FluentStack>
+            </EditForm>
+
+            <div class="auth-form-divider"><span>or</span></div>
+            <ExternalLoginPicker />
+
+            <div class="auth-links">
+                <FluentAnchor Appearance="Appearance.Hypertext" Href="Account/Login">Already have an account? Sign in</FluentAnchor>
+            </div>
+        </div>
+    </div>
+</div>
 
 @code {
     private IEnumerable<IdentityError>? identityErrors;
