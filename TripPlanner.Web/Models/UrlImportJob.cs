@@ -16,6 +16,9 @@ public class UrlImportJob
 
     public UrlImportJobStatus Status { get; set; } = UrlImportJobStatus.Pending;
 
+    /// <summary>BCP 47 language tag captured from the browser at job creation time (e.g. "de", "en-US").</summary>
+    public string LanguageTag { get; set; } = "en";
+
     public string? ErrorMessage { get; set; }
 
     /// <summary>The ID of the Place created by this job, once completed.</summary>

@@ -22,6 +22,9 @@ public class ChatJob
 
     public string? ErrorMessage { get; set; }
 
+    /// <summary>BCP 47 language tag captured from the browser at job creation time (e.g. "de", "en-US").</summary>
+    public string LanguageTag { get; set; } = "en";
+
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? CompletedAt { get; set; }
 }

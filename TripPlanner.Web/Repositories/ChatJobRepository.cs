@@ -6,13 +6,14 @@ namespace TripPlanner.Web.Repositories;
 
 public class ChatJobRepository(ApplicationDbContext context) : IChatJobRepository
 {
-    public async Task<ChatJob> CreateAsync(string conversationId, string userId, string userMessage)
+    public async Task<ChatJob> CreateAsync(string conversationId, string userId, string userMessage, string languageTag = "en")
     {
         var job = new ChatJob
         {
             ConversationId = conversationId,
             UserId = userId,
-            UserMessage = userMessage
+            UserMessage = userMessage,
+            LanguageTag = languageTag
         };
         context.ChatJobs.Add(job);
         await context.SaveChangesAsync();
