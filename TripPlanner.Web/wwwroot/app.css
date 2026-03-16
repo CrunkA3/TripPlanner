@@ -2,6 +2,7 @@
 
 body {
     --body-font: "Segoe UI Variable", "Segoe UI", sans-serif;
+    --app-header-height: 86px;
     font-family: var(--body-font);
     font-size: var(--type-ramp-base-font-size);
     line-height: var(--type-ramp-base-line-height);
@@ -13,14 +14,14 @@ body {
 }
 
 .main {
-    min-height: calc(100dvh - 86px);
+    min-height: calc(100dvh - var(--app-header-height));
     color: var(--neutral-foreground-rest);
     align-items: stretch !important;
 }
 
 .body-content {
     align-self: stretch;
-    height: calc(100dvh - 86px) !important;
+    height: calc(100dvh - var(--app-header-height)) !important;
     display: flex;
 }
 
@@ -527,6 +528,199 @@ table {
     background: rgba(0, 0, 0, 0.45);
     padding: 2px 12px;
     border-radius: 12px;
+}
+
+/* ── Auth pages (Login / Register) ─────────────────────────────────────── */
+
+.auth-wrapper {
+    display: flex;
+    margin: -0.5rem -1.5rem;
+    min-height: calc(100dvh - var(--app-header-height));
+    overflow: hidden;
+}
+
+/* Visual / illustration panel */
+.auth-visual {
+    flex: 0 0 55%;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 2.5rem 2rem 3rem;
+}
+
+.auth-scene {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.auth-visual-content {
+    position: relative;
+    z-index: 2;
+    color: white;
+    text-align: center;
+    width: 100%;
+    max-width: 340px;
+}
+
+.auth-brand-icon {
+    font-size: 2.75rem;
+    line-height: 1;
+    margin-bottom: 0.6rem;
+    filter: drop-shadow(0 2px 10px rgba(0, 0, 0, 0.5));
+    display: block;
+}
+
+.auth-brand-name {
+    font-size: 2.25rem;
+    font-weight: 700;
+    margin: 0 0 0.4rem;
+    letter-spacing: -0.02em;
+    text-shadow: 0 2px 14px rgba(0, 0, 0, 0.55);
+}
+
+.auth-brand-tagline {
+    font-size: 1.05rem;
+    opacity: 0.9;
+    margin: 0 0 1.75rem;
+    line-height: 1.55;
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.45);
+}
+
+.auth-feature-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+}
+
+.auth-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.82rem;
+    color: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 20px;
+    padding: 0.3rem 0.75rem;
+    backdrop-filter: blur(6px);
+    white-space: nowrap;
+}
+
+/* Form panel */
+.auth-form-panel {
+    flex: 0 0 45%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 2.5rem;
+    background: var(--neutral-layer-2);
+    overflow-y: auto;
+}
+
+.auth-form-card {
+    width: 100%;
+    max-width: 380px;
+}
+
+.auth-form-header {
+    margin-bottom: 1.5rem;
+}
+
+.auth-form-icon {
+    font-size: 2rem;
+    display: block;
+    margin-bottom: 0.4rem;
+}
+
+.auth-form-header h2 {
+    font-size: 1.65rem;
+    font-weight: 700;
+    margin: 0 0 0.3rem;
+    color: var(--neutral-foreground-rest);
+}
+
+.auth-form-subtitle {
+    font-size: 0.92rem;
+    color: var(--neutral-foreground-hint);
+    margin: 0;
+}
+
+.auth-form-divider {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 1.25rem 0;
+    color: var(--neutral-foreground-hint);
+    font-size: 0.82rem;
+}
+
+    .auth-form-divider::before,
+    .auth-form-divider::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: var(--neutral-stroke-rest);
+    }
+
+.auth-links {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin-top: 1.25rem;
+    font-size: 0.875rem;
+}
+
+/* Star twinkling animation */
+@keyframes auth-star-twinkle {
+    0%, 100% { opacity: 0.85; }
+    50% { opacity: 0.25; }
+}
+
+.auth-star-a { animation: auth-star-twinkle 3.2s ease-in-out infinite; }
+.auth-star-b { animation: auth-star-twinkle 4.1s ease-in-out infinite 1.1s; }
+.auth-star-c { animation: auth-star-twinkle 2.8s ease-in-out infinite 0.6s; }
+.auth-star-d { animation: auth-star-twinkle 5.0s ease-in-out infinite 1.8s; }
+
+/* Trail pulse */
+@keyframes auth-trail-pulse {
+    0%, 100% { opacity: 0.65; }
+    50% { opacity: 0.95; }
+}
+
+.auth-trail { animation: auth-trail-pulse 3.5s ease-in-out infinite; }
+
+/* Respect user preference for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .auth-star-a,
+    .auth-star-b,
+    .auth-star-c,
+    .auth-star-d,
+    .auth-trail {
+        animation: none;
+    }
+}
+
+/* Responsive: hide illustration on small screens */
+@media (max-width: 767px) {
+    .auth-wrapper {
+        /* reset negative margins used for full-bleed on desktop to prevent horizontal overflow on mobile */
+        margin: 0;
+    }
+
+    .auth-visual {
+        display: none;
+    }
+
+    .auth-form-panel {
+        flex: 1;
+        padding: 1.5rem 1.25rem;
+    }
 }
 
 /* Chat Page */
