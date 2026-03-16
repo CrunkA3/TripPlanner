@@ -1,6 +1,7 @@
 ﻿@inherits LayoutComponentBase
 @inject IJSRuntime JS
 @inject BrowserTimeZoneService BrowserTimeZoneService
+@inject BrowserCultureService BrowserCultureService
 
 @if (_isInteractive)
 {
@@ -50,6 +51,8 @@
             {
                 var timezone = await JS.InvokeAsync<string>("browserInfo.getTimezone");
                 BrowserTimeZoneService.SetTimeZone(timezone);
+                var culture = await JS.InvokeAsync<string>("browserInfo.getCulture");
+                BrowserCultureService.SetLanguage(culture);
             }
             catch
             {

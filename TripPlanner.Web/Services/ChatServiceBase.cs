@@ -22,7 +22,8 @@ public abstract partial class ChatServiceBase(
     IChatConversationRepository conversationRepository,
     WeatherService weatherService,
     TransitService transitService,
-    BrowserTimeZoneService browserTimeZoneService) : IChatService
+    BrowserTimeZoneService browserTimeZoneService,
+    BrowserCultureService browserCultureService) : IChatService
 {
     // ── Inner message/tool-call types ────────────────────────────────────────────
     // These are deliberately kept internal so subclasses can share the same types.
@@ -238,6 +239,7 @@ public abstract partial class ChatServiceBase(
             sb.AppendLine("Use the get_weather tool to look up current or forecasted weather for any location.");
         }
         sb.AppendLine("Use the search_transit_connections tool to find public-transit (ÖPNV/train/bus) connections between any two stations or cities.");
+        sb.AppendLine($"Always respond in the user's language: {browserCultureService.LanguageTag}.");
         sb.AppendLine("Keep names and titles short");
         sb.AppendLine("Use the Places from Wishlists and Trips");
         sb.AppendLine("Think ahead and make sensible suggestions");
