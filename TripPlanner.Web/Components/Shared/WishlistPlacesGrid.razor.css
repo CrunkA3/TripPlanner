@@ -17,7 +17,7 @@
 
 .place-card-image-header {
     position: relative;
-    height: 150px;
+    height: 250px;
     overflow: hidden;
     flex-shrink: 0;
 }
@@ -76,7 +76,7 @@
 
 .carousel-dots {
     position: absolute;
-    bottom: 6px;
+    top: 6px;
     left: 50%;
     transform: translateX(-50%);
     display: flex;
