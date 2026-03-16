@@ -188,7 +188,42 @@
                     }
                     else
                     {
-                        <FluentLabel Style="font-size: 0.875em; color: var(--neutral-foreground-hint);">No GPX track attached. Upload one below.</FluentLabel>
+                        <FluentLabel Style="font-size: 0.875em; color: var(--neutral-foreground-hint);">No GPX track attached. Upload one below or select an existing track.</FluentLabel>
+                        @if (GpxTracks.Count > 0)
+                        {
+                            <FluentTextField @bind-Value="@_gpxSearchText"
+                                             Placeholder="Search existing GPX tracks…"
+                                             Style="width: 100%;"
+                                             @oninput="@(e => _gpxSearchText = e.Value?.ToString() ?? string.Empty)" />
+                            var filteredTracks = GpxTracks
+                                .Where(t => string.IsNullOrWhiteSpace(_gpxSearchText) ||
+                                            t.Name.Contains(_gpxSearchText, StringComparison.OrdinalIgnoreCase))
+                                .ToList();
+                            @if (filteredTracks.Count > 0)
+                            {
+                                <FluentStack Orientation="Orientation.Vertical" Style="max-height: 200px; overflow-y: auto; gap: 4px;">
+                                    @foreach (var track in filteredTracks)
+                                    {
+                                        <FluentCard Style="cursor: pointer; padding: 8px;" @onclick="@(() => SelectExistingGpxTrack(track))">
+                                            <FluentStack Orientation="Orientation.Horizontal">
+                                                <FluentIcon Icon="Icons.Regular.Size20.Location" Color="Color.Neutral" />
+                                                <FluentStack Orientation="Orientation.Vertical" Style="flex: 1;">
+                                                    <FluentLabel Weight="FontWeight.Bold" Style="font-size: 0.875em;">@track.Name</FluentLabel>
+                                                    <FluentLabel Style="font-size: 0.8em;">
+                                                        Distance: @track.TotalDistance.ToString("F2") km | Points: @track.Points.Count
+                                                    </FluentLabel>
+                                                </FluentStack>
+                                            </FluentStack>
+                                        </FluentCard>
+                                    }
+                                </FluentStack>
+                            }
+                            else
+                            {
+                                <FluentLabel Style="font-size: 0.875em; color: var(--neutral-foreground-hint);">No matching GPX tracks found.</FluentLabel>
+                            }
+                            <FluentDivider />
+                        }
                         <GpxFileUpload OnFileUploaded="@HandleGpxUploaded" />
                     }
                 </FluentStack>
@@ -256,6 +291,7 @@
     private bool _isAnalyzing = false;
     private string? _analyzeError;
     private PlaceSuggestion? _suggestion;
+    private string _gpxSearchText = string.Empty;
 
     private ApplicationUser? CurrentUser { get; set; }
 
@@ -536,6 +572,15 @@
             await GpxRepository.DeleteAsync(Content.GpxTrackId);
             Content.GpxTrackId = null;
         }
+    }
+
+    private void SelectExistingGpxTrack(GpxTrack track)
+    {
+        if (Content == null) return;
+        Content.GpxTrackId = track.Id;
+        Content.Latitude = track.Points.FirstOrDefault()?.Latitude ?? Content.Latitude;
+        Content.Longitude = track.Points.FirstOrDefault()?.Longitude ?? Content.Longitude;
+        _gpxSearchText = string.Empty;
     }
 
 

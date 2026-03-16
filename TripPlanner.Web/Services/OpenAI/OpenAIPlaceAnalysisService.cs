@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using ReverseMarkdown;
 using TripPlanner.Web.Models;
 
 namespace TripPlanner.Web.Services.OpenAI;
@@ -191,18 +192,20 @@ public class OpenAIPlaceAnalysisService : IPlaceAnalysisService
     {
         // Remove script, style, and head blocks including their content
         html = Regex.Replace(html, @"<(script|style|head)[^>]*>.*?</(script|style|head)>",
-            " ", RegexOptions.Singleline | RegexOptions.IgnoreCase);
+            string.Empty, RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
-        // Remove all remaining HTML tags
-        html = Regex.Replace(html, @"<[^>]+>", " ");
-
-        // Decode HTML entities
-        html = System.Net.WebUtility.HtmlDecode(html);
+        // Convert HTML to Markdown to preserve structure (headings, lists, links)
+        var converter = new Converter(new Config
+        {
+            UnknownTags = Config.UnknownTagsOption.Drop,
+            SmartHrefHandling = true,
+        });
+        var markdown = converter.Convert(html);
 
         // Normalize whitespace
-        html = Regex.Replace(html, @"\s+", " ").Trim();
+        markdown = Regex.Replace(markdown, @"\n{3,}", "\n\n").Trim();
 
         // Truncate to a manageable size for the LLM
-        return html.Length > MaxContentLength ? html[..MaxContentLength] : html;
+        return markdown.Length > MaxContentLength ? markdown[..MaxContentLength] : markdown;
     }
 }
