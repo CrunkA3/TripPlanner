@@ -709,6 +709,7 @@ table {
 /* Responsive: hide illustration on small screens */
 @media (max-width: 767px) {
     .auth-wrapper {
+        /* reset negative margins used for full-bleed on desktop to prevent horizontal overflow on mobile */
         margin: 0;
     }
 
