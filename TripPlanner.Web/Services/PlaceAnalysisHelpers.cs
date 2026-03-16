@@ -1,4 +1,6 @@
+using System.Net;
 using System.Text.RegularExpressions;
+using HtmlAgilityPack;
 using ReverseMarkdown;
 
 namespace TripPlanner.Web.Services;
@@ -9,23 +11,34 @@ namespace TripPlanner.Web.Services;
 /// </summary>
 internal static class PlaceAnalysisHelpers
 {
+    // Elements whose full content (including text) must be removed before Markdown conversion.
+    private static readonly string[] StrippedElements = ["script", "style", "head", "noscript"];
+
     /// <summary>
-    /// Converts raw HTML to structured Markdown, stripping scripts/styles/head first.
+    /// Converts raw HTML to structured Markdown, removing non-content elements first.
     /// Truncates the result to <paramref name="maxLength"/> characters.
     /// </summary>
     internal static string ExtractTextFromHtml(string html, int maxLength)
     {
-        // Remove script, style, and head blocks including their content
-        html = Regex.Replace(html, @"<(script|style|head)[^>]*>.*?</(script|style|head)>",
-            string.Empty, RegexOptions.Singleline | RegexOptions.IgnoreCase);
+        // Use HtmlAgilityPack to remove non-content nodes (script, style, head, noscript)
+        // so their text content never leaks into the Markdown/LLM prompt.
+        var doc = new HtmlDocument();
+        doc.LoadHtml(html);
+        foreach (var tag in StrippedElements)
+        {
+            var nodes = doc.DocumentNode.SelectNodes($"//{tag}");
+            if (nodes != null)
+                foreach (var node in nodes.ToArray())
+                    node.Remove();
+        }
 
-        // Convert HTML to Markdown to preserve structure (headings, lists, links)
+        // Convert the cleaned HTML to Markdown to preserve structure (headings, lists, links)
         var converter = new Converter(new Config
         {
             UnknownTags = Config.UnknownTagsOption.Drop,
             SmartHrefHandling = true,
         });
-        var markdown = converter.Convert(html);
+        var markdown = converter.Convert(doc.DocumentNode.OuterHtml);
 
         // Normalize whitespace
         markdown = Regex.Replace(markdown, @"\n{3,}", "\n\n").Trim();
@@ -36,7 +49,7 @@ internal static class PlaceAnalysisHelpers
 
     /// <summary>
     /// Scans the raw HTML for <c>href</c> attributes pointing to GPX files and returns
-    /// their absolute URLs, resolved against <paramref name="pageUrl"/>.
+    /// their absolute http/https URLs, resolved against <paramref name="pageUrl"/>.
     /// </summary>
     internal static List<string> ExtractGpxUrls(string html, string pageUrl)
     {
@@ -46,15 +59,19 @@ internal static class PlaceAnalysisHelpers
         foreach (Match m in Regex.Matches(html, @"href\s*=\s*[""']([^""']*\.gpx[^""']*)[""']",
             RegexOptions.IgnoreCase))
         {
-            var href = m.Groups[1].Value;
+            // HTML-decode the attribute value so entities like &amp; become & in the URL.
+            var href = WebUtility.HtmlDecode(m.Groups[1].Value);
+
+            Uri? resolved = null;
             if (Uri.TryCreate(href, UriKind.Absolute, out var absUri))
-            {
-                results.Add(absUri.ToString());
-            }
-            else if (baseUri != null && Uri.TryCreate(baseUri, href, out var resolved))
-            {
+                resolved = absUri;
+            else if (baseUri != null && Uri.TryCreate(baseUri, href, out var relResolved))
+                resolved = relResolved;
+
+            // Restrict to http/https to avoid mailto:, javascript:, file:, and other unsafe schemes.
+            if (resolved != null &&
+                (resolved.Scheme == Uri.UriSchemeHttp || resolved.Scheme == Uri.UriSchemeHttps))
                 results.Add(resolved.ToString());
-            }
         }
 
         return results.Distinct(StringComparer.OrdinalIgnoreCase).ToList();

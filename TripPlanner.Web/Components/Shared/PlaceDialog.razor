@@ -1,5 +1,6 @@
 ﻿@implements IDialogContentComponent<Place>
 
+@using System.Text
 @using TripPlanner.Web.Models
 @using TripPlanner.Web.Repositories
 @using TripPlanner.Web.Services
@@ -575,20 +576,52 @@
     {
         if (Content == null || _isImportingGpx) return;
 
+        // Validate that the URL uses a safe, fetchable scheme.
+        if (!Uri.TryCreate(gpxUrl, UriKind.Absolute, out var parsedUri) ||
+            (parsedUri.Scheme != Uri.UriSchemeHttp && parsedUri.Scheme != Uri.UriSchemeHttps))
+        {
+            _gpxImportError = "GPX URL must use http or https.";
+            return;
+        }
+
         _isImportingGpx = true;
         _importingGpxUrl = gpxUrl;
         _gpxImportError = null;
 
+        const long maxGpxBytes = 10 * 1024 * 1024; // 10 MB – matches GpxFileUpload limit
+
         try
         {
             using var client = HttpClientFactory.CreateClient("UrlFetch");
-            var response = await client.GetAsync(gpxUrl);
+            using var response = await client.GetAsync(gpxUrl, HttpCompletionOption.ResponseHeadersRead);
             response.EnsureSuccessStatusCode();
-            var gpxContent = await response.Content.ReadAsStringAsync();
 
-            var fileName = Uri.TryCreate(gpxUrl, UriKind.Absolute, out var uri)
-                ? System.IO.Path.GetFileName(uri.LocalPath)
-                : "track.gpx";
+            // Reject responses that are obviously not GPX/XML (e.g. an HTML error page)
+            var contentType = response.Content.Headers.ContentType?.MediaType ?? string.Empty;
+            if (contentType.Contains("text/html", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("The URL did not return a GPX file.");
+
+            // Reject content that exceeds the size limit based on the Content-Length header.
+            if (response.Content.Headers.ContentLength > maxGpxBytes)
+                throw new InvalidOperationException("GPX file is too large (maximum 10 MB).");
+
+            // Stream-read the response body with a hard cap to guard against missing Content-Length.
+            using var responseStream = await response.Content.ReadAsStreamAsync();
+            using var ms = new MemoryStream();
+            var buffer = new byte[8192];
+            long totalRead = 0;
+            int bytesRead;
+            while ((bytesRead = await responseStream.ReadAsync(buffer)) > 0)
+            {
+                totalRead += bytesRead;
+                if (totalRead > maxGpxBytes)
+                    throw new InvalidOperationException("GPX file is too large (maximum 10 MB).");
+                await ms.WriteAsync(buffer.AsMemory(0, bytesRead));
+            }
+            var gpxContent = Encoding.UTF8.GetString(ms.ToArray());
+
+            var fn = Path.GetFileName(parsedUri.LocalPath);
+            var fileName = !string.IsNullOrEmpty(fn) ? fn : "track.gpx";
 
             var gpxTrack = GpxService.ParseGpxContent(gpxContent, fileName);
             gpxTrack.CreatedAt = DateTimeOffset.UtcNow;
