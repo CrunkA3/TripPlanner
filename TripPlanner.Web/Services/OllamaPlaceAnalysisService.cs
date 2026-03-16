@@ -29,7 +29,7 @@ public class OllamaPlaceAnalysisService : IPlaceAnalysisService
 
     private sealed record OllamaStreamChunk(string? Response, bool Done);
 
-    public async Task<PlaceAnalysisResult?> AnalyzeUrlAsync(string url, CancellationToken cancellationToken = default)
+    public async Task<PlaceAnalysisResult?> AnalyzeUrlAsync(string url, string languageTag = "en", CancellationToken cancellationToken = default)
     {
         // Step 1: Fetch the page content
         string pageContent;
@@ -57,6 +57,7 @@ public class OllamaPlaceAnalysisService : IPlaceAnalysisService
 
         var prompt = $"""
             You are a travel assistant. Analyze the following web page content about a place and extract structured information.
+            Always write the name, description, and tags in the user's language: {languageTag}.
 
             Return ONLY a valid JSON object (no markdown, no explanation) with these fields:
             - "name": string (the name of the place)

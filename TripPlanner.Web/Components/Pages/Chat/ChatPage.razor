@@ -16,6 +16,7 @@
 @inject IChatConversationRepository ConversationRepository
 @inject IChatJobRepository ChatJobRepository
 @inject UserService UserService
+@inject BrowserTimeZoneService BrowserTimeZoneService
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 @inject ILogger<ChatPage> Logger
@@ -336,7 +337,7 @@
         await ConversationRepository.AddMessageAsync(conversationId, "user", message, _currentUser.Id);
 
         // Create the background job.
-        var job = await ChatJobRepository.CreateAsync(conversationId, _currentUser.Id, message);
+        var job = await ChatJobRepository.CreateAsync(conversationId, _currentUser.Id, message, BrowserTimeZoneService.LanguageTag);
         _activeJobId = job.Id;
         _pendingUserMessage = message;
         _isThinking = true;
@@ -436,7 +437,7 @@
         _jobError = null;
         _isThinking = true;
 
-        var job = await ChatJobRepository.CreateAsync(ChatService.CurrentConversationId, _currentUser.Id, _pendingUserMessage);
+        var job = await ChatJobRepository.CreateAsync(ChatService.CurrentConversationId, _currentUser.Id, _pendingUserMessage, BrowserTimeZoneService.LanguageTag);
         _activeJobId = job.Id;
         StateHasChanged();
 

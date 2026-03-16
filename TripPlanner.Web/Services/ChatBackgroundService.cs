@@ -76,6 +76,7 @@ public partial class ChatBackgroundService(
         var jobRepo = scope.ServiceProvider.GetRequiredService<IChatJobRepository>();
         var chatService = scope.ServiceProvider.GetRequiredService<IChatService>();
         var userManager = scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<ApplicationUser>>();
+        var browserTimeZoneService = scope.ServiceProvider.GetRequiredService<BrowserTimeZoneService>();
 
         var pendingJobs = await jobRepo.GetPendingJobsAsync(MaxJobsPerCycle);
 
@@ -84,7 +85,7 @@ public partial class ChatBackgroundService(
             if (cancellationToken.IsCancellationRequested)
                 break;
 
-            await ProcessJobAsync(job, jobRepo, chatService, userManager, cancellationToken);
+            await ProcessJobAsync(job, jobRepo, chatService, userManager, browserTimeZoneService, cancellationToken);
         }
     }
 
@@ -93,6 +94,7 @@ public partial class ChatBackgroundService(
         IChatJobRepository jobRepo,
         IChatService chatService,
         Microsoft.AspNetCore.Identity.UserManager<ApplicationUser> userManager,
+        BrowserTimeZoneService browserTimeZoneService,
         CancellationToken cancellationToken)
     {
         LogProcessingChatJob(job.Id, job.ConversationId);
@@ -107,6 +109,9 @@ public partial class ChatBackgroundService(
             var user = await userManager.FindByIdAsync(job.UserId);
             if (user?.HomeLatitude is not null && user.HomeLongitude is not null)
                 chatService.SetUserLocation(user.HomeLatitude.Value, user.HomeLongitude.Value);
+
+            // Prime the scoped BrowserTimeZoneService with the language captured at job creation.
+            browserTimeZoneService.SetLanguage(job.LanguageTag);
 
             // Load the conversation history from the database (which already contains the user message).
             var loaded = await chatService.LoadConversationAsync(job.ConversationId, job.UserId);

@@ -50,6 +50,8 @@
             {
                 var timezone = await JS.InvokeAsync<string>("browserInfo.getTimezone");
                 BrowserTimeZoneService.SetTimeZone(timezone);
+                var culture = await JS.InvokeAsync<string>("browserInfo.getCulture");
+                BrowserTimeZoneService.SetLanguage(culture);
             }
             catch
             {

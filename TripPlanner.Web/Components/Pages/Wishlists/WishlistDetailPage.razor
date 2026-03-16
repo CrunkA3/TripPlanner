@@ -11,6 +11,7 @@
 @inject IWishlistRepository WishlistRepository
 @inject IPlaceRepository PlaceRepository
 @inject IUrlImportJobRepository UrlImportJobRepository
+@inject BrowserTimeZoneService BrowserTimeZoneService
 @inject UserService UserService
 @inject IDialogService DialogService
 @inject NavigationManager NavigationManager
@@ -328,6 +329,7 @@ else
                 Url = url,
                 CreatedByUserId = currentUserId,
                 Status = UrlImportJobStatus.Pending,
+                LanguageTag = BrowserTimeZoneService.LanguageTag,
                 CreatedAt = DateTimeOffset.UtcNow
             };
             await UrlImportJobRepository.AddAsync(job);

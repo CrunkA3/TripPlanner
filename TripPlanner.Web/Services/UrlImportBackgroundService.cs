@@ -105,7 +105,7 @@ public class UrlImportBackgroundService(
 
         try
         {
-            var result = await analysisService.AnalyzeUrlAsync(job.Url, cancellationToken);
+            var result = await analysisService.AnalyzeUrlAsync(job.Url, job.LanguageTag, cancellationToken);
 
             job.AiPrompt = result?.Prompt;
             job.AiResponse = result?.RawResponse;

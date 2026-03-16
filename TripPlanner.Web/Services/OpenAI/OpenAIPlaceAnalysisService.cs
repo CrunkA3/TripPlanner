@@ -53,7 +53,7 @@ public class OpenAIPlaceAnalysisService : IPlaceAnalysisService
         public string? Content { get; set; }
     }
 
-    public async Task<PlaceAnalysisResult?> AnalyzeUrlAsync(string url, CancellationToken cancellationToken = default)
+    public async Task<PlaceAnalysisResult?> AnalyzeUrlAsync(string url, string languageTag = "en", CancellationToken cancellationToken = default)
     {
         // Step 1: Fetch the page content.
         string pageContent;
@@ -79,7 +79,7 @@ public class OpenAIPlaceAnalysisService : IPlaceAnalysisService
         var modelName = _configuration["OpenAI:Model"] ?? "gpt-4o";
         var categories = string.Join(", ", Enum.GetNames<PlaceCategory>());
 
-        var systemPrompt = "You are a travel assistant that extracts structured place information from web page content.";
+        var systemPrompt = $"You are a travel assistant that extracts structured place information from web page content. Always write the name, description, and tags in the user's language: {languageTag}.";
         var userPrompt = $"""
             Analyze the following web page content about a place and extract structured information.
 
