@@ -315,3 +315,7 @@ window.clickElementById = function (elementId) {
         element.click();
     }
 };
+
+window.focusElement = function (element) {
+    if (element) element.focus();
+};
