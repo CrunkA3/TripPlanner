@@ -62,13 +62,12 @@
                             <FluentBadge BackgroundColor="var(--neutral-layer-4)"><FluentIcon Value="@(new Icons.Regular.Size20.NoteEdit())" Width="12px" /> Notes</FluentBadge>
                         </span>
                     }
+                    <div class="place-card-image-title">
+                        <FluentLabel Typo="Typography.Subject" Weight="FontWeight.Bold" Style="color: white; text-shadow: 0 1px 3px rgba(0,0,0,0.5);">@place.Name</FluentLabel>
+                    </div>
                 </div>
 
                 <div class="place-card-body">
-                    <div class="place-card-title">
-                        <FluentLabel Typo="Typography.Subject" Weight="FontWeight.Bold">@place.Name</FluentLabel>
-                    </div>
-
                     @if (!string.IsNullOrWhiteSpace(place.Description))
                     {
                         <FluentLabel Typo="Typography.Body" Class="place-card-description">@place.Description</FluentLabel>

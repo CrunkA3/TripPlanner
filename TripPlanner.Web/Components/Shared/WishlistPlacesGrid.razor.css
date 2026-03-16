@@ -166,9 +166,14 @@
     gap: 0.35rem;
 }
 
-.place-card-title {
-    font-size: 1rem;
-    font-weight: 600;
+.place-card-image-title {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 2rem 0.75rem 0.5rem;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.80) 0%, rgba(0, 0, 0, 0) 100%);
+    z-index: 1;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
