@@ -695,6 +695,17 @@ table {
 
 .auth-trail { animation: auth-trail-pulse 3.5s ease-in-out infinite; }
 
+/* Respect user preference for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .auth-star-a,
+    .auth-star-b,
+    .auth-star-c,
+    .auth-star-d,
+    .auth-trail {
+        animation: none;
+    }
+}
+
 /* Responsive: hide illustration on small screens */
 @media (max-width: 767px) {
     .auth-visual {
