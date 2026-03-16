@@ -1,7 +1,5 @@
 using System.Text;
 using System.Text.Json;
-using System.Text.RegularExpressions;
-using ReverseMarkdown;
 using TripPlanner.Web.Models;
 
 namespace TripPlanner.Web.Services;
@@ -33,14 +31,15 @@ public class OllamaPlaceAnalysisService : IPlaceAnalysisService
     public async Task<PlaceAnalysisResult?> AnalyzeUrlAsync(string url, string languageTag = "en", CancellationToken cancellationToken = default)
     {
         // Step 1: Fetch the page content
+        string html;
         string pageContent;
         try
         {
             using var httpClient = _httpClientFactory.CreateClient("UrlFetch");
             var response = await httpClient.GetAsync(url, cancellationToken);
             response.EnsureSuccessStatusCode();
-            var html = await response.Content.ReadAsStringAsync(cancellationToken);
-            pageContent = ExtractTextFromHtml(html);
+            html = await response.Content.ReadAsStringAsync(cancellationToken);
+            pageContent = PlaceAnalysisHelpers.ExtractTextFromHtml(html, MaxContentLength);
         }
         catch (OperationCanceledException)
         {
@@ -51,6 +50,8 @@ public class OllamaPlaceAnalysisService : IPlaceAnalysisService
             _logger.LogWarning(ex, "Failed to fetch URL: {Url}", url);
             throw new InvalidOperationException($"Could not fetch the URL: {ex.Message}", ex);
         }
+
+        var gpxFileUrls = PlaceAnalysisHelpers.ExtractGpxUrls(html, url);
 
         // Step 2: Send to Ollama for analysis
         var modelName = _configuration["Ollama:Model"] ?? "llama3.2";
@@ -147,6 +148,7 @@ public class OllamaPlaceAnalysisService : IPlaceAnalysisService
                 Suggestion = suggestion,
                 Prompt = prompt,
                 RawResponse = responseText,
+                GpxFileUrls = gpxFileUrls,
             };
         }
         catch (OperationCanceledException)
@@ -158,26 +160,5 @@ public class OllamaPlaceAnalysisService : IPlaceAnalysisService
             _logger.LogWarning(ex, "Failed to get LLM analysis from Ollama for URL: {Url}", url);
             throw new InvalidOperationException($"Could not analyze the URL with the local LLM: {ex.Message}", ex);
         }
-    }
-
-    private static string ExtractTextFromHtml(string html)
-    {
-        // Remove script, style, and head blocks including their content
-        html = Regex.Replace(html, @"<(script|style|head)[^>]*>.*?</(script|style|head)>",
-            string.Empty, RegexOptions.Singleline | RegexOptions.IgnoreCase);
-
-        // Convert HTML to Markdown to preserve structure (headings, lists, links)
-        var converter = new Converter(new Config
-        {
-            UnknownTags = Config.UnknownTagsOption.Drop,
-            SmartHrefHandling = true,
-        });
-        var markdown = converter.Convert(html);
-
-        // Normalize whitespace
-        markdown = Regex.Replace(markdown, @"\n{3,}", "\n\n").Trim();
-
-        // Truncate to a manageable size for the LLM
-        return markdown.Length > MaxContentLength ? markdown[..MaxContentLength] : markdown;
     }
 }

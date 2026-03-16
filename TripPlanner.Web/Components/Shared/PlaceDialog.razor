@@ -188,39 +188,33 @@
                     }
                     else
                     {
-                        <FluentLabel Style="font-size: 0.875em; color: var(--neutral-foreground-hint);">No GPX track attached. Upload one below or select an existing track.</FluentLabel>
-                        @if (GpxTracks.Count > 0)
+                        <FluentLabel Style="font-size: 0.875em; color: var(--neutral-foreground-hint);">No GPX track attached. Upload one below.</FluentLabel>
+                        @if (_foundGpxUrls.Count > 0)
                         {
-                            <FluentTextField @bind-Value="@_gpxSearchText"
-                                             Placeholder="Search existing GPX tracks…"
-                                             Style="width: 100%;"
-                                             @oninput="@(e => _gpxSearchText = e.Value?.ToString() ?? string.Empty)" />
-                            var filteredTracks = GpxTracks
-                                .Where(t => string.IsNullOrWhiteSpace(_gpxSearchText) ||
-                                            t.Name.Contains(_gpxSearchText, StringComparison.OrdinalIgnoreCase))
-                                .ToList();
-                            @if (filteredTracks.Count > 0)
+                            <FluentLabel Weight="FontWeight.Bold" Style="font-size: 0.875em;">Found on page:</FluentLabel>
+                            @foreach (var gpxUrl in _foundGpxUrls)
                             {
-                                <FluentStack Orientation="Orientation.Vertical" Style="max-height: 200px; overflow-y: auto; gap: 4px;">
-                                    @foreach (var track in filteredTracks)
-                                    {
-                                        <FluentCard Style="cursor: pointer; padding: 8px;" @onclick="@(() => SelectExistingGpxTrack(track))">
-                                            <FluentStack Orientation="Orientation.Horizontal">
-                                                <FluentIcon Icon="Icons.Regular.Size20.Location" Color="Color.Neutral" />
-                                                <FluentStack Orientation="Orientation.Vertical" Style="flex: 1;">
-                                                    <FluentLabel Weight="FontWeight.Bold" Style="font-size: 0.875em;">@track.Name</FluentLabel>
-                                                    <FluentLabel Style="font-size: 0.8em;">
-                                                        Distance: @track.TotalDistance.ToString("F2") km | Points: @track.Points.Count
-                                                    </FluentLabel>
-                                                </FluentStack>
-                                            </FluentStack>
-                                        </FluentCard>
-                                    }
-                                </FluentStack>
+                                var capturedUrl = gpxUrl;
+                                var isThisImporting = _importingGpxUrl == capturedUrl;
+                                <FluentCard Style="padding: 8px;">
+                                    <FluentStack Orientation="Orientation.Horizontal" Style="align-items: center; gap: 8px;">
+                                        <FluentIcon Icon="Icons.Regular.Size20.Location" Color="Color.Neutral" />
+                                        <FluentLabel Style="font-size: 0.8em; flex: 1; word-break: break-all;">@capturedUrl</FluentLabel>
+                                        <FluentButton Appearance="Appearance.Outline"
+                                                      Disabled="@_isImportingGpx"
+                                                      OnClick="@(() => ImportGpxFromUrl(capturedUrl))">
+                                            @if (isThisImporting)
+                                            {
+                                                <FluentProgress Circular Value="null" Width="14px" Style="margin-right: 4px;" />
+                                            }
+                                            Import
+                                        </FluentButton>
+                                    </FluentStack>
+                                </FluentCard>
                             }
-                            else
+                            @if (!string.IsNullOrEmpty(_gpxImportError))
                             {
-                                <FluentLabel Style="font-size: 0.875em; color: var(--neutral-foreground-hint);">No matching GPX tracks found.</FluentLabel>
+                                <FluentLabel Color="Color.Error" Style="font-size: 0.875em;">@_gpxImportError</FluentLabel>
                             }
                             <FluentDivider />
                         }
@@ -291,7 +285,10 @@
     private bool _isAnalyzing = false;
     private string? _analyzeError;
     private PlaceSuggestion? _suggestion;
-    private string _gpxSearchText = string.Empty;
+    private List<string> _foundGpxUrls = [];
+    private bool _isImportingGpx = false;
+    private string? _importingGpxUrl;
+    private string? _gpxImportError;
 
     private ApplicationUser? CurrentUser { get; set; }
 
@@ -574,13 +571,46 @@
         }
     }
 
-    private void SelectExistingGpxTrack(GpxTrack track)
+    private async Task ImportGpxFromUrl(string gpxUrl)
     {
-        if (Content == null) return;
-        Content.GpxTrackId = track.Id;
-        Content.Latitude = track.Points.FirstOrDefault()?.Latitude ?? Content.Latitude;
-        Content.Longitude = track.Points.FirstOrDefault()?.Longitude ?? Content.Longitude;
-        _gpxSearchText = string.Empty;
+        if (Content == null || _isImportingGpx) return;
+
+        _isImportingGpx = true;
+        _importingGpxUrl = gpxUrl;
+        _gpxImportError = null;
+
+        try
+        {
+            using var client = HttpClientFactory.CreateClient("UrlFetch");
+            var response = await client.GetAsync(gpxUrl);
+            response.EnsureSuccessStatusCode();
+            var gpxContent = await response.Content.ReadAsStringAsync();
+
+            var fileName = Uri.TryCreate(gpxUrl, UriKind.Absolute, out var uri)
+                ? System.IO.Path.GetFileName(uri.LocalPath)
+                : "track.gpx";
+
+            var gpxTrack = GpxService.ParseGpxContent(gpxContent, fileName);
+            gpxTrack.CreatedAt = DateTimeOffset.UtcNow;
+
+            await GpxRepository.AddAsync(gpxTrack);
+
+            Content.GpxTrackId = gpxTrack.Id;
+            Content.Latitude = gpxTrack.Points.FirstOrDefault()?.Latitude ?? Content.Latitude;
+            Content.Longitude = gpxTrack.Points.FirstOrDefault()?.Longitude ?? Content.Longitude;
+
+            await LoadGpxTracks();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed to import GPX from URL: {Url}", gpxUrl);
+            _gpxImportError = $"Could not import GPX file: {ex.Message}";
+        }
+        finally
+        {
+            _isImportingGpx = false;
+            _importingGpxUrl = null;
+        }
     }
 
 
@@ -599,11 +629,14 @@
         _isAnalyzing = true;
         _analyzeError = null;
         _suggestion = null;
+        _foundGpxUrls = [];
         StateHasChanged();
 
         try
         {
-            _suggestion = (await PlaceAnalysisService.AnalyzeUrlAsync(Content.Url, BrowserTimeZoneService.LanguageTag))?.Suggestion;
+            var result = await PlaceAnalysisService.AnalyzeUrlAsync(Content.Url, BrowserTimeZoneService.LanguageTag);
+            _suggestion = result?.Suggestion;
+            _foundGpxUrls = result?.GpxFileUrls ?? [];
             if (_suggestion == null)
                 _analyzeError = "The AI could not extract place information from this URL.";
         }
