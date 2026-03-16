@@ -1,8 +1,8 @@
 namespace TripPlanner.Web.Services;
 
 /// <summary>
-/// Scoped service that holds the browser's IANA timezone, allowing server-side
-/// components to display date/time values in the user's local timezone.
+/// Scoped service that holds the browser's IANA timezone and preferred language, allowing
+/// server-side components and AI prompts to use the user's local timezone and language.
 /// Initialized after the Blazor circuit becomes interactive via JS interop.
 /// </summary>
 public class BrowserTimeZoneService
@@ -17,6 +17,21 @@ public class BrowserTimeZoneService
     /// Falls back to <see cref="TimeZoneInfo.Utc"/>.<see cref="TimeZoneInfo.Id"/> until initialized.
     /// </summary>
     public string IanaTimeZoneId { get; private set; } = TimeZoneInfo.Utc.Id;
+
+    /// <summary>
+    /// Gets the BCP 47 language tag supplied by the browser's <c>navigator.language</c>
+    /// (e.g. "de", "en-US"). Falls back to "en" until initialized.
+    /// </summary>
+    public string LanguageTag { get; private set; } = "en";
+
+    /// <summary>Sets the preferred language from the browser's <c>navigator.language</c> value.</summary>
+    public void SetLanguage(string languageTag)
+    {
+        if (string.IsNullOrWhiteSpace(languageTag))
+            return;
+
+        LanguageTag = languageTag;
+    }
 
     /// <summary>Sets the timezone from an IANA or Windows timezone identifier.</summary>
     public void SetTimeZone(string timeZoneId)

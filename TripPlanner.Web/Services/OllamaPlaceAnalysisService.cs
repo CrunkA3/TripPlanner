@@ -14,20 +14,20 @@ public class OllamaPlaceAnalysisService : IPlaceAnalysisService
     private readonly IConfiguration _configuration;
     private readonly ILogger<OllamaPlaceAnalysisService> _logger;
     private readonly IGeocodingService _geocodingService;
-    private readonly BrowserCultureService _browserCultureService;
+    private readonly BrowserTimeZoneService _browserTimeZoneService;
 
     public OllamaPlaceAnalysisService(
         IHttpClientFactory httpClientFactory,
         IConfiguration configuration,
         ILogger<OllamaPlaceAnalysisService> logger,
         IGeocodingService geocodingService,
-        BrowserCultureService browserCultureService)
+        BrowserTimeZoneService browserTimeZoneService)
     {
         _httpClientFactory = httpClientFactory;
         _configuration = configuration;
         _logger = logger;
         _geocodingService = geocodingService;
-        _browserCultureService = browserCultureService;
+        _browserTimeZoneService = browserTimeZoneService;
     }
 
     private sealed record OllamaStreamChunk(string? Response, bool Done);
@@ -60,7 +60,7 @@ public class OllamaPlaceAnalysisService : IPlaceAnalysisService
 
         var prompt = $"""
             You are a travel assistant. Analyze the following web page content about a place and extract structured information.
-            Always write the name, description, and tags in the user's language: {_browserCultureService.LanguageTag}.
+            Always write the name, description, and tags in the user's language: {_browserTimeZoneService.LanguageTag}.
 
             Return ONLY a valid JSON object (no markdown, no explanation) with these fields:
             - "name": string (the name of the place)

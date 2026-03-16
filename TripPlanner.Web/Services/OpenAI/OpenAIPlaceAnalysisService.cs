@@ -18,20 +18,20 @@ public class OpenAIPlaceAnalysisService : IPlaceAnalysisService
     private readonly IConfiguration _configuration;
     private readonly ILogger<OpenAIPlaceAnalysisService> _logger;
     private readonly IGeocodingService _geocodingService;
-    private readonly BrowserCultureService _browserCultureService;
+    private readonly BrowserTimeZoneService _browserTimeZoneService;
 
     public OpenAIPlaceAnalysisService(
         IHttpClientFactory httpClientFactory,
         IConfiguration configuration,
         ILogger<OpenAIPlaceAnalysisService> logger,
         IGeocodingService geocodingService,
-        BrowserCultureService browserCultureService)
+        BrowserTimeZoneService browserTimeZoneService)
     {
         _httpClientFactory = httpClientFactory;
         _configuration = configuration;
         _logger = logger;
         _geocodingService = geocodingService;
-        _browserCultureService = browserCultureService;
+        _browserTimeZoneService = browserTimeZoneService;
     }
 
     // SSE chunk from the OpenAI streaming response.
@@ -82,7 +82,7 @@ public class OpenAIPlaceAnalysisService : IPlaceAnalysisService
         var modelName = _configuration["OpenAI:Model"] ?? "gpt-4o";
         var categories = string.Join(", ", Enum.GetNames<PlaceCategory>());
 
-        var systemPrompt = $"You are a travel assistant that extracts structured place information from web page content. Always write the name, description, and tags in the user's language: {_browserCultureService.LanguageTag}.";
+        var systemPrompt = $"You are a travel assistant that extracts structured place information from web page content. Always write the name, description, and tags in the user's language: {_browserTimeZoneService.LanguageTag}.";
         var userPrompt = $"""
             Analyze the following web page content about a place and extract structured information.
 

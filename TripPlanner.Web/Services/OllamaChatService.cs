@@ -18,9 +18,8 @@ public partial class OllamaChatService(
     IChatConversationRepository conversationRepository,
     WeatherService weatherService,
     TransitService transitService,
-    BrowserTimeZoneService browserTimeZoneService,
-    BrowserCultureService browserCultureService)
-    : ChatServiceBase(configuration, logger, tripRepository, wishlistRepository, placeRepository, conversationRepository, weatherService, transitService, browserTimeZoneService, browserCultureService)
+    BrowserTimeZoneService browserTimeZoneService)
+    : ChatServiceBase(configuration, logger, tripRepository, wishlistRepository, placeRepository, conversationRepository, weatherService, transitService, browserTimeZoneService)
 {
     private sealed class OllamaChatResponse
     {

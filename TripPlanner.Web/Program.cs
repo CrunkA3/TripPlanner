@@ -150,7 +150,6 @@ builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<WeatherService>();
 builder.Services.AddScoped<TransitService>();
 builder.Services.AddScoped<BrowserTimeZoneService>();
-builder.Services.AddScoped<BrowserCultureService>();
 builder.Services.AddScoped<IGeocodingService, NominatimGeocodingService>();
 
 var aiProvider = builder.Configuration["AI:Provider"] ?? "Ollama";
