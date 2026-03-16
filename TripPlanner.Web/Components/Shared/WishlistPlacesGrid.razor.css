@@ -179,6 +179,12 @@
     text-overflow: ellipsis;
 }
 
+.place-card-image-title ::deep .place-card-title-label {
+    color: white;
+    font-size: 1rem;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
 .place-card-description {
     font-size: 0.85rem;
     color: var(--neutral-foreground-hint);
