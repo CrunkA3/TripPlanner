@@ -13,4 +13,7 @@ public class PlaceAnalysisResult
 
     /// <summary>The raw text response returned by the AI model.</summary>
     public string RawResponse { get; init; } = string.Empty;
+
+    /// <summary>Absolute URLs of GPX files discovered as download links on the analyzed page.</summary>
+    public List<string> GpxFileUrls { get; init; } = [];
 }

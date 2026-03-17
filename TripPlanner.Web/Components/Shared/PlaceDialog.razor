@@ -1,5 +1,6 @@
 ﻿@implements IDialogContentComponent<Place>
 
+@using System.Text
 @using TripPlanner.Web.Models
 @using TripPlanner.Web.Repositories
 @using TripPlanner.Web.Services
@@ -189,6 +190,35 @@
                     else
                     {
                         <FluentLabel Style="font-size: 0.875em; color: var(--neutral-foreground-hint);">No GPX track attached. Upload one below.</FluentLabel>
+                        @if (_foundGpxUrls.Count > 0)
+                        {
+                            <FluentLabel Weight="FontWeight.Bold" Style="font-size: 0.875em;">Found on page:</FluentLabel>
+                            @foreach (var gpxUrl in _foundGpxUrls)
+                            {
+                                var capturedUrl = gpxUrl;
+                                var isThisImporting = _importingGpxUrl == capturedUrl;
+                                <FluentCard Style="padding: 8px;">
+                                    <FluentStack Orientation="Orientation.Horizontal" Style="align-items: center; gap: 8px;">
+                                        <FluentIcon Icon="Icons.Regular.Size20.Location" Color="Color.Neutral" />
+                                        <FluentLabel Style="font-size: 0.8em; flex: 1; word-break: break-all;">@capturedUrl</FluentLabel>
+                                        <FluentButton Appearance="Appearance.Outline"
+                                                      Disabled="@_isImportingGpx"
+                                                      OnClick="@(() => ImportGpxFromUrl(capturedUrl))">
+                                            @if (isThisImporting)
+                                            {
+                                                <FluentProgress Circular Value="null" Width="14px" Style="margin-right: 4px;" />
+                                            }
+                                            Import
+                                        </FluentButton>
+                                    </FluentStack>
+                                </FluentCard>
+                            }
+                            @if (!string.IsNullOrEmpty(_gpxImportError))
+                            {
+                                <FluentLabel Color="Color.Error" Style="font-size: 0.875em;">@_gpxImportError</FluentLabel>
+                            }
+                            <FluentDivider />
+                        }
                         <GpxFileUpload OnFileUploaded="@HandleGpxUploaded" />
                     }
                 </FluentStack>
@@ -256,6 +286,10 @@
     private bool _isAnalyzing = false;
     private string? _analyzeError;
     private PlaceSuggestion? _suggestion;
+    private List<string> _foundGpxUrls = [];
+    private bool _isImportingGpx = false;
+    private string? _importingGpxUrl;
+    private string? _gpxImportError;
 
     private ApplicationUser? CurrentUser { get; set; }
 
@@ -538,6 +572,80 @@
         }
     }
 
+    private async Task ImportGpxFromUrl(string gpxUrl)
+    {
+        if (Content == null || _isImportingGpx) return;
+
+        // Validate that the URL uses a safe, fetchable scheme.
+        if (!Uri.TryCreate(gpxUrl, UriKind.Absolute, out var parsedUri) ||
+            (parsedUri.Scheme != Uri.UriSchemeHttp && parsedUri.Scheme != Uri.UriSchemeHttps))
+        {
+            _gpxImportError = "GPX URL must use http or https.";
+            return;
+        }
+
+        _isImportingGpx = true;
+        _importingGpxUrl = gpxUrl;
+        _gpxImportError = null;
+
+        const long maxGpxBytes = 10 * 1024 * 1024; // 10 MB – matches GpxFileUpload limit
+
+        try
+        {
+            using var client = HttpClientFactory.CreateClient("UrlFetch");
+            using var response = await client.GetAsync(gpxUrl, HttpCompletionOption.ResponseHeadersRead);
+            response.EnsureSuccessStatusCode();
+
+            // Reject responses that are obviously not GPX/XML (e.g. an HTML error page)
+            var contentType = response.Content.Headers.ContentType?.MediaType ?? string.Empty;
+            if (contentType.Contains("text/html", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("The URL did not return a GPX file.");
+
+            // Reject content that exceeds the size limit based on the Content-Length header.
+            if (response.Content.Headers.ContentLength > maxGpxBytes)
+                throw new InvalidOperationException("GPX file is too large (maximum 10 MB).");
+
+            // Stream-read the response body with a hard cap to guard against missing Content-Length.
+            using var responseStream = await response.Content.ReadAsStreamAsync();
+            using var ms = new MemoryStream();
+            var buffer = new byte[8192];
+            long totalRead = 0;
+            int bytesRead;
+            while ((bytesRead = await responseStream.ReadAsync(buffer)) > 0)
+            {
+                totalRead += bytesRead;
+                if (totalRead > maxGpxBytes)
+                    throw new InvalidOperationException("GPX file is too large (maximum 10 MB).");
+                await ms.WriteAsync(buffer.AsMemory(0, bytesRead));
+            }
+            var gpxContent = Encoding.UTF8.GetString(ms.ToArray());
+
+            var fn = Path.GetFileName(parsedUri.LocalPath);
+            var fileName = !string.IsNullOrEmpty(fn) ? fn : "track.gpx";
+
+            var gpxTrack = GpxService.ParseGpxContent(gpxContent, fileName);
+            gpxTrack.CreatedAt = DateTimeOffset.UtcNow;
+
+            await GpxRepository.AddAsync(gpxTrack);
+
+            Content.GpxTrackId = gpxTrack.Id;
+            Content.Latitude = gpxTrack.Points.FirstOrDefault()?.Latitude ?? Content.Latitude;
+            Content.Longitude = gpxTrack.Points.FirstOrDefault()?.Longitude ?? Content.Longitude;
+
+            await LoadGpxTracks();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed to import GPX from URL: {Url}", gpxUrl);
+            _gpxImportError = $"Could not import GPX file: {ex.Message}";
+        }
+        finally
+        {
+            _isImportingGpx = false;
+            _importingGpxUrl = null;
+        }
+    }
+
 
 
     private async Task AnalyzeUrl()
@@ -554,11 +662,14 @@
         _isAnalyzing = true;
         _analyzeError = null;
         _suggestion = null;
+        _foundGpxUrls = [];
         StateHasChanged();
 
         try
         {
-            _suggestion = (await PlaceAnalysisService.AnalyzeUrlAsync(Content.Url, BrowserTimeZoneService.LanguageTag))?.Suggestion;
+            var result = await PlaceAnalysisService.AnalyzeUrlAsync(Content.Url, BrowserTimeZoneService.LanguageTag);
+            _suggestion = result?.Suggestion;
+            _foundGpxUrls = result?.GpxFileUrls ?? [];
             if (_suggestion == null)
                 _analyzeError = "The AI could not extract place information from this URL.";
         }
