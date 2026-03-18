@@ -15,7 +15,7 @@ public class GpxRepository : IGpxRepository
 
     public async Task<List<GpxTrack>> GetAllAsync()
     {
-        return await _context.GpxTracks.Include(t => t.Points.OrderBy(x => x.Order)).ToListAsync();
+        return await _context.GpxTracks.AsNoTracking().Include(t => t.Points.OrderBy(x => x.Order)).ToListAsync();
     }
 
     public async Task<List<GpxTrack>> GetAllByUserAsync(string userId)
@@ -39,6 +39,7 @@ public class GpxRepository : IGpxRepository
             .Distinct();
 
         return await _context.GpxTracks
+            .AsNoTracking()
             .Where(t => accessibleTrackIds.Contains(t.Id))
             .Include(t => t.Points.OrderBy(x => x.Order))
             .ToListAsync();
@@ -47,14 +48,14 @@ public class GpxRepository : IGpxRepository
 
     public async Task<List<GpxTrack>> GetByTripIdAsync(string tripId)
     {
-        var trackIds = _context.Trips.Where(t => t.Id == tripId)
-            .Include(t => t.Days).ThenInclude(d => d.Places).ThenInclude(p => p.Place)
+        var trackIds = _context.Trips.AsNoTracking().Where(t => t.Id == tripId)
             .SelectMany(t => t.Days.SelectMany(d => d.Places.Select(p => p.Place)))
-            .Where(p => p != null && !string.IsNullOrEmpty(p.GpxTrackId))
-            .Select(p => p!.GpxTrackId);
+            .Where(p => p != null && p.GpxTrackId != null)
+            .Select(p => p!.GpxTrackId!);
 
         return await _context.GpxTracks
-            .Where(x => trackIds.Any(trackId => x.Id == trackId))
+            .AsNoTracking()
+            .Where(x => trackIds.Contains(x.Id))
             .Include(t => t.Points.OrderBy(x => x.Order))
             .ToListAsync();
     }

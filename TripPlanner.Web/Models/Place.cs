@@ -11,6 +11,7 @@ public class Place
     public double Latitude { get; set; }
     public double Longitude { get; set; }
     public List<string> Tags { get; set; } = new();
+    [System.ComponentModel.DataAnnotations.MaxLength(450)]
     public string? GpxTrackId { get; set; }
 
     // Images (multiple)
