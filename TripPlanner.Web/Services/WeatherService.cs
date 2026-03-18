@@ -1,24 +1,18 @@
-using System.Collections.Concurrent;
+using Microsoft.Extensions.Caching.Memory;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 
 namespace TripPlanner.Web.Services;
 
-public class WeatherService(IHttpClientFactory httpClientFactory, ILogger<WeatherService> logger)
+public class WeatherService(IHttpClientFactory httpClientFactory, IMemoryCache cache, ILogger<WeatherService> logger)
 {
-    private readonly ConcurrentDictionary<string, (WeatherForecast Forecast, DateTime CachedAt)> _cache = new();
     private static readonly TimeSpan CacheExpiry = TimeSpan.FromHours(1);
 
     public async Task<WeatherForecast?> GetForecastAsync(double latitude, double longitude)
     {
-        var key = $"{latitude:F3},{longitude:F3}";
-        if (_cache.TryGetValue(key, out var cached))
-        {
-            if (DateTime.UtcNow - cached.CachedAt < CacheExpiry)
-                return cached.Forecast;
-            // Remove stale entry so the dictionary doesn't grow without bound
-            _cache.TryRemove(key, out _);
-        }
+        var key = $"weather:{latitude:F3},{longitude:F3}";
+        if (cache.TryGetValue(key, out WeatherForecast? cached))
+            return cached;
 
         try
         {
@@ -48,7 +42,11 @@ public class WeatherService(IHttpClientFactory httpClientFactory, ILogger<Weathe
                     .ToList()
             };
 
-            _cache[key] = (forecast, DateTime.UtcNow);
+            cache.Set(key, forecast, new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = CacheExpiry,
+                Size = 1,
+            });
             return forecast;
         }
         catch (Exception ex)
