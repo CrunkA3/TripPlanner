@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using TripPlanner.Web.Models;
+using TripPlanner.Web.Services;
 
 namespace TripPlanner.Web.Services.OpenAI;
 
@@ -8,27 +9,10 @@ namespace TripPlanner.Web.Services.OpenAI;
 /// <see cref="IPlaceAnalysisService"/> implementation backed by the OpenAI Chat Completions API.
 /// Registered when <c>AI:Provider</c> is set to <c>OpenAI</c> in configuration.
 /// </summary>
-public class OpenAIPlaceAnalysisService : IPlaceAnalysisService
+public class OpenAIPlaceAnalysisService : PlaceAnalysisServiceBase
 {
-    // Maximum number of characters of page text sent to the LLM to stay within prompt limits.
-    private const int MaxContentLength = 5000;
-
-    private readonly IHttpClientFactory _httpClientFactory;
     private readonly IConfiguration _configuration;
     private readonly ILogger<OpenAIPlaceAnalysisService> _logger;
-    private readonly IGeocodingService _geocodingService;
-
-    public OpenAIPlaceAnalysisService(
-        IHttpClientFactory httpClientFactory,
-        IConfiguration configuration,
-        ILogger<OpenAIPlaceAnalysisService> logger,
-        IGeocodingService geocodingService)
-    {
-        _httpClientFactory = httpClientFactory;
-        _configuration = configuration;
-        _logger = logger;
-        _geocodingService = geocodingService;
-    }
 
     // SSE chunk from the OpenAI streaming response.
     private sealed class OpenAIStreamChunk
@@ -52,32 +36,20 @@ public class OpenAIPlaceAnalysisService : IPlaceAnalysisService
         public string? Content { get; set; }
     }
 
-    public async Task<PlaceAnalysisResult?> AnalyzeUrlAsync(string url, string languageTag = "en", CancellationToken cancellationToken = default)
+    public OpenAIPlaceAnalysisService(
+        IHttpClientFactory httpClientFactory,
+        IConfiguration configuration,
+        ILogger<OpenAIPlaceAnalysisService> logger,
+        IGeocodingService geocodingService)
+        : base(httpClientFactory, logger, geocodingService)
     {
-        // Step 1: Fetch the page content.
-        string html;
-        string pageContent;
-        try
-        {
-            using var httpClient = _httpClientFactory.CreateClient("UrlFetch");
-            var response = await httpClient.GetAsync(url, cancellationToken);
-            response.EnsureSuccessStatusCode();
-            html = await response.Content.ReadAsStringAsync(cancellationToken);
-            pageContent = PlaceAnalysisHelpers.ExtractTextFromHtml(html, MaxContentLength);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to fetch URL: {Url}", url);
-            throw new InvalidOperationException($"Could not fetch the URL: {ex.Message}", ex);
-        }
+        _configuration = configuration;
+        _logger = logger;
+    }
 
-        var gpxFileUrls = PlaceAnalysisHelpers.ExtractGpxUrls(html, url);
-
-        // Step 2: Send to OpenAI for analysis.
+    protected override async Task<(string ResponseText, string Prompt)> GetLlmResponseAsync(
+        string pageContent, string languageTag, CancellationToken cancellationToken)
+    {
         var modelName = _configuration["OpenAI:Model"] ?? "gpt-4o";
         var categories = string.Join(", ", Enum.GetNames<PlaceCategory>());
 
@@ -141,43 +113,7 @@ public class OpenAIPlaceAnalysisService : IPlaceAnalysisService
                     responseBuilder.Append(deltaContent);
             }
 
-            var responseText = responseBuilder.ToString();
-            if (string.IsNullOrWhiteSpace(responseText))
-                return null;
-
-            var suggestion = JsonSerializer.Deserialize<PlaceSuggestion>(responseText, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
-
-            // Step 3: Geocode if the LLM did not return coordinates.
-            if (suggestion != null && (!suggestion.Latitude.HasValue || !suggestion.Longitude.HasValue))
-            {
-                var hasAddress = !string.IsNullOrWhiteSpace(suggestion.Address);
-                var geocodeQuery = hasAddress ? suggestion.Address : suggestion.Name;
-
-                if (!string.IsNullOrWhiteSpace(geocodeQuery))
-                {
-                    _logger.LogDebug(
-                        "LLM did not return coordinates, geocoding using {Source}: '{Query}'.",
-                        hasAddress ? "address" : "place name",
-                        geocodeQuery);
-                    var geoResult = await _geocodingService.GeocodeAsync(geocodeQuery, cancellationToken);
-                    if (geoResult != null)
-                    {
-                        suggestion.Latitude = geoResult.Latitude;
-                        suggestion.Longitude = geoResult.Longitude;
-                    }
-                }
-            }
-
-            return new PlaceAnalysisResult
-            {
-                Suggestion = suggestion,
-                Prompt = userPrompt,
-                RawResponse = responseText,
-                GpxFileUrls = gpxFileUrls,
-            };
+            return (responseBuilder.ToString(), userPrompt);
         }
         catch (OperationCanceledException)
         {
@@ -185,7 +121,6 @@ public class OpenAIPlaceAnalysisService : IPlaceAnalysisService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to get LLM analysis from OpenAI for URL: {Url}", url);
             throw new InvalidOperationException($"Could not analyze the URL with the AI service: {ex.Message}", ex);
         }
     }

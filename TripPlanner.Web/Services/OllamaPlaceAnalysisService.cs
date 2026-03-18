@@ -4,56 +4,27 @@ using TripPlanner.Web.Models;
 
 namespace TripPlanner.Web.Services;
 
-public class OllamaPlaceAnalysisService : IPlaceAnalysisService
+public class OllamaPlaceAnalysisService : PlaceAnalysisServiceBase
 {
-    // Maximum number of characters of page text sent to the LLM to stay within prompt limits
-    private const int MaxContentLength = 5000;
-
-    private readonly IHttpClientFactory _httpClientFactory;
     private readonly IConfiguration _configuration;
     private readonly ILogger<OllamaPlaceAnalysisService> _logger;
-    private readonly IGeocodingService _geocodingService;
+
+    private sealed record OllamaStreamChunk(string? Response, bool Done);
 
     public OllamaPlaceAnalysisService(
         IHttpClientFactory httpClientFactory,
         IConfiguration configuration,
         ILogger<OllamaPlaceAnalysisService> logger,
         IGeocodingService geocodingService)
+        : base(httpClientFactory, logger, geocodingService)
     {
-        _httpClientFactory = httpClientFactory;
         _configuration = configuration;
         _logger = logger;
-        _geocodingService = geocodingService;
     }
 
-    private sealed record OllamaStreamChunk(string? Response, bool Done);
-
-    public async Task<PlaceAnalysisResult?> AnalyzeUrlAsync(string url, string languageTag = "en", CancellationToken cancellationToken = default)
+    protected override async Task<(string ResponseText, string Prompt)> GetLlmResponseAsync(
+        string pageContent, string languageTag, CancellationToken cancellationToken)
     {
-        // Step 1: Fetch the page content
-        string html;
-        string pageContent;
-        try
-        {
-            using var httpClient = _httpClientFactory.CreateClient("UrlFetch");
-            var response = await httpClient.GetAsync(url, cancellationToken);
-            response.EnsureSuccessStatusCode();
-            html = await response.Content.ReadAsStringAsync(cancellationToken);
-            pageContent = PlaceAnalysisHelpers.ExtractTextFromHtml(html, MaxContentLength);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to fetch URL: {Url}", url);
-            throw new InvalidOperationException($"Could not fetch the URL: {ex.Message}", ex);
-        }
-
-        var gpxFileUrls = PlaceAnalysisHelpers.ExtractGpxUrls(html, url);
-
-        // Step 2: Send to Ollama for analysis
         var modelName = _configuration["Ollama:Model"] ?? "llama3.2";
         var categories = string.Join(", ", Enum.GetNames<PlaceCategory>());
 
@@ -112,44 +83,7 @@ public class OllamaPlaceAnalysisService : IPlaceAnalysisService
                     break;
             }
 
-            var responseText = responseBuilder.ToString();
-            if (string.IsNullOrWhiteSpace(responseText))
-                return null;
-
-            var suggestion = JsonSerializer.Deserialize<PlaceSuggestion>(responseText, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
-
-            // Step 3: If the LLM did not return coordinates, geocode using the address found on the page.
-            // If no address was found either, fall back to the place name.
-            if (suggestion != null && (!suggestion.Latitude.HasValue || !suggestion.Longitude.HasValue))
-            {
-                var hasAddress = !string.IsNullOrWhiteSpace(suggestion.Address);
-                var geocodeQuery = hasAddress ? suggestion.Address : suggestion.Name;
-
-                if (!string.IsNullOrWhiteSpace(geocodeQuery))
-                {
-                    _logger.LogDebug(
-                        "LLM did not return coordinates, geocoding using {Source}: '{Query}'.",
-                        hasAddress ? "address" : "place name",
-                        geocodeQuery);
-                    var geoResult = await _geocodingService.GeocodeAsync(geocodeQuery, cancellationToken);
-                    if (geoResult != null)
-                    {
-                        suggestion.Latitude = geoResult.Latitude;
-                        suggestion.Longitude = geoResult.Longitude;
-                    }
-                }
-            }
-
-            return new PlaceAnalysisResult
-            {
-                Suggestion = suggestion,
-                Prompt = prompt,
-                RawResponse = responseText,
-                GpxFileUrls = gpxFileUrls,
-            };
+            return (responseBuilder.ToString(), prompt);
         }
         catch (OperationCanceledException)
         {
@@ -157,7 +91,6 @@ public class OllamaPlaceAnalysisService : IPlaceAnalysisService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to get LLM analysis from Ollama for URL: {Url}", url);
             throw new InvalidOperationException($"Could not analyze the URL with the local LLM: {ex.Message}", ex);
         }
     }
