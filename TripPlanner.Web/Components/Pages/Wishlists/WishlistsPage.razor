@@ -201,6 +201,8 @@ else
 
     private async Task DeleteWishlist(string id)
     {
+        if (currentUserId is null) return;
+
         var wishlist = wishlists?.FirstOrDefault(w => w.Id == id);
         var name = wishlist?.Name ?? "this wishlist";
         var dialog = await DialogService.ShowDialogAsync<ConfirmDialog>(
@@ -209,7 +211,7 @@ else
         var result = await dialog.Result;
         if (result.Cancelled) return;
 
-        await WishlistRepository.DeleteAsync(id, currentUserId!);
+        await WishlistRepository.DeleteAsync(id, currentUserId);
         await LoadWishlists();
     }
 

@@ -50,7 +50,6 @@ public class WishlistRepository : IWishlistRepository
     public async Task DeleteAsync(string id, string userId)
     {
         var wishlist = await _context.Wishlists
-            .Include(w => w.SharedWith)
             .FirstOrDefaultAsync(w => w.Id == id && w.SharedWith.Any(uw => uw.UserId == userId && uw.Level == ShareLevel.Owner));
         if (wishlist != null)
         {
