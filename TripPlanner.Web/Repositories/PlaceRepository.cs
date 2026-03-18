@@ -141,7 +141,7 @@ public class PlaceRepository : IPlaceRepository
             }
         }
 
-        _context.Entry(place).CurrentValues.SetValues(place);
+        _context.Entry(place).State = EntityState.Modified;
         await _context.SaveChangesAsync();
         return place;
     }

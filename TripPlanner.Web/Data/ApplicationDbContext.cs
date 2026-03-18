@@ -141,6 +141,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         modelBuilder.Entity<ChatJob>()
             .HasIndex(j => j.ConversationId);
 
+        modelBuilder.Entity<ChatJob>()
+            .HasIndex(j => j.UserId);
+
         modelBuilder.Entity<UrlImportJob>()
             .HasIndex(j => j.Status);
 

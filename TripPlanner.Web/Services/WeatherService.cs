@@ -12,8 +12,13 @@ public class WeatherService(IHttpClientFactory httpClientFactory, ILogger<Weathe
     public async Task<WeatherForecast?> GetForecastAsync(double latitude, double longitude)
     {
         var key = $"{latitude:F3},{longitude:F3}";
-        if (_cache.TryGetValue(key, out var cached) && DateTime.UtcNow - cached.CachedAt < CacheExpiry)
-            return cached.Forecast;
+        if (_cache.TryGetValue(key, out var cached))
+        {
+            if (DateTime.UtcNow - cached.CachedAt < CacheExpiry)
+                return cached.Forecast;
+            // Remove stale entry so the dictionary doesn't grow without bound
+            _cache.TryRemove(key, out _);
+        }
 
         try
         {
