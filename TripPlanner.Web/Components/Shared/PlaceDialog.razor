@@ -315,7 +315,8 @@
 
     private async Task LoadGpxTracks()
     {
-        GpxTracks = await GpxRepository.GetAllAsync();
+        if (CurrentUser is null) return;
+        GpxTracks = await GpxRepository.GetAllByUserAsync(CurrentUser.Id);
     }
 
     private async Task LoadWishlists()
@@ -350,11 +351,40 @@
             return;
         }
 
+        if (UrlSecurityHelper.IsPrivateOrLocalUri(uri))
+        {
+            _imageError = "Private or local URLs are not allowed.";
+            return;
+        }
+
         try
         {
-            using var client = HttpClientFactory.CreateClient();
-            client.Timeout = TimeSpan.FromSeconds(15);
+            using var client = HttpClientFactory.CreateClient("UrlFetchNoRedirect");
             var response = await client.GetAsync(uri);
+
+            // Manually follow up to 5 redirects, validating each Location against SSRF rules
+            int redirects = 0;
+            while (response.StatusCode is System.Net.HttpStatusCode.MovedPermanently
+                                        or System.Net.HttpStatusCode.Found
+                                        or System.Net.HttpStatusCode.SeeOther
+                                        or System.Net.HttpStatusCode.TemporaryRedirect
+                                        or System.Net.HttpStatusCode.PermanentRedirect)
+            {
+                if (++redirects > 5 || response.Headers.Location is not { } location)
+                    break;
+
+                var next = location.IsAbsoluteUri ? location : new Uri(uri, location);
+                if ((next.Scheme != Uri.UriSchemeHttp && next.Scheme != Uri.UriSchemeHttps)
+                    || UrlSecurityHelper.IsPrivateOrLocalUri(next))
+                {
+                    _imageError = "Private or local URLs are not allowed.";
+                    return;
+                }
+
+                uri = next;
+                response = await client.GetAsync(uri);
+            }
+
             response.EnsureSuccessStatusCode();
 
             var contentType = response.Content.Headers.ContentType?.MediaType ?? "image/jpeg";
@@ -565,9 +595,9 @@
 
     private async Task RemoveGpxTrack()
     {
-        if (Content != null && !string.IsNullOrEmpty(Content.GpxTrackId))
+        if (Content != null && !string.IsNullOrEmpty(Content.GpxTrackId) && CurrentUser is not null)
         {
-            await GpxRepository.DeleteAsync(Content.GpxTrackId);
+            await GpxRepository.DeleteAsync(Content.GpxTrackId, CurrentUser.Id);
             Content.GpxTrackId = null;
         }
     }
@@ -584,6 +614,12 @@
             return;
         }
 
+        if (UrlSecurityHelper.IsPrivateOrLocalUri(parsedUri))
+        {
+            _gpxImportError = "Private or local URLs are not allowed.";
+            return;
+        }
+
         _isImportingGpx = true;
         _importingGpxUrl = gpxUrl;
         _gpxImportError = null;
@@ -592,8 +628,40 @@
 
         try
         {
-            using var client = HttpClientFactory.CreateClient("UrlFetch");
-            using var response = await client.GetAsync(gpxUrl, HttpCompletionOption.ResponseHeadersRead);
+            using var client = HttpClientFactory.CreateClient("UrlFetchNoRedirect");
+            var fetchUri = parsedUri;
+
+            // Manually follow up to 5 redirects, validating each Location against SSRF rules
+            HttpResponseMessage response;
+            int redirects = 0;
+            while (true)
+            {
+                response = await client.GetAsync(fetchUri, HttpCompletionOption.ResponseHeadersRead);
+
+                if (response.StatusCode is System.Net.HttpStatusCode.MovedPermanently
+                                         or System.Net.HttpStatusCode.Found
+                                         or System.Net.HttpStatusCode.SeeOther
+                                         or System.Net.HttpStatusCode.TemporaryRedirect
+                                         or System.Net.HttpStatusCode.PermanentRedirect)
+                {
+                    if (++redirects > 5 || response.Headers.Location is not { } location)
+                        break;
+
+                    var next = location.IsAbsoluteUri ? location : new Uri(fetchUri, location);
+                    if ((next.Scheme != Uri.UriSchemeHttp && next.Scheme != Uri.UriSchemeHttps)
+                        || UrlSecurityHelper.IsPrivateOrLocalUri(next))
+                    {
+                        _gpxImportError = "Private or local URLs are not allowed.";
+                        return;
+                    }
+
+                    fetchUri = next;
+                    continue;
+                }
+
+                break;
+            }
+
             response.EnsureSuccessStatusCode();
 
             // Reject responses that are obviously not GPX/XML (e.g. an HTML error page)
@@ -656,6 +724,12 @@
             (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
         {
             _analyzeError = "Please enter a valid http or https URL to analyze.";
+            return;
+        }
+
+        if (UrlSecurityHelper.IsPrivateOrLocalUri(uri))
+        {
+            _analyzeError = "Private or local URLs are not allowed.";
             return;
         }
 

@@ -314,7 +314,9 @@ else
             return;
         }
 
-        var invalid = lines.Where(l => !Uri.TryCreate(l, UriKind.Absolute, out _)).ToList();
+        var invalid = lines.Where(l => !Uri.TryCreate(l, UriKind.Absolute, out var u) ||
+            (u.Scheme != Uri.UriSchemeHttp && u.Scheme != Uri.UriSchemeHttps) ||
+            UrlSecurityHelper.IsPrivateOrLocalUri(u)).ToList();
         if (invalid.Count > 0)
         {
             urlSubmitError = $"Invalid URL(s): {string.Join(", ", invalid)}";

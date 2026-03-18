@@ -468,7 +468,7 @@ public abstract partial class ChatServiceBase(
     {
         var trip = await tripRepository.GetByIdAsync(tripId);
         if (trip is null || trip.OwnerId != userId) return "Trip not found or access denied.";
-        await tripRepository.DeleteAsync(tripId);
+        await tripRepository.DeleteAsync(tripId, userId);
         return "Trip deleted successfully.";
     }
 
@@ -543,7 +543,7 @@ public abstract partial class ChatServiceBase(
     private async Task<string> DeleteWishlistAsync(string wishlistId, string userId)
     {
         if (!await wishlistRepository.CanUserAdministrateAsync(wishlistId, userId)) return "Wishlist not found or access denied.";
-        await wishlistRepository.DeleteAsync(wishlistId);
+        await wishlistRepository.DeleteAsync(wishlistId, userId);
         return "Wishlist deleted successfully.";
     }
 

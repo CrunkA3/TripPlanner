@@ -55,9 +55,9 @@ public class EfTripRepository : ITripRepository
         return trip;
     }
 
-    public async Task DeleteAsync(string id)
+    public async Task DeleteAsync(string id, string userId)
     {
-        var trip = await _context.Trips.FindAsync(id);
+        var trip = await _context.Trips.FirstOrDefaultAsync(t => t.Id == id && t.OwnerId == userId);
         if (trip != null)
         {
             _context.Trips.Remove(trip);

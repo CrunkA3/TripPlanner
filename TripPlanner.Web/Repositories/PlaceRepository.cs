@@ -39,8 +39,12 @@ public class PlaceRepository : IPlaceRepository
 
     public async Task<List<Place>> GetAllWithAnyWishlistAsync(string userId)
     {
+        var userWishlistIds = _context.UserWishlists
+            .Where(w => w.UserId == userId)
+            .Select(w => w.WishlistId);
+
         return await _context.Places
-            .Where(p => p.WishlistId != null)
+            .Where(p => p.WishlistId != null && userWishlistIds.Contains(p.WishlistId))
             .Include(p => p.Wishlist)
             .ThenInclude(wl => wl!.SharedWith)
             .Include(p => p.Images)

@@ -96,9 +96,12 @@
                                 </FluentButton>
                             }
                             <FluentSpacer />
-                            <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size16.Delete())" OnClick="@(() => DeleteTrip(trip))">
-                                Delete
-                            </FluentButton>
+                            @if (trip.OwnerId == CurrentUserId)
+                            {
+                                <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size16.Delete())" OnClick="@(() => DeleteTrip(trip))">
+                                    Delete
+                                </FluentButton>
+                            }
                         </FluentStack>
                     </FluentStack>
                 </FluentCard>
@@ -289,13 +292,15 @@
 
     private async Task DeleteTrip(Trip trip)
     {
+        if (CurrentUserId is null) return;
+
         var dialog = await DialogService.ShowDialogAsync<ConfirmDialog>(
             new ConfirmDialogContent($"Are you sure you want to delete the trip \"{trip.Name}\"?"),
             new DialogParameters { Title = "Confirm Delete", PreventDismissOnOverlayClick = true });
         var result = await dialog.Result;
         if (result.Cancelled) return;
 
-        await TripRepository.DeleteAsync(trip.Id);
+        await TripRepository.DeleteAsync(trip.Id, CurrentUserId);
         await LoadData();
     }
 
