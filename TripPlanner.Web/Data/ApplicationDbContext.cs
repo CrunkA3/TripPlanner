@@ -133,5 +133,18 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .WithMany(c => c.Messages)
             .HasForeignKey(m => m.ConversationId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // Performance indexes
+        modelBuilder.Entity<ChatJob>()
+            .HasIndex(j => j.Status);
+
+        modelBuilder.Entity<ChatJob>()
+            .HasIndex(j => j.ConversationId);
+
+        modelBuilder.Entity<UrlImportJob>()
+            .HasIndex(j => j.Status);
+
+        modelBuilder.Entity<Place>()
+            .HasIndex(p => p.GpxTrackId);
     }
 }

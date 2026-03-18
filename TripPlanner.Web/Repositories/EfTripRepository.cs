@@ -16,6 +16,7 @@ public class EfTripRepository : ITripRepository
     public async Task<List<Trip>> GetAllAsync()
     {
         return await _context.Trips
+            .AsNoTracking()
             .Include(t => t.Days)
                 .ThenInclude(d => d.Places)
                     .ThenInclude(p => p.Place)
@@ -29,6 +30,7 @@ public class EfTripRepository : ITripRepository
     public async Task<Trip?> GetByIdAsync(string id)
     {
         return await _context.Trips
+            .AsNoTracking()
             .Include(t => t.Days)
                 .ThenInclude(d => d.Places)
                     .ThenInclude(p => p.Place)
@@ -68,6 +70,7 @@ public class EfTripRepository : ITripRepository
     public async Task<List<Trip>> GetByOwnerAsync(string userId)
     {
         return await _context.Trips
+            .AsNoTracking()
             .Where(t => t.OwnerId == userId)
             .Include(t => t.Days)
                 .ThenInclude(d => d.Places)
@@ -81,6 +84,7 @@ public class EfTripRepository : ITripRepository
     public async Task<List<Trip>> GetSharedWithUserAsync(string userId)
     {
         return await _context.SharedTrips
+            .AsNoTracking()
             .Where(st => st.UserId == userId)
             .Include(st => st.Trip)
                 .ThenInclude(t => t!.Days)
@@ -124,9 +128,8 @@ public class EfTripRepository : ITripRepository
     public async Task<bool> CanUserAccessAsync(string tripId, string userId)
     {
         return await _context.Trips
-            .AnyAsync(t => t.Id == tripId && t.OwnerId == userId)
-            || await _context.SharedTrips
-                .AnyAsync(st => st.TripId == tripId && st.UserId == userId);
+            .AnyAsync(t => t.Id == tripId && (t.OwnerId == userId
+                || t.SharedWith.Any(st => st.UserId == userId)));
     }
 
     public async Task<Accommodation> AddAccommodationAsync(Accommodation accommodation)

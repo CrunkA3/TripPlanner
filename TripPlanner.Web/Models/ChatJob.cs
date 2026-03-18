@@ -8,10 +8,10 @@ public class ChatJob
     public string Id { get; set; } = Guid.NewGuid().ToString();
 
     /// <summary>The conversation this job belongs to.</summary>
-    [Required]
+    [Required, MaxLength(450)]
     public string ConversationId { get; set; } = string.Empty;
 
-    [Required]
+    [Required, MaxLength(450)]
     public string UserId { get; set; } = string.Empty;
 
     /// <summary>The user message to process.</summary>
