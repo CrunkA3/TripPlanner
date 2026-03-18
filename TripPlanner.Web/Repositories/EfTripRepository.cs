@@ -15,28 +15,14 @@ public class EfTripRepository : ITripRepository
 
     public async Task<List<Trip>> GetAllAsync()
     {
-        return await _context.Trips
-            .AsNoTracking()
-            .Include(t => t.Days)
-                .ThenInclude(d => d.Places)
-                    .ThenInclude(p => p.Place)
-            .Include(t => t.UnscheduledPlaces)
-                .ThenInclude(p => p.Place)
-            .Include(t => t.Accommodations)
+        return await WithStandardIncludes(_context.Trips.AsNoTracking())
             .Include(t => t.SharedWith)
             .ToListAsync();
     }
 
     public async Task<Trip?> GetByIdAsync(string id)
     {
-        return await _context.Trips
-            .AsNoTracking()
-            .Include(t => t.Days)
-                .ThenInclude(d => d.Places)
-                    .ThenInclude(p => p.Place)
-            .Include(t => t.UnscheduledPlaces)
-                .ThenInclude(p => p.Place)
-            .Include(t => t.Accommodations)
+        return await WithStandardIncludes(_context.Trips.AsNoTracking())
             .Include(t => t.SharedWith)
                 .ThenInclude(st => st.User)
             .FirstOrDefaultAsync(t => t.Id == id);
@@ -69,15 +55,8 @@ public class EfTripRepository : ITripRepository
 
     public async Task<List<Trip>> GetByOwnerAsync(string userId)
     {
-        return await _context.Trips
-            .AsNoTracking()
+        return await WithStandardIncludes(_context.Trips.AsNoTracking())
             .Where(t => t.OwnerId == userId)
-            .Include(t => t.Days)
-                .ThenInclude(d => d.Places)
-                    .ThenInclude(p => p.Place)
-            .Include(t => t.UnscheduledPlaces)
-                .ThenInclude(p => p.Place)
-            .Include(t => t.Accommodations)
             .ToListAsync();
     }
 
@@ -156,4 +135,13 @@ public class EfTripRepository : ITripRepository
             await _context.SaveChangesAsync();
         }
     }
+
+    private static IQueryable<Trip> WithStandardIncludes(IQueryable<Trip> query) =>
+        query
+            .Include(t => t.Days)
+                .ThenInclude(d => d.Places)
+                    .ThenInclude(p => p.Place)
+            .Include(t => t.UnscheduledPlaces)
+                .ThenInclude(p => p.Place)
+            .Include(t => t.Accommodations);
 }

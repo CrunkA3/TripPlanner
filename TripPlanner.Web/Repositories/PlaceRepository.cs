@@ -14,15 +14,28 @@ public class PlaceRepository : IPlaceRepository
         _context = context;
     }
 
-    public async Task<List<Place>> GetAllByUserAsync(string userId)
-    {
-        var userWishlistIds = _context.UserWishlists
+    private IQueryable<string> GetUserWishlistIds(string userId) =>
+        _context.UserWishlists
             .Where(w => w.UserId == userId)
             .Select(w => w.WishlistId);
 
-        var tripPlaceIds = _context.Trips
+    private IQueryable<string> GetUserTripIds(string userId) =>
+        _context.Trips
+            .Where(t => t.OwnerId == userId)
+            .Select(t => t.Id)
+            .Union(_context.SharedTrips
+                .Where(st => st.UserId == userId)
+                .Select(st => st.TripId));
+
+    private IQueryable<string> GetOwnedTripPlaceIds(string userId) =>
+        _context.Trips
             .Where(t => t.OwnerId == userId)
             .SelectMany(t => t.Days.SelectMany(d => d.Places.Select(tp => tp.PlaceId)));
+
+    public async Task<List<Place>> GetAllByUserAsync(string userId)
+    {
+        var userWishlistIds = GetUserWishlistIds(userId);
+        var tripPlaceIds = GetOwnedTripPlaceIds(userId);
 
         var query = _context.Places
             .AsNoTracking()
@@ -39,9 +52,7 @@ public class PlaceRepository : IPlaceRepository
 
     public async Task<List<Place>> GetAllWithAnyWishlistAsync(string userId)
     {
-        var userWishlistIds = _context.UserWishlists
-            .Where(w => w.UserId == userId)
-            .Select(w => w.WishlistId);
+        var userWishlistIds = GetUserWishlistIds(userId);
 
         return await _context.Places
             .AsNoTracking()
@@ -64,16 +75,8 @@ public class PlaceRepository : IPlaceRepository
 
     public async Task<Place?> GetByIdAsync(string id, string userId)
     {
-        var userWishlistIds = _context.UserWishlists
-            .Where(w => w.UserId == userId)
-            .Select(w => w.WishlistId);
-
-        var userTripIds = _context.Trips
-            .Where(t => t.OwnerId == userId)
-            .Select(t => t.Id)
-            .Union(_context.SharedTrips
-                .Where(st => st.UserId == userId)
-                .Select(st => st.TripId));
+        var userWishlistIds = GetUserWishlistIds(userId);
+        var userTripIds = GetUserTripIds(userId);
 
         return await _context.Places
             .AsNoTracking()
@@ -91,16 +94,8 @@ public class PlaceRepository : IPlaceRepository
 
     public async Task<bool> HasAccessAsync(string id, string userId)
     {
-        var userWishlistIds = _context.UserWishlists
-            .Where(w => w.UserId == userId)
-            .Select(w => w.WishlistId);
-
-        var userTripIds = _context.Trips
-            .Where(t => t.OwnerId == userId)
-            .Select(t => t.Id)
-            .Union(_context.SharedTrips
-                .Where(st => st.UserId == userId)
-                .Select(st => st.TripId));
+        var userWishlistIds = GetUserWishlistIds(userId);
+        var userTripIds = GetUserTripIds(userId);
 
         return await _context.Places.AnyAsync(p => p.Id == id && (
             (p.WishlistId != null && userWishlistIds.Contains(p.WishlistId)) ||
@@ -148,23 +143,14 @@ public class PlaceRepository : IPlaceRepository
 
     public async Task<bool> MarkAsReviewedAsync(string id, string userId)
     {
-        var userWishlistIds = _context.UserWishlists
-            .Where(w => w.UserId == userId)
-            .Select(w => w.WishlistId);
-
-        var ownedTripIds = _context.Trips
-            .Where(t => t.OwnerId == userId)
-            .Select(t => t.Id);
-
-        var sharedTripIds = _context.SharedTrips
-            .Where(st => st.UserId == userId)
-            .Select(st => st.TripId);
+        var userWishlistIds = GetUserWishlistIds(userId);
+        var userTripIds = GetUserTripIds(userId);
 
         var updatedAt = DateTimeOffset.UtcNow;
         var count = await _context.Places
             .Where(p => p.Id == id && (
                 (p.WishlistId != null && userWishlistIds.Contains(p.WishlistId)) ||
-                (p.TripId != null && (ownedTripIds.Contains(p.TripId) || sharedTripIds.Contains(p.TripId)))))
+                (p.TripId != null && userTripIds.Contains(p.TripId))))
             .ExecuteUpdateAsync(s => s
                 .SetProperty(p => p.NeedsReview, false)
                 .SetProperty(p => p.UpdatedAt, updatedAt));
@@ -220,13 +206,8 @@ public class PlaceRepository : IPlaceRepository
 
     public async Task<List<string>> GetAllTagsByUserAsync(string userId)
     {
-        var userWishlistIds = _context.UserWishlists
-            .Where(w => w.UserId == userId)
-            .Select(w => w.WishlistId);
-
-        var tripPlaceIds = _context.Trips
-            .Where(t => t.OwnerId == userId)
-            .SelectMany(t => t.Days.SelectMany(d => d.Places.Select(tp => tp.PlaceId)));
+        var userWishlistIds = GetUserWishlistIds(userId);
+        var tripPlaceIds = GetOwnedTripPlaceIds(userId);
 
         var tags = await _context.Places
             .AsNoTracking()
