@@ -250,7 +250,8 @@
 
     private async Task LoadGpxTracks()
     {
-        GpxTracks = await GpxRepository.GetAllAsync();
+        if (CurrentUser is null) return;
+        GpxTracks = await GpxRepository.GetAllByUserAsync(CurrentUser.Id);
     }
 
     private async Task LoadWishlists()

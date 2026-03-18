@@ -145,7 +145,7 @@ public class TripMcpTools(ITripRepository tripRepository, IHttpContextAccessor h
         if (trip is null || trip.OwnerId != UserId)
             return "Trip not found or access denied.";
 
-        await tripRepository.DeleteAsync(tripId);
+        await tripRepository.DeleteAsync(tripId, UserId);
         return "Trip deleted successfully.";
     }
 }

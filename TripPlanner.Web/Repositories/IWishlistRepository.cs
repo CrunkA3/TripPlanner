@@ -8,7 +8,7 @@ public interface IWishlistRepository
     Task<Wishlist?> GetByIdAsync(string id);
     Task<Wishlist> AddAsync(Wishlist wishlist);
     Task<Wishlist> UpdateAsync(Wishlist wishlist);
-    Task DeleteAsync(string id);
+    Task DeleteAsync(string id, string userId);
     Task ShareWithUserAsync(string wishlistId, string userId);
     Task UnshareWithUserAsync(string wishlistId, string userId);
     Task<bool> CanUserAccessAsync(string wishlistId, string userId);

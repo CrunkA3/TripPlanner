@@ -8,7 +8,7 @@ public interface ITripRepository
     Task<Trip?> GetByIdAsync(string id);
     Task<Trip> AddAsync(Trip trip);
     Task<Trip> UpdateAsync(Trip trip);
-    Task DeleteAsync(string id);
+    Task DeleteAsync(string id, string userId);
     Task<List<Trip>> GetByOwnerAsync(string userId);
     Task<List<Trip>> GetSharedWithUserAsync(string userId);
     Task ShareWithUserAsync(string tripId, string userId);

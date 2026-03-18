@@ -209,7 +209,7 @@ else
         var result = await dialog.Result;
         if (result.Cancelled) return;
 
-        await WishlistRepository.DeleteAsync(id);
+        await WishlistRepository.DeleteAsync(id, currentUserId!);
         await LoadWishlists();
     }
 

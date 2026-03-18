@@ -277,10 +277,11 @@
         if (CurrentUser is not null)
         {
             Places = await PlaceRepository.GetAllByUserAsync(CurrentUser.Id);
+            var ownedTrips = await TripRepository.GetByOwnerAsync(CurrentUser.Id);
+            var sharedTrips = await TripRepository.GetSharedWithUserAsync(CurrentUser.Id);
+            Trips = ownedTrips.UnionBy(sharedTrips, t => t.Id).ToList();
+            GpxTracks = await GpxRepository.GetAllByUserAsync(CurrentUser.Id);
         }
-
-        Trips = await TripRepository.GetAllAsync();
-        GpxTracks = await GpxRepository.GetAllAsync();
         
         if (!string.IsNullOrEmpty(SelectedTripId))
         {

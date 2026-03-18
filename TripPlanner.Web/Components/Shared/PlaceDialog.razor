@@ -315,7 +315,8 @@
 
     private async Task LoadGpxTracks()
     {
-        GpxTracks = await GpxRepository.GetAllAsync();
+        if (CurrentUser is null) return;
+        GpxTracks = await GpxRepository.GetAllByUserAsync(CurrentUser.Id);
     }
 
     private async Task LoadWishlists()
@@ -347,6 +348,12 @@
             (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
         {
             _imageError = "Please enter a valid http or https URL.";
+            return;
+        }
+
+        if (UrlSecurityHelper.IsPrivateOrLocalUri(uri))
+        {
+            _imageError = "Private or local URLs are not allowed.";
             return;
         }
 
@@ -565,9 +572,9 @@
 
     private async Task RemoveGpxTrack()
     {
-        if (Content != null && !string.IsNullOrEmpty(Content.GpxTrackId))
+        if (Content != null && !string.IsNullOrEmpty(Content.GpxTrackId) && CurrentUser is not null)
         {
-            await GpxRepository.DeleteAsync(Content.GpxTrackId);
+            await GpxRepository.DeleteAsync(Content.GpxTrackId, CurrentUser.Id);
             Content.GpxTrackId = null;
         }
     }
@@ -581,6 +588,12 @@
             (parsedUri.Scheme != Uri.UriSchemeHttp && parsedUri.Scheme != Uri.UriSchemeHttps))
         {
             _gpxImportError = "GPX URL must use http or https.";
+            return;
+        }
+
+        if (UrlSecurityHelper.IsPrivateOrLocalUri(parsedUri))
+        {
+            _gpxImportError = "Private or local URLs are not allowed.";
             return;
         }
 
@@ -656,6 +669,12 @@
             (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
         {
             _analyzeError = "Please enter a valid http or https URL to analyze.";
+            return;
+        }
+
+        if (UrlSecurityHelper.IsPrivateOrLocalUri(uri))
+        {
+            _analyzeError = "Private or local URLs are not allowed.";
             return;
         }
 

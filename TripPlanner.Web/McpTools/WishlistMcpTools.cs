@@ -119,7 +119,7 @@ public class WishlistMcpTools(IWishlistRepository wishlistRepository, IHttpConte
         if (!await wishlistRepository.CanUserAdministrateAsync(wishlistId, UserId))
             return "Wishlist not found or access denied.";
 
-        await wishlistRepository.DeleteAsync(wishlistId);
+        await wishlistRepository.DeleteAsync(wishlistId, UserId);
         return "Wishlist deleted successfully.";
     }
 }
