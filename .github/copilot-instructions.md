@@ -125,5 +125,11 @@ Web is exposed on ports `8980` (HTTP) and `8981` (HTTPS).
 5. Register in `Program.cs`
 6. Run `dotnet ef migrations add <Name>` from `TripPlanner.Web/`
 
+## Code Style Preferences
+- **Keep classes small and focused (SRP)**: Each class, service, repository, and component should have one primary responsibility. If a class grows beyond that, split it into multiple smaller, focused classes.
+- **Don't repeat yourself (DRY)**: Do not duplicate logic. Extract shared behavior into helper methods, base classes, or services. Identical or near-identical code blocks must be extracted into shared helpers or base types rather than copied.
+- **Prefer Blazor components**: Break large Razor pages/components into smaller, reusable child components. Each component should do one thing.
+- **Use partial classes**: When a class or Blazor component file becomes long, use C# `partial class` to split the code-behind into multiple files (e.g. `MyPage.razor` + `MyPage.razor.cs` with additional partials like `MyPage.Logic.cs` or `MyPage.EventHandlers.cs`).
+
 ## Trust These Instructions
 Trust the information in this file. Only search the codebase if something here appears incomplete or incorrect.
