@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text.Json;
 using TripPlanner.Web.Models;
 
@@ -36,18 +37,58 @@ public abstract class PlaceAnalysisServiceBase : IPlaceAnalysisService
 
     public async Task<PlaceAnalysisResult?> AnalyzeUrlAsync(string url, string languageTag = "en", CancellationToken cancellationToken = default)
     {
-        // Step 1: Fetch the page content.
+        // Step 1: Validate the URL and fetch the page content.
+        // Use "UrlFetchNoRedirect" (AllowAutoRedirect=false) so every redirect hop can be
+        // validated against UrlSecurityHelper before being followed, preventing redirect-based SSRF.
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        {
+            throw new InvalidOperationException("Only http and https URLs are supported.");
+        }
+
+        if (UrlSecurityHelper.IsPrivateOrLocalUri(uri))
+        {
+            throw new InvalidOperationException("Private or local URLs are not allowed.");
+        }
+
         string html;
         string pageContent;
         try
         {
-            using var httpClient = _httpClientFactory.CreateClient("UrlFetch");
-            var response = await httpClient.GetAsync(url, cancellationToken);
+            using var httpClient = _httpClientFactory.CreateClient("UrlFetchNoRedirect");
+            var response = await httpClient.GetAsync(uri, cancellationToken);
+
+            // Manually follow up to 5 redirects, validating each Location against SSRF rules
+            int redirects = 0;
+            while (response.StatusCode is HttpStatusCode.MovedPermanently
+                                        or HttpStatusCode.Found
+                                        or HttpStatusCode.SeeOther
+                                        or HttpStatusCode.TemporaryRedirect
+                                        or HttpStatusCode.PermanentRedirect)
+            {
+                if (++redirects > 5 || response.Headers.Location is not { } location)
+                    break;
+
+                var next = location.IsAbsoluteUri ? location : new Uri(uri, location);
+                if ((next.Scheme != Uri.UriSchemeHttp && next.Scheme != Uri.UriSchemeHttps)
+                    || UrlSecurityHelper.IsPrivateOrLocalUri(next))
+                {
+                    throw new InvalidOperationException("Redirect target is a private or local URL.");
+                }
+
+                uri = next;
+                response = await httpClient.GetAsync(uri, cancellationToken);
+            }
+
             response.EnsureSuccessStatusCode();
             html = await response.Content.ReadAsStringAsync(cancellationToken);
             pageContent = PlaceAnalysisHelpers.ExtractTextFromHtml(html, MaxContentLength);
         }
         catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (InvalidOperationException)
         {
             throw;
         }
@@ -60,15 +101,38 @@ public abstract class PlaceAnalysisServiceBase : IPlaceAnalysisService
         var gpxFileUrls = PlaceAnalysisHelpers.ExtractGpxUrls(html, url);
 
         // Step 2: Delegate to the subclass for the LLM-specific call.
-        var (responseText, prompt) = await GetLlmResponseAsync(pageContent, languageTag, cancellationToken);
+        string responseText;
+        string prompt;
+        try
+        {
+            (responseText, prompt) = await GetLlmResponseAsync(pageContent, languageTag, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to get LLM analysis for URL: {Url}", url);
+            throw;
+        }
 
         if (string.IsNullOrWhiteSpace(responseText))
             return null;
 
-        var suggestion = JsonSerializer.Deserialize<PlaceSuggestion>(responseText, new JsonSerializerOptions
+        PlaceSuggestion? suggestion;
+        try
         {
-            PropertyNameCaseInsensitive = true
-        });
+            suggestion = JsonSerializer.Deserialize<PlaceSuggestion>(responseText, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogWarning(ex, "Failed to deserialize LLM response for URL: {Url}", url);
+            throw new InvalidOperationException("The AI service returned an invalid response.", ex);
+        }
 
         // Step 3: If the LLM did not return coordinates, geocode using the address found on the page.
         // If no address was found either, fall back to the place name.

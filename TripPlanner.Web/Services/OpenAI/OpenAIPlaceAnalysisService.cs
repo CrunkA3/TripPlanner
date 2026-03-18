@@ -121,7 +121,6 @@ public class OpenAIPlaceAnalysisService : PlaceAnalysisServiceBase
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to get LLM analysis from OpenAI for URL.");
             throw new InvalidOperationException($"Could not analyze the URL with the AI service: {ex.Message}", ex);
         }
     }

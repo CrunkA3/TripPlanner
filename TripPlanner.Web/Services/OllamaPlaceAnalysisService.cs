@@ -91,7 +91,6 @@ public class OllamaPlaceAnalysisService : PlaceAnalysisServiceBase
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to get LLM analysis from Ollama for URL.");
             throw new InvalidOperationException($"Could not analyze the URL with the local LLM: {ex.Message}", ex);
         }
     }
