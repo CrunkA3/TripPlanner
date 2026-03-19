@@ -5,16 +5,10 @@ Eine moderne **Blazor Server**-Webanwendung zur Reiseplanung und Verwaltung von 
 ## Screenshots
 
 ### Startseite
-![Startseite](https://github.com/user-attachments/assets/4b741916-4910-464d-8e9f-8b8d9d511401)
-
-### Registrierung
-![Registrierung](https://github.com/user-attachments/assets/21436adc-170b-4a02-8671-b8247edc7ac1)
-
-### Anmeldung
-![Anmeldung](https://github.com/user-attachments/assets/0601eaa9-e6eb-4b02-bf80-12e34f0f56c9)
+![Startseite](/assets/screenshots/02-home-authenticated.png)
 
 ### Wunschlisten
-![Wunschlisten](https://github.com/user-attachments/assets/6a236f13-8d5d-4b62-a928-af2940cb847e)
+![Wunschlisten](/assets/screenshots/04-wishlists-with-data.png)
 
 ### Reisen
 ![Reisen](https://github.com/user-attachments/assets/7e49bee7-de4b-4f4d-8a5a-20c5473c5224)
