@@ -416,34 +416,6 @@
         StartPolling();
     }
 
-    private void SelectConversation(string conversationId)
-    {
-        if (_isThinking) return;
-        _showSidebar = false;
-        Navigation.NavigateTo($"/chat/{conversationId}");
-    }
-
-    private void NewConversation()
-    {
-        if (_isThinking) return;
-        ChatService.Clear();
-        _pendingUserMessage = null;
-        _jobError = null;
-        _showSidebar = false;
-        Navigation.NavigateTo("/chat");
-    }
-
-    private async Task DeleteConversation(string conversationId)
-    {
-        if (_currentUser is null) return;
-        await ConversationRepository.DeleteAsync(conversationId, _currentUser.Id);
-        _conversations = await ConversationRepository.GetByUserAsync(_currentUser.Id);
-        if (string.Equals(ChatService.CurrentConversationId, conversationId, StringComparison.OrdinalIgnoreCase))
-            Navigation.NavigateTo("/chat");
-        else
-            StateHasChanged();
-    }
-
     private async Task OnTextAreaInput(ChangeEventArgs e)
     {
         _userInput = e.Value?.ToString() ?? string.Empty;
@@ -496,17 +468,6 @@
         {
             // Ignore JS interop errors (e.g. during prerendering)
         }
-    }
-
-    private static string FormatDate(DateTimeOffset dt)
-    {
-        var now = DateTimeOffset.UtcNow;
-        var diff = now - dt;
-        if (diff.TotalMinutes < 1) return "just now";
-        if (diff.TotalHours < 1) return $"{(int)diff.TotalMinutes}m ago";
-        if (diff.TotalDays < 1) return $"{(int)diff.TotalHours}h ago";
-        if (diff.TotalDays < 7) return $"{(int)diff.TotalDays}d ago";
-        return dt.ToString("MMM d");
     }
 
     public void Dispose()
