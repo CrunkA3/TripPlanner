@@ -36,42 +36,14 @@
 
     @* ─── Sidebar ─── *@
     <div class="@(_showSidebar ? "chat-sidebar chat-sidebar--open" : "chat-sidebar")">
-        <div style="padding: 8px;">
-            <FluentButton Appearance="Appearance.Accent"
-                          IconStart="@(new Icons.Regular.Size20.Add())"
-                          OnClick="@NewConversation"
-                          Style="width: 100%;">
-                New Conversation
-            </FluentButton>
-        </div>
-        <div style="flex: 1; overflow-y: auto; padding: 4px 8px; display: flex; flex-direction: column; gap: 4px;">
+        <FluentNavMenu>
+            <FluentNavLink Icon="@(new Icons.Filled.Size24.ChatAdd())" Href="/chat" @Tooltip="New Conversation" Match="NavLinkMatch.All" IconColor="Color.Accent">New Conversation</FluentNavLink>
             @foreach (var conv in _conversations)
             {
-                var isActive = conv.Id == ChatService.CurrentConversationId;
-                <FluentStack Orientation="Orientation.Horizontal"
-                             Style="@($"border-radius: 6px; padding: 2px 4px; align-items: center;")">
-                    <FluentButton Appearance="@(isActive? Appearance.Accent: Appearance.Stealth)"
-                                  OnClick="@(() => SelectConversation(conv.Id))"
-                                  Style="@($"flex: 1; text-align: left; overflow: hidden; min-width: 0;")">
-                        <span style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.85rem;">@conv.Title</span>
-                        <span style="display: block; font-size: 0.7rem; opacity: 0.7;">@FormatDate(conv.UpdatedAt ?? conv.CreatedAt)</span>
-                    </FluentButton>
+                <FluentNavLink Icon="@(new Icons.Regular.Size24.Chat())" Href="@($"/chat/{@conv.Id}")" @Tooltip="@conv.Title" IconColor="Color.Neutral">@conv.Title</FluentNavLink>
+            }
+        </FluentNavMenu>
 
-                    @if (isActive)
-                    {
-                        <FluentButton Appearance="Appearance.Stealth"
-                                      IconStart="@(new Icons.Regular.Size16.Delete().WithColor(Color.Error))"
-                                      Title="Delete conversation"
-                                      OnClick="@(() => DeleteConversation(conv.Id))"
-                                      Style="flex-shrink: 0; color: var(--foreground-on-accent-rest);" />
-                    }
-                </FluentStack>
-            }
-            @if (!_conversations.Any())
-            {
-                <FluentLabel Style="opacity: 0.5; font-size: 0.8rem; text-align: center; padding: 12px;">No conversations yet</FluentLabel>
-            }
-        </div>
     </div>
 
     @* ─── Chat panel ─── *@
