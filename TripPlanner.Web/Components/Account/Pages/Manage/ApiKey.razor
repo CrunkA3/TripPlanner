@@ -90,6 +90,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        if (HttpContext is null) return;
         user = await UserManager.GetUserAsync(HttpContext.User);
         if (user is null) return;
 
