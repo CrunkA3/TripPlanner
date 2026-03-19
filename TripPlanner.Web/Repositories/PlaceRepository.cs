@@ -115,6 +115,7 @@ public class PlaceRepository : IPlaceRepository
 
         // Sync images: load existing, add new, update existing, remove deleted
         var existingImages = await _context.PlaceImages
+            .AsNoTracking()
             .Where(pi => pi.PlaceId == place.Id)
             .ToListAsync();
 
