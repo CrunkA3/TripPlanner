@@ -200,7 +200,7 @@
         _imageSrcCache.Clear();
         _currentImageIndex.Clear();
 
-        var needsTimer = Places.Any(p => p.Images.Count > 1);
+        var needsTimer = Places.Any(p => p.ImageIds.Count > 1);
         if (needsTimer && _carouselTimer == null)
         {
             _carouselTimer = new System.Timers.Timer(CarouselIntervalMs);
@@ -227,9 +227,9 @@
             // avoid races with UI event handlers that also modify _currentImageIndex.
             await InvokeAsync(() =>
             {
-                foreach (var place in Places.Where(p => p.Images.Count > 1))
+                foreach (var place in Places.Where(p => p.ImageIds.Count > 1))
                 {
-                    _currentImageIndex[place.Id] = (_currentImageIndex.GetValueOrDefault(place.Id) + 1) % place.Images.Count;
+                    _currentImageIndex[place.Id] = (_currentImageIndex.GetValueOrDefault(place.Id) + 1) % place.ImageIds.Count;
                 }
                 StateHasChanged();
             });
@@ -252,7 +252,7 @@
 
     private void SetImageIndex(Place place, int index)
     {
-        if (index >= 0 && index < place.Images.Count)
+        if (index >= 0 && index < place.ImageIds.Count)
             _currentImageIndex[place.Id] = index;
     }
 
