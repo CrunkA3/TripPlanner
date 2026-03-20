@@ -20,5 +20,5 @@ internal static class PlaceImageHelper
     /// Returns the srcset attribute value for a place image referenced by its ID.
     /// </summary>
     public static string BuildSrcSet(string imageId) =>
-        $"/api/placeImages/{imageId}?width=400 400w, /api/placeImages/{imageId}?width=800 800w";
+        $"/api/placeImages/{imageId}?width=400 400w, /api/placeImages/{imageId}?width=800 800w, /api/placeImages/{imageId}?width=1200 1200w";
 }
