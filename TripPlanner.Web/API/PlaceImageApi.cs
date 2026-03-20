@@ -97,8 +97,14 @@ internal static class PlaceImageApi
             await image.SaveAsJpegAsync(ms, cancellationToken);
             return (ms.ToArray(), "image/jpeg");
         }
-        catch
+        catch (OperationCanceledException)
         {
+            // Preserve cancellation semantics for the caller.
+            throw;
+        }
+        catch (Exception)
+        {
+            // If resizing or encoding fails for any other reason, fall back to the original data.
             return (data, contentType);
         }
     }
