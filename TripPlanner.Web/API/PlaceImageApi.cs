@@ -8,13 +8,13 @@ internal static class PlaceImageApi
     internal static IEndpointConventionBuilder MapPlaceImageApi(this IEndpointRouteBuilder endpoints)
     {
         var groupPlaceImages = endpoints.MapGroup("/api/placeImages")
-            .WithDisplayName("Place Image API");
+            .WithDisplayName("Place Image API")
+            .RequireAuthorization();
 
         // Endpoint to retrieve a place image by its ID
         groupPlaceImages.MapGet("/{imageId}", GetPlaceImageAsync)
             .WithName("GetPlaceImage")
             .WithDisplayName("Get Place Image")
-            .RequireAuthorization()
             .Produces(StatusCodes.Status200OK, contentType: "image/jpeg", additionalContentTypes: "image/png")
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status404NotFound);
@@ -31,7 +31,7 @@ internal static class PlaceImageApi
             return Results.BadRequest("Image ID cannot be null or empty.");
         }
 
-        var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
         if (userId is null)
         {
             return Results.Unauthorized();
