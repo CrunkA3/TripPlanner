@@ -22,7 +22,7 @@ public interface IPlaceRepository
     Task<List<Place>> GetByWishlistIdAsync(string wishlistId);
     Task<List<string>> GetAllTagsByUserAsync(string userId);
 
-    Task<PlaceImage?> GetPlaceImageAsync(string imageId, string userId);
+    Task<PlaceImage?> GetPlaceImageAsync(string imageId, string userId, CancellationToken cancellationToken = default);
 
     static string GetCategoryColor(PlaceCategory category)
     {
