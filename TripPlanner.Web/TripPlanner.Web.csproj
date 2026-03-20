@@ -29,4 +29,8 @@
   <ItemGroup>
     <ProjectReference Include="..\TripPlanner.ServiceDefaults\TripPlanner.ServiceDefaults.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="API\" />
+  </ItemGroup>
 </Project>

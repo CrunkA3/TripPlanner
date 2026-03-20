@@ -40,7 +40,6 @@ public class PlaceRepository : IPlaceRepository
         var query = _context.Places
             .AsNoTracking()
             .Include(p => p.Wishlist)
-            .Include(p => p.Images)
             .Where(p => p.Wishlist != null && (
                             userWishlistIds.Contains(p.WishlistId!) ||
                             tripPlaceIds.Contains(p.Id)))
@@ -59,7 +58,6 @@ public class PlaceRepository : IPlaceRepository
             .Where(p => p.WishlistId != null && userWishlistIds.Contains(p.WishlistId))
             .Include(p => p.Wishlist)
             .ThenInclude(wl => wl!.SharedWith)
-            .Include(p => p.Images)
             .ToListAsync();
     }
 
@@ -69,7 +67,6 @@ public class PlaceRepository : IPlaceRepository
             .AsNoTracking()
             .Where(p => p.TripId == tripId)
             .Include(p => p.Wishlist)
-            .Include(p => p.Images)
             .ToListAsync();
     }
 
@@ -81,7 +78,6 @@ public class PlaceRepository : IPlaceRepository
         return await _context.Places
             .AsNoTracking()
             .Include(p => p.Wishlist)
-            .Include(p => p.Images)
             .FirstOrDefaultAsync(p => p.Id == id && (
                 (p.WishlistId != null && userWishlistIds.Contains(p.WishlistId)) ||
                 (p.TripId != null && userTripIds.Contains(p.TripId))));
