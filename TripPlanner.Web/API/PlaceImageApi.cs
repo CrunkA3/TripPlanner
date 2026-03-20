@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using System.Security.Cryptography;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
 using TripPlanner.Web.Repositories;
@@ -9,6 +10,10 @@ internal static class PlaceImageApi
 {
     // Allowed resize widths to prevent abuse and limit resource usage.
     private static readonly int[] AllowedWidths = [400, 800, 1200];
+
+    // Maximum cache lifetime for private image responses: 1 day (86400 seconds).
+    private const int CacheMaxAgeSeconds = 86400;
+    private const string CacheControlValue = "private, max-age=86400";
 
     internal static IEndpointConventionBuilder MapPlaceImageApi(this IEndpointRouteBuilder endpoints)
     {
@@ -22,6 +27,7 @@ internal static class PlaceImageApi
             .WithName("GetPlaceImage")
             .WithDisplayName("Get Place Image")
             .Produces(StatusCodes.Status200OK, contentType: "image/jpeg", additionalContentTypes: "image/png")
+            .Produces(StatusCodes.Status304NotModified)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status404NotFound);
@@ -63,6 +69,10 @@ internal static class PlaceImageApi
             return Results.BadRequest("Unsupported image content type.");
         }
 
+        // Compute an ETag from the raw stored data and the requested width so that
+        // each unique (image, width) combination gets a stable, deterministic tag.
+        var etag = ComputeETag(placeImage.ImageData, width);
+
         var imageData = placeImage.ImageData;
         var outputContentType = safeContentType;
         if (width is not null)
@@ -70,7 +80,17 @@ internal static class PlaceImageApi
             (imageData, outputContentType) = await ResizeImageAsync(imageData, safeContentType, width.Value, cancellationToken);
         }
 
-        return new SafeImageResult(imageData, outputContentType);
+        return new SafeImageResult(imageData, outputContentType, etag);
+    }
+
+    /// <summary>
+    /// Computes a short, stable ETag from the raw image bytes and the requested width.
+    /// </summary>
+    private static string ComputeETag(byte[] data, int? width)
+    {
+        var hash = SHA256.HashData(data);
+        var hex = Convert.ToHexString(hash)[..16];
+        return width is null ? $"\"{hex}\"" : $"\"{hex}-{width}\"";
     }
 
     /// <summary>
@@ -141,18 +161,21 @@ internal static class PlaceImageApi
     }
 
     /// <summary>
-    /// IResult implementation that returns image data with a safe content type and
-    /// adds the X-Content-Type-Options: nosniff header.
+    /// IResult implementation that returns image data with a safe content type,
+    /// X-Content-Type-Options: nosniff, ETag, and Cache-Control headers.
+    /// Returns 304 Not Modified when the client's cached copy is still valid.
     /// </summary>
     private sealed class SafeImageResult : IResult
     {
         private readonly byte[] _data;
         private readonly string _contentType;
+        private readonly string _etag;
 
-        public SafeImageResult(byte[] data, string contentType)
+        public SafeImageResult(byte[] data, string contentType, string etag)
         {
             _data = data ?? throw new ArgumentNullException(nameof(data));
             _contentType = contentType ?? throw new ArgumentNullException(nameof(contentType));
+            _etag = etag ?? throw new ArgumentNullException(nameof(etag));
         }
 
         public async Task ExecuteAsync(HttpContext httpContext)
@@ -163,6 +186,19 @@ internal static class PlaceImageApi
             }
 
             var response = httpContext.Response;
+
+            // Always set ETag and Cache-Control so conditional GETs work correctly.
+            response.Headers.ETag = _etag;
+            response.Headers.CacheControl = CacheControlValue;
+
+            // If the client already has a valid cached copy, skip sending the body.
+            if (httpContext.Request.Headers.IfNoneMatch
+                .Any(v => string.Equals(v, _etag, StringComparison.OrdinalIgnoreCase)))
+            {
+                response.StatusCode = StatusCodes.Status304NotModified;
+                return;
+            }
+
             response.StatusCode = StatusCodes.Status200OK;
             response.ContentType = _contentType;
             response.Headers["X-Content-Type-Options"] = "nosniff";
