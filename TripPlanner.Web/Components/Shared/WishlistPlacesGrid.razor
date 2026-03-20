@@ -13,19 +13,15 @@
             <div class="place-card" style="@("border-top-color: " + IPlaceRepository.GetCategoryColor(place.Category))">
                 <div class="place-card-image-header">
                     @{
-                        var sortedImages = place.Images.OrderBy(i => i.SortOrder).ToList();
-                        var imageCount = sortedImages.Count;
+                        var imageCount = place.ImageIds?.Count ?? 0;
                         var currentIdx = imageCount > 0
                             ? Math.Clamp(_currentImageIndex.GetValueOrDefault(place.Id, 0), 0, imageCount - 1)
                             : 0;
-                        var currentImg = imageCount > 0 ? sortedImages[currentIdx] : null;
-                        var showImage = currentImg is not null &&
-                            currentImg.ImageData.Length > 0 &&
-                            System.Text.RegularExpressions.Regex.IsMatch(currentImg.ImageContentType, @"^image/[a-zA-Z0-9\-\+\.]+$");
+                        var currentImg = imageCount > 0 ? place.ImageIds![currentIdx] : null;
                     }
-                    @if (showImage && currentImg is not null)
+                    @if (currentImg is not null)
                     {
-                        <img @key="@currentImg.Id" src="@GetImageSrc(currentImg)" alt="@place.Name" />
+                        <img @key="@currentImg" src="@($"/api/placeImages/{currentImg}")" alt="@place.Name" />
                     }
                     else
                     {
@@ -181,7 +177,6 @@
     [Parameter]
     public EventCallback<string> OnRemoveReview { get; set; }
 
-    private Dictionary<string, string> _imageSrcCache = new();
     private Dictionary<string, int> _currentImageIndex = new();
     private System.Timers.Timer? _carouselTimer;
     private int _carouselTickRunning = 0;
@@ -190,17 +185,20 @@
 
     private string? currentUserId;
 
+
+
     protected override async Task OnInitializedAsync()
     {
         currentUserId = await UserService.GetCurrentUserIdAsync();
+
+
     }
 
     protected override void OnParametersSet()
     {
-        _imageSrcCache.Clear();
         _currentImageIndex.Clear();
 
-        var needsTimer = Places.Any(p => p.Images.Count > 1);
+        var needsTimer = Places.Any(p => p.ImageIds.Count > 1);
         if (needsTimer && _carouselTimer == null)
         {
             _carouselTimer = new System.Timers.Timer(CarouselIntervalMs);
@@ -227,9 +225,9 @@
             // avoid races with UI event handlers that also modify _currentImageIndex.
             await InvokeAsync(() =>
             {
-                foreach (var place in Places.Where(p => p.Images.Count > 1))
+                foreach (var place in Places.Where(p => p.ImageIds.Count > 1))
                 {
-                    _currentImageIndex[place.Id] = (_currentImageIndex.GetValueOrDefault(place.Id) + 1) % place.Images.Count;
+                    _currentImageIndex[place.Id] = (_currentImageIndex.GetValueOrDefault(place.Id) + 1) % place.ImageIds.Count;
                 }
                 StateHasChanged();
             });
@@ -244,7 +242,7 @@
 
     private void NavigateImage(Place place, int delta)
     {
-        var count = place.Images.Count;
+        var count = place.ImageIds.Count;
         if (count <= 1) return;
         var current = _currentImageIndex.GetValueOrDefault(place.Id, 0);
         _currentImageIndex[place.Id] = (current + delta + count) % count;
@@ -252,7 +250,7 @@
 
     private void SetImageIndex(Place place, int index)
     {
-        if (index >= 0 && index < place.Images.Count)
+        if (index >= 0 && index < place.ImageIds.Count)
             _currentImageIndex[place.Id] = index;
     }
 
@@ -269,16 +267,6 @@
     private bool CanShowPlaceActions(Place place) =>
         CanUserEditPlace(place) &&
         (OnEditPlace.HasDelegate || OnDeletePlace.HasDelegate || OnNotesPlace.HasDelegate || OnRemoveReview.HasDelegate);
-
-    private string GetImageSrc(PlaceImage img)
-    {
-        if (!_imageSrcCache.TryGetValue(img.Id, out var src))
-        {
-            src = $"data:{img.ImageContentType};base64,{Convert.ToBase64String(img.ImageData)}";
-            _imageSrcCache[img.Id] = src;
-        }
-        return src;
-    }
 
     public void Dispose()
     {

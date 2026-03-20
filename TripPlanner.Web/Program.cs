@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Http.Resilience;
 using Microsoft.FluentUI.AspNetCore.Components;
+using TripPlanner.Web.API;
 using TripPlanner.Web.Auth;
 using TripPlanner.Web.Components;
 using TripPlanner.Web.Components.Account;
@@ -192,6 +193,7 @@ builder.Services.AddMcpServer()
 
 var app = builder.Build();
 
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -207,6 +209,8 @@ else
 }
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
+app.UseAuthentication();
+app.UseAuthorization();
 app.UseRequestLocalization(options =>
 {
     // Accept any culture the browser declares via Accept-Language.
@@ -235,6 +239,9 @@ app.MapMcp("/mcp")
     .RequireAuthorization(policy => policy
         .AddAuthenticationSchemes(McpApiKeyAuthHandler.SchemeName)
         .RequireAuthenticatedUser());
+
+// Map API Endpoints
+app.MapPlaceImageApi();
 
 app.MapDefaultEndpoints();
 

@@ -10,12 +10,15 @@ public class Place
     public PlaceCategory Category { get; set; }
     public double Latitude { get; set; }
     public double Longitude { get; set; }
-    public List<string> Tags { get; set; } = new();
+    public List<string> Tags { get; set; } = [];
     [System.ComponentModel.DataAnnotations.MaxLength(450)]
     public string? GpxTrackId { get; set; }
 
     // Images (multiple)
-    public List<PlaceImage> Images { get; set; } = new();
+    public List<PlaceImage> Images { get; set; } = [];
+
+    [NotMapped]
+    public List<string> ImageIds { get; set; } = [];
 
 
     // Wishlist association
