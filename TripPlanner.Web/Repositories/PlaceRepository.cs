@@ -298,7 +298,7 @@ public class PlaceRepository : IPlaceRepository
             .OrderBy(t => t)];
     }
 
-    public async Task<PlaceImage?> GetPlaceImageAsync(string imageId, string userId)
+    public async Task<PlaceImage?> GetPlaceImageAsync(string imageId, string userId, CancellationToken cancellationToken = default)
     {
         var userWishlistIds = GetUserWishlistIds(userId);
         var userTripIds = GetUserTripIds(userId);
@@ -309,6 +309,6 @@ public class PlaceRepository : IPlaceRepository
             .Where(pi => pi.Id == imageId && (
                 (pi.Place!.WishlistId != null && userWishlistIds.Contains(pi.Place.WishlistId)) ||
                 (pi.Place.TripId != null && userTripIds.Contains(pi.Place.TripId))));
-        return await query.FirstOrDefaultAsync();
+        return await query.FirstOrDefaultAsync(cancellationToken);
     }
 }
