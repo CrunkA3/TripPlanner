@@ -75,23 +75,23 @@ internal static class PlaceImageApi
 
     /// <summary>
     /// Resizes image data proportionally to the specified width, encoding as JPEG.
-    /// Returns the original data and content type if resizing fails or the image is already smaller than the target width.
+    /// Returns the original data and content type only if the image already has the requested width,
+    /// or if resizing fails for any reason.
     /// </summary>
     private static async Task<(byte[] Data, string ContentType)> ResizeImageAsync(byte[] data, string contentType, int targetWidth, CancellationToken cancellationToken)
     {
         try
         {
             using var image = Image.Load(data);
-            if (image.Width <= targetWidth)
+
+            // If the image already has the requested width, return it unchanged to avoid unnecessary processing.
+            if (image.Width == targetWidth)
             {
                 return (data, contentType);
             }
 
-            image.Mutate(ctx => ctx.Resize(new ResizeOptions
-            {
-                Size = new Size(targetWidth, 0), // height 0 = calculate proportionally with ResizeMode.Max
-                Mode = ResizeMode.Max
-            }));
+            // Resize to the exact requested width, preserving aspect ratio and allowing upscaling if needed.
+            image.Mutate(ctx => ctx.Resize(targetWidth, 0));
 
             using var ms = new MemoryStream();
             await image.SaveAsJpegAsync(ms, cancellationToken);
