@@ -258,9 +258,13 @@ public class PlaceRepository : IPlaceRepository
         })];
     }
 
-    public async Task<List<Place>> GetByWishlistIdAsync(string wishlistId)
+    public async Task<List<Place>> GetByWishlistIdAsync(string wishlistId, string userId)
     {
-        // TODO: check for user access to the wishlist
+        var userWishlistIds = GetUserWishlistIds(userId);
+        var hasAccess = await userWishlistIds.AnyAsync(id => id == wishlistId);
+        if (!hasAccess)
+            return [];
+
         var query = _context.Places
             .AsNoTracking()
             .Where(p => p.WishlistId == wishlistId)

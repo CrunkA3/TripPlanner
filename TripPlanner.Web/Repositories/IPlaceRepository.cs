@@ -19,7 +19,7 @@ public interface IPlaceRepository
     Task<bool> MarkAsReviewedAsync(string id, string userId);
     Task DeleteAsync(string id, string userId);
     Task<List<Place>> FilterAsync(PlaceCategory? category = null, List<string>? tags = null, bool? hasGpxTrack = null);
-    Task<List<Place>> GetByWishlistIdAsync(string wishlistId);
+    Task<List<Place>> GetByWishlistIdAsync(string wishlistId, string userId);
     Task<List<string>> GetAllTagsByUserAsync(string userId);
 
     Task<PlaceImage?> GetPlaceImageAsync(string imageId, string userId);
