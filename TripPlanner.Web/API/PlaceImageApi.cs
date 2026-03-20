@@ -1,21 +1,28 @@
 ﻿using System.Security.Claims;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Processing;
 using TripPlanner.Web.Repositories;
 
 namespace TripPlanner.Web.API;
 
 internal static class PlaceImageApi
 {
+    // Allowed resize widths to prevent abuse and limit resource usage.
+    private static readonly int[] AllowedWidths = [400, 800, 1200];
+
     internal static IEndpointConventionBuilder MapPlaceImageApi(this IEndpointRouteBuilder endpoints)
     {
         var groupPlaceImages = endpoints.MapGroup("/api/placeImages")
             .WithDisplayName("Place Image API")
             .RequireAuthorization();
 
-        // Endpoint to retrieve a place image by its ID
+        // Endpoint to retrieve a place image by its ID.
+        // Optional 'width' query parameter resizes the image proportionally (allowed: 400, 800, 1200).
         groupPlaceImages.MapGet("/{imageId}", GetPlaceImageAsync)
             .WithName("GetPlaceImage")
             .WithDisplayName("Get Place Image")
             .Produces(StatusCodes.Status200OK, contentType: "image/jpeg", additionalContentTypes: "image/png")
+            .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status404NotFound);
 
@@ -24,7 +31,7 @@ internal static class PlaceImageApi
     }
 
 
-    private static async Task<IResult> GetPlaceImageAsync(string imageId, ClaimsPrincipal user, IPlaceRepository placeRepository, CancellationToken cancellationToken)
+    private static async Task<IResult> GetPlaceImageAsync(string imageId, int? width, ClaimsPrincipal user, IPlaceRepository placeRepository, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(imageId))
         {
@@ -35,6 +42,11 @@ internal static class PlaceImageApi
         if (userId is null)
         {
             return Results.Unauthorized();
+        }
+
+        if (width is not null && !AllowedWidths.Contains(width.Value))
+        {
+            return Results.BadRequest($"Invalid width. Allowed values: {string.Join(", ", AllowedWidths)}.");
         }
 
         // Check if the image exists and belongs to the current user
@@ -51,7 +63,44 @@ internal static class PlaceImageApi
             return Results.BadRequest("Unsupported image content type.");
         }
 
-        return new SafeImageResult(placeImage.ImageData, safeContentType);
+        var imageData = placeImage.ImageData;
+        var outputContentType = safeContentType;
+        if (width is not null)
+        {
+            (imageData, outputContentType) = await ResizeImageAsync(imageData, safeContentType, width.Value, cancellationToken);
+        }
+
+        return new SafeImageResult(imageData, outputContentType);
+    }
+
+    /// <summary>
+    /// Resizes image data proportionally to the specified width, encoding as JPEG.
+    /// Returns the original data and content type if resizing fails or the image is already smaller than the target width.
+    /// </summary>
+    private static async Task<(byte[] Data, string ContentType)> ResizeImageAsync(byte[] data, string contentType, int targetWidth, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var image = Image.Load(data);
+            if (image.Width <= targetWidth)
+            {
+                return (data, contentType);
+            }
+
+            image.Mutate(ctx => ctx.Resize(new ResizeOptions
+            {
+                Size = new Size(targetWidth, 0), // height 0 = calculate proportionally with ResizeMode.Max
+                Mode = ResizeMode.Max
+            }));
+
+            using var ms = new MemoryStream();
+            await image.SaveAsJpegAsync(ms, cancellationToken);
+            return (ms.ToArray(), "image/jpeg");
+        }
+        catch
+        {
+            return (data, contentType);
+        }
     }
 
     /// <summary>

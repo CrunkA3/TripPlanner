@@ -21,7 +21,11 @@
                     }
                     @if (currentImg is not null)
                     {
-                        <img @key="@currentImg" src="@($"/api/placeImages/{currentImg}")" alt="@place.Name" />
+                        <img @key="@currentImg"
+                             src="@($"/api/placeImages/{currentImg}")"
+                             srcset="@PlaceImageHelper.BuildSrcSet(currentImg)"
+                             sizes="(max-width: 600px) calc(100vw - 32px), (max-width: 960px) calc(50vw - 24px), (max-width: 1280px) calc(25vw - 24px), calc(16.67vw - 24px)"
+                             alt="@place.Name" />
                     }
                     else
                     {
