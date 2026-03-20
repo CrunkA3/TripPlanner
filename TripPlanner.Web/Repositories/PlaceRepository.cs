@@ -177,8 +177,11 @@ public class PlaceRepository : IPlaceRepository
             {
                 _context.PlaceImages.Add(img);
             }
-            else
+            else if (img.ImageData?.Length > 0)
             {
+                // Only update the row if the dialog replaced the image blob.
+                // Stub entries (ImageData is empty) represent unchanged DB images loaded
+                // via the /api/placeImages endpoint and must not overwrite existing data.
                 _context.Entry(img).State = EntityState.Modified;
             }
         }

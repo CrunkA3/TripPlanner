@@ -311,8 +311,15 @@
         {
             Tags = await PlaceRepository.GetAllTagsByUserAsync(CurrentUser.Id);
 
-            var dbPlace = await PlaceRepository.GetByIdAsync(Content.Id, CurrentUser.Id);
-            Content.Images = dbPlace?.Images ?? new List<PlaceImage>();
+            // Only load image stubs for existing places that have images.
+            // New places have an empty ImageIds list, so we skip the DB roundtrip.
+            // Stubs are displayed via /api/placeImages/{id} to avoid loading full blobs on init.
+            if (Content.ImageIds.Count > 0)
+            {
+                Content.Images = Content.ImageIds
+                    .Select((id, idx) => new PlaceImage { Id = id, PlaceId = Content.Id, SortOrder = idx, ImageData = [] })
+                    .ToList();
+            }
         }
     }
 
@@ -462,7 +469,9 @@
     }
 
     private string GetImageSrc(PlaceImage img) =>
-        $"data:{img.ImageContentType};base64,{Convert.ToBase64String(img.ImageData)}";
+        img.ImageData.Length > 0
+            ? $"data:{img.ImageContentType};base64,{Convert.ToBase64String(img.ImageData)}"
+            : $"/api/placeImages/{img.Id}";
 
     private void OpenLightbox(int index)
     {
