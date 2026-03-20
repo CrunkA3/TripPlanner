@@ -128,7 +128,9 @@
                     @if (Content.Images.Any())
                     {
                         <FluentStack Orientation="Orientation.Horizontal" Style="flex-wrap: wrap; gap: 8px;">
-                            @{var sortedImages = Content.Images.OrderBy(i => i.SortOrder).ToList();}
+                            @{
+                                var sortedImages = Content.Images.OrderBy(i => i.SortOrder).ToList();
+                            }
                             @for (var idx = 0; idx < sortedImages.Count; idx++)
                             {
                                 var img = sortedImages[idx];
@@ -304,8 +306,14 @@
         SelectedTags = Content.Tags;
         await LoadGpxTracks();
         await LoadWishlists();
+
         if (CurrentUser is not null)
+        {
             Tags = await PlaceRepository.GetAllTagsByUserAsync(CurrentUser.Id);
+
+            var dbPlace = await PlaceRepository.GetByIdAsync(Content.Id, CurrentUser.Id);
+            Content.Images = dbPlace?.Images ?? new List<PlaceImage>();
+        }
     }
 
     protected override void OnParametersSet()

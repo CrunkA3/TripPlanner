@@ -13,19 +13,15 @@
             <div class="place-card" style="@("border-top-color: " + IPlaceRepository.GetCategoryColor(place.Category))">
                 <div class="place-card-image-header">
                     @{
-                        var sortedImages = place.Images.OrderBy(i => i.SortOrder).ToList();
-                        var imageCount = sortedImages.Count;
+                        var imageCount = place.ImageIds?.Count ?? 0;
                         var currentIdx = imageCount > 0
                             ? Math.Clamp(_currentImageIndex.GetValueOrDefault(place.Id, 0), 0, imageCount - 1)
                             : 0;
-                        var currentImg = imageCount > 0 ? sortedImages[currentIdx] : null;
-                        var showImage = currentImg is not null &&
-                            currentImg.ImageData.Length > 0 &&
-                            System.Text.RegularExpressions.Regex.IsMatch(currentImg.ImageContentType, @"^image/[a-zA-Z0-9\-\+\.]+$");
+                        var currentImg = imageCount > 0 ? place.ImageIds![currentIdx] : null;
                     }
-                    @if (showImage && currentImg is not null)
+                    @if (currentImg is not null)
                     {
-                        <img @key="@currentImg.Id" src="@GetImageSrc(currentImg)" alt="@place.Name" />
+                        <img @key="@currentImg" src="@($"/api/placeImages/{currentImg}")" alt="@place.Name" />
                     }
                     else
                     {
@@ -190,9 +186,13 @@
 
     private string? currentUserId;
 
+
+
     protected override async Task OnInitializedAsync()
     {
         currentUserId = await UserService.GetCurrentUserIdAsync();
+
+
     }
 
     protected override void OnParametersSet()
@@ -244,7 +244,7 @@
 
     private void NavigateImage(Place place, int delta)
     {
-        var count = place.Images.Count;
+        var count = place.ImageIds.Count;
         if (count <= 1) return;
         var current = _currentImageIndex.GetValueOrDefault(place.Id, 0);
         _currentImageIndex[place.Id] = (current + delta + count) % count;

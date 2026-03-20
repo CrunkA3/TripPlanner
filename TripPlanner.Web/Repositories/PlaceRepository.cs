@@ -46,7 +46,7 @@ public class PlaceRepository : IPlaceRepository
             .Select(p => new
             {
                 Place = p,
-                ImageIds = p.Images.Select(i => i.Id)
+                ImageIds = p.Images.OrderBy(i => i.SortOrder).Select(i => i.Id)
             });
 
         var queryResult = await query.ToListAsync();
@@ -71,7 +71,7 @@ public class PlaceRepository : IPlaceRepository
             .Select(p => new
             {
                 Place = p,
-                ImageIds = p.Images.Select(i => i.Id)
+                ImageIds = p.Images.OrderBy(i => i.SortOrder).Select(i => i.Id)
             });
 
         var queryResult = await query.ToListAsync();
@@ -92,7 +92,7 @@ public class PlaceRepository : IPlaceRepository
             .Select(p => new
             {
                 Place = p,
-                ImageIds = p.Images.Select(i => i.Id)
+                ImageIds = p.Images.OrderBy(i => i.SortOrder).Select(i => i.Id)
             }); ;
 
         var queryResult = await query.ToListAsync();
@@ -112,10 +112,12 @@ public class PlaceRepository : IPlaceRepository
         var query = _context.Places
             .AsNoTracking()
             .Include(p => p.Wishlist)
+            .Include(p => p.Trip)
+            .Include(p => p.Images)
             .Select(p => new
             {
                 Place = p,
-                ImageIds = p.Images.Select(i => i.Id)
+                ImageIds = p.Images.OrderBy(i => i.SortOrder).Select(i => i.Id)
             });
 
         var queryResult = await query
@@ -148,7 +150,7 @@ public class PlaceRepository : IPlaceRepository
         _context.Places.Add(place);
         await _context.SaveChangesAsync();
 
-        place.ImageIds = [.. place.Images.Select(i => i.Id)];
+        place.ImageIds = [.. place.Images.OrderBy(i => i.SortOrder).Select(i => i.Id)];
 
         return place;
     }
@@ -163,7 +165,7 @@ public class PlaceRepository : IPlaceRepository
             .Where(pi => pi.PlaceId == place.Id)
             .ToListAsync();
 
-        var newImageIds = place.Images.Select(i => i.Id).ToHashSet();
+        var newImageIds = place.Images.OrderBy(i => i.SortOrder).Select(i => i.Id).ToHashSet();
         var toRemove = existingImages.Where(ei => !newImageIds.Contains(ei.Id)).ToList();
         _context.PlaceImages.RemoveRange(toRemove);
 
@@ -244,7 +246,7 @@ public class PlaceRepository : IPlaceRepository
             .Select(p => new
             {
                 Place = p,
-                ImageIds = p.Images.Select(i => i.Id)
+                ImageIds = p.Images.OrderBy(i => i.SortOrder).Select(i => i.Id)
             });
 
         var queryResult = await queryWithImageIds.ToListAsync();
@@ -265,7 +267,7 @@ public class PlaceRepository : IPlaceRepository
             .Select(p => new
             {
                 Place = p,
-                ImageIds = p.Images.Select(i => i.Id)
+                ImageIds = p.Images.OrderBy(i => i.SortOrder).Select(i => i.Id)
             });
 
         var queryResult = await query.ToListAsync();
@@ -296,4 +298,17 @@ public class PlaceRepository : IPlaceRepository
             .OrderBy(t => t)];
     }
 
+    public async Task<PlaceImage?> GetPlaceImageAsync(string imageId, string userId)
+    {
+        var userWishlistIds = GetUserWishlistIds(userId);
+        var userTripIds = GetUserTripIds(userId);
+
+        var query = _context.PlaceImages
+            .AsNoTracking()
+            .Include(pi => pi.Place)
+            .Where(pi => pi.Id == imageId && (
+                (pi.Place!.WishlistId != null && userWishlistIds.Contains(pi.Place.WishlistId)) ||
+                (pi.Place.TripId != null && userTripIds.Contains(pi.Place.TripId))));
+        return await query.FirstOrDefaultAsync();
+    }
 }

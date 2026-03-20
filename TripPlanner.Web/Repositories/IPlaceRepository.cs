@@ -22,6 +22,8 @@ public interface IPlaceRepository
     Task<List<Place>> GetByWishlistIdAsync(string wishlistId);
     Task<List<string>> GetAllTagsByUserAsync(string userId);
 
+    Task<PlaceImage?> GetPlaceImageAsync(string imageId, string userId);
+
     static string GetCategoryColor(PlaceCategory category)
     {
         return category switch
