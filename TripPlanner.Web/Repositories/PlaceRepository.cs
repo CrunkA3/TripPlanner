@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using TripPlanner.Web.Data;
 using TripPlanner.Web.Models;
-using TripPlanner.Web.Services;
 
 namespace TripPlanner.Web.Repositories;
 
@@ -43,9 +42,20 @@ public class PlaceRepository : IPlaceRepository
             .Where(p => p.Wishlist != null && (
                             userWishlistIds.Contains(p.WishlistId!) ||
                             tripPlaceIds.Contains(p.Id)))
-            .Include(p => p.Trip);
+            .Include(p => p.Trip)
+            .Select(p => new
+            {
+                Place = p,
+                ImageIds = p.Images.Select(i => i.Id)
+            });
 
-        return await query.ToListAsync();
+        var queryResult = await query.ToListAsync();
+
+        return [.. queryResult.Select(q =>
+        {
+            q.Place.ImageIds = [.. q.ImageIds];
+            return q.Place;
+        })];
     }
 
 
@@ -53,21 +63,45 @@ public class PlaceRepository : IPlaceRepository
     {
         var userWishlistIds = GetUserWishlistIds(userId);
 
-        return await _context.Places
+        var query = _context.Places
             .AsNoTracking()
             .Where(p => p.WishlistId != null && userWishlistIds.Contains(p.WishlistId))
             .Include(p => p.Wishlist)
             .ThenInclude(wl => wl!.SharedWith)
-            .ToListAsync();
+            .Select(p => new
+            {
+                Place = p,
+                ImageIds = p.Images.Select(i => i.Id)
+            });
+
+        var queryResult = await query.ToListAsync();
+
+        return [.. queryResult.Select(q =>
+        {
+            q.Place.ImageIds = [.. q.ImageIds];
+            return q.Place;
+        })];
     }
 
     public async Task<List<Place>> GetAllForTripAsync(string tripId)
     {
-        return await _context.Places
+        var query = _context.Places
             .AsNoTracking()
             .Where(p => p.TripId == tripId)
             .Include(p => p.Wishlist)
-            .ToListAsync();
+            .Select(p => new
+            {
+                Place = p,
+                ImageIds = p.Images.Select(i => i.Id)
+            }); ;
+
+        var queryResult = await query.ToListAsync();
+
+        return [.. queryResult.Select(q =>
+        {
+            q.Place.ImageIds = [.. q.ImageIds];
+            return q.Place;
+        })];
     }
 
     public async Task<Place?> GetByIdAsync(string id, string userId)
@@ -75,12 +109,23 @@ public class PlaceRepository : IPlaceRepository
         var userWishlistIds = GetUserWishlistIds(userId);
         var userTripIds = GetUserTripIds(userId);
 
-        return await _context.Places
+        var query = _context.Places
             .AsNoTracking()
             .Include(p => p.Wishlist)
-            .FirstOrDefaultAsync(p => p.Id == id && (
-                (p.WishlistId != null && userWishlistIds.Contains(p.WishlistId)) ||
-                (p.TripId != null && userTripIds.Contains(p.TripId))));
+            .Select(p => new
+            {
+                Place = p,
+                ImageIds = p.Images.Select(i => i.Id)
+            });
+
+        var queryResult = await query
+            .FirstOrDefaultAsync(p => p.Place.Id == id && (
+                (p.Place.WishlistId != null && userWishlistIds.Contains(p.Place.WishlistId)) ||
+                (p.Place.TripId != null && userTripIds.Contains(p.Place.TripId))));
+
+        queryResult?.Place.ImageIds = [.. queryResult?.ImageIds ?? []];
+
+        return queryResult?.Place;
     }
 
     public async Task<bool> ExistsAsync(string id)
@@ -102,6 +147,9 @@ public class PlaceRepository : IPlaceRepository
     {
         _context.Places.Add(place);
         await _context.SaveChangesAsync();
+
+        place.ImageIds = [.. place.Images.Select(i => i.Id)];
+
         return place;
     }
 
@@ -189,16 +237,44 @@ public class PlaceRepository : IPlaceRepository
                 : query.Where(p => p.GpxTrackId == null);
         }
 
-        return await query.Include(p => p.Wishlist).ToListAsync();
+
+
+        var queryWithImageIds = query
+            .Include(p => p.Wishlist)
+            .Select(p => new
+            {
+                Place = p,
+                ImageIds = p.Images.Select(i => i.Id)
+            });
+
+        var queryResult = await queryWithImageIds.ToListAsync();
+
+        return [.. queryResult.Select(q =>
+        {
+            q.Place.ImageIds = [.. q.ImageIds];
+            return q.Place;
+        })];
     }
 
     public async Task<List<Place>> GetByWishlistIdAsync(string wishlistId)
     {
-        return await _context.Places
+        // TODO: check for user access to the wishlist
+        var query = _context.Places
             .AsNoTracking()
             .Where(p => p.WishlistId == wishlistId)
-            .Include(p => p.Images)
-            .ToListAsync();
+            .Select(p => new
+            {
+                Place = p,
+                ImageIds = p.Images.Select(i => i.Id)
+            });
+
+        var queryResult = await query.ToListAsync();
+
+        return [.. queryResult.Select(q =>
+        {
+            q.Place.ImageIds = [.. q.ImageIds];
+            return q.Place;
+        })];
     }
 
     public async Task<List<string>> GetAllTagsByUserAsync(string userId)
@@ -213,12 +289,11 @@ public class PlaceRepository : IPlaceRepository
             .Select(p => p.Tags)
             .ToListAsync();
 
-        return tags
+        return [.. tags
             .SelectMany(t => t)
             .Where(t => !string.IsNullOrWhiteSpace(t))
             .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(t => t)
-            .ToList();
+            .OrderBy(t => t)];
     }
 
 }

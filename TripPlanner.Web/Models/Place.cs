@@ -15,7 +15,10 @@ public class Place
     public string? GpxTrackId { get; set; }
 
     // Images (multiple)
-    public List<PlaceImage> Images { get; set; } = new();
+    public List<PlaceImage> Images { get; set; } = [];
+
+    [NotMapped]
+    public string[]? ImageIds { get; set; }
 
 
     // Wishlist association
