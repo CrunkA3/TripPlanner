@@ -85,16 +85,20 @@
                 {
                     <FluentLabel Style="font-size: 0.875em;">No places to display</FluentLabel>
                 }
+                else if (!VisiblePlaces.Any() && !VisibleTripPlaces.Any())
+                {
+                    <FluentLabel Style="font-size: 0.875em;">No places visible in current map area</FluentLabel>
+                }
                 else
                 {
                     <FluentAccordion>
-                        @if (Places.Any())
+                        @if (VisiblePlaces.Any())
                         {
                             <FluentAccordionItem Heading="Wishlist Places" Expanded="true">
                                     @if (isLandscape)
                                 {
                                     <FluentStack Orientation="Orientation.Vertical">
-                                        @foreach (var place in Places)
+                                        @foreach (var place in VisiblePlaces)
                                         {
                                             var weather = WeatherByPlaceId.GetValueOrDefault(place.Id);
                                             <FluentCard>
@@ -118,7 +122,7 @@
                                 else
                                 {
                                     <FluentHorizontalScroll Speed="600" Easing=ScrollEasing.EaseInOut>
-                                        @foreach (var place in Places)
+                                        @foreach (var place in VisiblePlaces)
                                         {
                                             var weather = WeatherByPlaceId.GetValueOrDefault(place.Id);
                                             <FluentCard Style="height:150px;width: 150px;">
@@ -142,11 +146,11 @@
                             </FluentAccordionItem>
                         }
                         
-                        @if (SelectedTripPlaces.Any())
+                        @if (VisibleTripPlaces.Any())
                         {
                             <FluentAccordionItem Heading="Trip Places" Expanded="true">
                                 <FluentStack Orientation="Orientation.Vertical">
-                                    @foreach (var tripPlace in SelectedTripPlaces)
+                                    @foreach (var tripPlace in VisibleTripPlaces)
                                     {
                                         @if (tripPlace.Place != null)
                                         {
@@ -219,6 +223,43 @@
 
     private bool isLandscape = true;
 
+    private bool _boundsKnown;
+    private double _boundsNorth;
+    private double _boundsSouth;
+    private double _boundsEast;
+    private double _boundsWest;
+
+    private List<Place>? _visiblePlaces;
+    private List<TripPlace>? _visibleTripPlaces;
+
+    private List<Place> VisiblePlaces => _visiblePlaces ??= ComputeVisiblePlaces();
+    private List<TripPlace> VisibleTripPlaces => _visibleTripPlaces ??= ComputeVisibleTripPlaces();
+
+    private List<Place> ComputeVisiblePlaces() =>
+        _boundsKnown
+            ? Places.Where(p => IsInBounds(p.Latitude, p.Longitude)).ToList()
+            : Places;
+
+    private List<TripPlace> ComputeVisibleTripPlaces() =>
+        _boundsKnown
+            ? SelectedTripPlaces.Where(tp => tp.Place != null && IsInBounds(tp.Place.Latitude, tp.Place.Longitude)).ToList()
+            : SelectedTripPlaces;
+
+    private void InvalidateVisiblePlaces()
+    {
+        _visiblePlaces = null;
+        _visibleTripPlaces = null;
+    }
+
+    private bool IsInBounds(double lat, double lng)
+    {
+        if (lat < _boundsSouth || lat > _boundsNorth) return false;
+        // Handle antimeridian crossing (west > east when map spans the date line)
+        return _boundsWest <= _boundsEast
+            ? lng >= _boundsWest && lng <= _boundsEast
+            : lng >= _boundsWest || lng <= _boundsEast;
+    }
+
     protected override async Task OnInitializedAsync()
     {
         await LoadMapData();
@@ -235,6 +276,7 @@
         if (firstRender)
         {
             await InitializeMap();
+            await JSRuntime.InvokeVoidAsync("mapInterop.registerBoundsCallback", _dotNetRef, "OnBoundsChanged");
             await UpdateMapContent();
 
 
@@ -303,6 +345,7 @@
         }
         
         IsLoading = false;
+        InvalidateVisiblePlaces();
 
         if (MapInitialized)
         {
@@ -448,6 +491,18 @@
         }
     }
 
+
+    [JSInvokable]
+    public void OnBoundsChanged(double north, double south, double east, double west)
+    {
+        _boundsNorth = north;
+        _boundsSouth = south;
+        _boundsEast = east;
+        _boundsWest = west;
+        _boundsKnown = true;
+        InvalidateVisiblePlaces();
+        InvokeAsync(StateHasChanged);
+    }
 
     [JSInvokable]
     public async Task OnOrientationChanged(string newOrientation)
