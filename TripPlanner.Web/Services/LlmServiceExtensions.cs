@@ -74,11 +74,13 @@ internal static class LlmServiceExtensions
         {
             builder.Services.AddScoped<IPlaceAnalysisService, OpenAIPlaceAnalysisService>();
             builder.Services.AddScoped<IChatService, OpenAIChatService>();
+            builder.Services.AddScoped<ISemanticSearchService, OpenAISemanticSearchService>();
         }
         else if (string.Equals(aiProvider, "Ollama", StringComparison.OrdinalIgnoreCase))
         {
             builder.Services.AddScoped<IPlaceAnalysisService, OllamaPlaceAnalysisService>();
             builder.Services.AddScoped<IChatService, OllamaChatService>();
+            builder.Services.AddScoped<ISemanticSearchService, OllamaSemanticSearchService>();
         }
         else
         {

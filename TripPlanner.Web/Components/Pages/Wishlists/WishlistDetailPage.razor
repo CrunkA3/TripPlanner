@@ -16,6 +16,7 @@
 @inject UserService UserService
 @inject IDialogService DialogService
 @inject NavigationManager NavigationManager
+@inject ISemanticSearchService SemanticSearchService
 
 <PageTitle>@(wishlist?.Name ?? "Wishlist")</PageTitle>
 <FluentDialogProvider />
@@ -68,6 +69,20 @@ else
                                   Style="min-width: 220px;"
                                   Immediate="true"
                                   ImmediateDelay="200" />
+                    <FluentButton Appearance="Appearance.Accent"
+                                  IconStart="@(new Icons.Regular.Size20.Bot())"
+                                  OnClick="@RunSemanticSearchAsync"
+                                  Disabled="@(string.IsNullOrWhiteSpace(SearchText) || IsSemanticSearching)"
+                                  title="Search with AI (semantic search)">
+                        @if (IsSemanticSearching)
+                        {
+                            <FluentProgressRing Width="16px" />
+                        }
+                        else
+                        {
+                            <span>AI Search</span>
+                        }
+                    </FluentButton>
                     <FluentAutocomplete TOption="string"
                                         Label="Filter by Tags"
                                         Placeholder="Filter by tags…"
@@ -78,6 +93,13 @@ else
                         Clear
                     </FluentButton>
                 </FluentStack>
+                @if (SemanticSearchActive)
+                {
+                    <FluentMessageBar Intent="MessageIntent.Info" Style="margin-top: 8px;">
+                        <FluentIcon Value="@(new Icons.Regular.Size16.Bot())" Style="margin-right: 4px;" />
+                        Showing AI-ranked results for &ldquo;@LastSemanticQuery&rdquo;. <FluentButton Appearance="Appearance.Lightweight" OnClick="@ClearSemanticSearch" Class="semantic-search-clear-btn">Return to normal search</FluentButton>
+                    </FluentMessageBar>
+                }
             </FluentCard>
         }
 
@@ -234,14 +256,22 @@ else
     private string SearchText { get; set; } = string.Empty;
     private IEnumerable<string> FilterTags { get; set; } = Array.Empty<string>();
 
+    private bool IsSemanticSearching { get; set; } = false;
+    private bool SemanticSearchActive { get; set; } = false;
+    private IReadOnlyList<Place>? SemanticSearchResults { get; set; }
+    private string LastSemanticQuery { get; set; } = string.Empty;
+
     private IEnumerable<Place> FilteredPlaces =>
-        places?
-            .Where(p => string.IsNullOrWhiteSpace(SearchText) ||
-                p.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
-                (p.Description?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) == true) ||
-                (p.Tags != null && p.Tags.Any(t => t.Contains(SearchText, StringComparison.OrdinalIgnoreCase))))
-            .Where(p => !FilterTags.Any() || FilterTags.All(t => (p.Tags ?? Enumerable.Empty<string>()).Contains(t)))
-        ?? Enumerable.Empty<Place>();
+        (SemanticSearchActive && SemanticSearchResults != null
+            ? SemanticSearchResults.AsEnumerable()
+            : places?
+                .Where(p => string.IsNullOrWhiteSpace(SearchText) ||
+                    p.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
+                    (p.Description?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) == true) ||
+                    (p.Tags != null && p.Tags.Any(t => t.Contains(SearchText, StringComparison.OrdinalIgnoreCase))))
+                .AsEnumerable()
+            ?? Enumerable.Empty<Place>())
+        .Where(p => !FilterTags.Any() || FilterTags.All(t => (p.Tags ?? Enumerable.Empty<string>()).Contains(t)));
 
     private string EmptyPlacesMessage =>
         places?.Count == 0
@@ -267,6 +297,32 @@ else
     {
         SearchText = string.Empty;
         FilterTags = Array.Empty<string>();
+        ClearSemanticSearch();
+    }
+
+    private void ClearSemanticSearch()
+    {
+        SemanticSearchActive = false;
+        SemanticSearchResults = null;
+        LastSemanticQuery = string.Empty;
+    }
+
+    private async Task RunSemanticSearchAsync()
+    {
+        if (places is null || string.IsNullOrWhiteSpace(SearchText)) return;
+
+        IsSemanticSearching = true;
+        StateHasChanged();
+        try
+        {
+            LastSemanticQuery = SearchText;
+            SemanticSearchResults = await SemanticSearchService.SearchAsync(SearchText, places);
+            SemanticSearchActive = true;
+        }
+        finally
+        {
+            IsSemanticSearching = false;
+        }
     }
 
 

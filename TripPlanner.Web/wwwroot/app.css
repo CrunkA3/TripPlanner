@@ -828,3 +828,9 @@ table {
         overflow-y: auto;
     }
 }
+
+
+.semantic-search-clear-btn {
+    padding: 0;
+    text-decoration: underline;
+}
