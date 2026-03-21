@@ -236,7 +236,7 @@ app.MapMcp("/mcp")
         .RequireAuthenticatedUser())
     .DisableAntiforgery();
 
-// Map API Endpoints (also disable antiforgery for API endpoints)
+// Map API endpoints
 app.MapPlaceImageApi();
 
 app.MapStaticAssets();
