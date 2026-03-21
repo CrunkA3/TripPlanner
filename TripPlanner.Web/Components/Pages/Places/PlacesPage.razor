@@ -34,6 +34,13 @@
 
     <FluentCard AreaRestricted="false">
         <FluentStack Orientation="Orientation.Horizontal" Width="100%" Wrap="true">
+            <FluentSearch @bind-Value="@SearchText"
+                          Placeholder="Search by name, description or tags…"
+                          Label="Search"
+                          Style="min-width: 220px;"
+                          Immediate="true"
+                          ImmediateDelay="200" />
+
             <FluentSelect TOption="string" @bind-Value="@FilterCategoryString" Label="Category" Style="min-width: 200px;">
                 <FluentOption TOption="string" Value="">All Categories</FluentOption>
                 @foreach (var category in Enum.GetValues<PlaceCategory>())
@@ -184,6 +191,10 @@
 
     private IQueryable<Place>? Places { get; set; }
     private IQueryable<Place>? FilteredPlaces => Places?
+        .Where(p => string.IsNullOrWhiteSpace(SearchText) ||
+            p.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
+            (p.Description != null && p.Description.Contains(SearchText, StringComparison.OrdinalIgnoreCase)) ||
+            (p.Tags != null && p.Tags.Any(t => t.Contains(SearchText, StringComparison.OrdinalIgnoreCase))))
         .Where(p => !FilterCategory.HasValue || p.Category == FilterCategory.Value)
         .Where(p => !FilterHasGpx.GetValueOrDefault(false) || p.GpxTrackId != null)
         .Where(p => FilterDateFrom == null || (p.VisitDate.HasValue && p.VisitDate.Value.DateTime >= FilterDateFrom.Value))
@@ -194,6 +205,7 @@
     private bool IsLoading { get; set; } = true;
     private bool HideAddDialog { get; set; } = true;
     private Place? EditingPlace { get; set; }
+    private string SearchText { get; set; } = string.Empty;
     private PlaceCategory? FilterCategory { get; set; }
     private string FilterCategoryString { get; set; } = string.Empty;
     private bool? FilterHasGpx { get; set; }
@@ -270,6 +282,7 @@
 
     private async Task ClearFilters()
     {
+        SearchText = string.Empty;
         FilterCategory = null;
         FilterCategoryString = string.Empty;
         FilterHasGpx = null;

@@ -62,13 +62,19 @@ else
         {
             <FluentCard AreaRestricted="false">
                 <FluentStack Orientation="Orientation.Horizontal" Width="100%" Wrap="true">
+                    <FluentSearch @bind-Value="@SearchText"
+                                  Placeholder="Search by name, description or tags…"
+                                  Label="Search"
+                                  Style="min-width: 220px;"
+                                  Immediate="true"
+                                  ImmediateDelay="200" />
                     <FluentAutocomplete TOption="string"
                                         Label="Filter by Tags"
                                         Placeholder="Filter by tags…"
                                         OnOptionsSearch="@OnTagFilterSearchAsync"
                                         @bind-SelectedOptions="@FilterTags"
                                         Style="min-width: 200px;" />
-                    <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size20.Eraser())" OnClick="@ClearTagFilter">
+                    <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size20.Eraser())" OnClick="@ClearFilters">
                         Clear
                     </FluentButton>
                 </FluentStack>
@@ -225,16 +231,22 @@ else
     private string urlInputText = string.Empty;
     private string? urlSubmitError;
 
+    private string SearchText { get; set; } = string.Empty;
     private IEnumerable<string> FilterTags { get; set; } = Array.Empty<string>();
 
     private IEnumerable<Place> FilteredPlaces =>
-        places?.Where(p => !FilterTags.Any() || FilterTags.All(t => (p.Tags ?? Enumerable.Empty<string>()).Contains(t)))
+        places?
+            .Where(p => string.IsNullOrWhiteSpace(SearchText) ||
+                p.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
+                (p.Description?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) == true) ||
+                (p.Tags != null && p.Tags.Any(t => t.Contains(SearchText, StringComparison.OrdinalIgnoreCase))))
+            .Where(p => !FilterTags.Any() || FilterTags.All(t => (p.Tags ?? Enumerable.Empty<string>()).Contains(t)))
         ?? Enumerable.Empty<Place>();
 
     private string EmptyPlacesMessage =>
         places?.Count == 0
             ? "This wishlist doesn't have any places yet. Click \"Add Place\" to start adding places."
-            : "No places match the selected tag filter.";
+            : "No places match the current filter.";
 
     private Task OnTagFilterSearchAsync(OptionsSearchEventArgs<string> e)
     {
@@ -251,8 +263,9 @@ else
         return Task.CompletedTask;
     }
 
-    private void ClearTagFilter()
+    private void ClearFilters()
     {
+        SearchText = string.Empty;
         FilterTags = Array.Empty<string>();
     }
 
