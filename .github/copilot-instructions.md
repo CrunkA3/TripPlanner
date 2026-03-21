@@ -72,9 +72,10 @@ TripPlanner.Web/                      # Main Blazor Server web app
       Places/                         # PlacesPage.razor
       Wishlists/                      # WishlistsPage.razor, WishlistDetailPage.razor
       Trips/                          # TripsPage.razor, TripPlanPage.razor, TripPlanPage2.razor,
-                                      #   TripPlanPanelAccommodations/Days/Places.razor,
-                                      #   TripPlanSectionAccomodations/Days/Places.razor
+                                      #   TripPlanPanelAccommodations.razor, TripPlanPanelDays.razor,
+                                      #   TripPlanPanelPlaces.razor, TripPlanSectionAccomodations.razor,
       Map/                            # MapPage.razor
+                                      #   TripPlanSectionDays.razor, TripPlanSectionPlaces.razor
     Account/                          # Identity scaffolded pages (Login, Register, Manage/*)
     Shared/                           # Reusable components:
                                       #   PlaceDialog.razor, PlaceImageHelper.cs, PlaceNotesDrawer.razor,
