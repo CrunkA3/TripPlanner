@@ -72,7 +72,7 @@ public abstract class SemanticSearchServiceBase(IMemoryCache cache, ILogger logg
                         cache.Set(BuildCacheKey(placeList[idx]), emb, new MemoryCacheEntryOptions
                         {
                             AbsoluteExpirationRelativeToNow = EmbeddingCacheExpiry,
-                            Size = 1
+                            Size = emb.Length
                         });
                     }
                 }
