@@ -22,6 +22,12 @@ public abstract class SemanticSearchServiceBase(IMemoryCache cache, ILogger logg
     /// </summary>
     protected abstract Task<float[][]?> GetEmbeddingsAsync(string[] texts, CancellationToken ct);
 
+    /// <summary>
+    /// The embeddings model name used by this implementation (e.g. "text-embedding-3-small").
+    /// Included in cache keys so that changing the model or provider invalidates existing cached vectors.
+    /// </summary>
+    protected abstract string EmbeddingsModelName { get; }
+
     public async Task<IReadOnlyList<Place>> SearchAsync(string query, IEnumerable<Place> places, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(query))
@@ -47,7 +53,7 @@ public abstract class SemanticSearchServiceBase(IMemoryCache cache, ILogger logg
 
         for (var i = 0; i < placeList.Count; i++)
         {
-            var key = BuildCacheKey(placeList[i]);
+            var key = BuildCacheKey(placeList[i], EmbeddingsModelName);
             if (cache.TryGetValue(key, out float[]? cached) && cached is { Length: > 0 })
                 placeEmbs[i] = cached;
             else
@@ -69,7 +75,7 @@ public abstract class SemanticSearchServiceBase(IMemoryCache cache, ILogger logg
                     if (emb is { Length: > 0 })
                     {
                         placeEmbs[idx] = emb;
-                        cache.Set(BuildCacheKey(placeList[idx]), emb, new MemoryCacheEntryOptions
+                        cache.Set(BuildCacheKey(placeList[idx], EmbeddingsModelName), emb, new MemoryCacheEntryOptions
                         {
                             AbsoluteExpirationRelativeToNow = EmbeddingCacheExpiry,
                             Size = emb.Length
@@ -104,8 +110,8 @@ public abstract class SemanticSearchServiceBase(IMemoryCache cache, ILogger logg
         return string.Join(". ", parts);
     }
 
-    private static string BuildCacheKey(Place p)
-        => $"place_emb:{p.Id}:{p.UpdatedAt?.Ticks ?? p.CreatedAt.Ticks}";
+    private static string BuildCacheKey(Place p, string modelName)
+        => $"place_emb:{modelName}:{p.Id}:{p.UpdatedAt?.Ticks ?? p.CreatedAt.Ticks}";
 
     private static double CosineSimilarity(float[] a, float[] b)
     {

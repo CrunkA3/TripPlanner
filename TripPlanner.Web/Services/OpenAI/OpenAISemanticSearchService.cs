@@ -40,9 +40,12 @@ public class OpenAISemanticSearchService(
         public float[] Embedding { get; set; } = [];
     }
 
+    protected override string EmbeddingsModelName =>
+        configuration["OpenAI:EmbeddingsModel"] ?? "text-embedding-3-small";
+
     protected override async Task<float[][]?> GetEmbeddingsAsync(string[] texts, CancellationToken ct)
     {
-        var model = configuration["OpenAI:EmbeddingsModel"] ?? "text-embedding-3-small";
+        var model = EmbeddingsModelName;
         try
         {
             var client = httpClientFactory.CreateClient("OpenAI");

@@ -32,9 +32,12 @@ public class OllamaSemanticSearchService(
         public float[][]? Embeddings { get; set; }
     }
 
+    protected override string EmbeddingsModelName =>
+        configuration["Ollama:EmbeddingsModel"] ?? "nomic-embed-text";
+
     protected override async Task<float[][]?> GetEmbeddingsAsync(string[] texts, CancellationToken ct)
     {
-        var model = configuration["Ollama:EmbeddingsModel"] ?? "nomic-embed-text";
+        var model = EmbeddingsModelName;
         try
         {
             var client = httpClientFactory.CreateClient("Ollama");
