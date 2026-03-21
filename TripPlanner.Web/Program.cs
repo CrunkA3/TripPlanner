@@ -228,8 +228,8 @@ app.UseRequestLocalization(options =>
 app.UseAntiforgery();
 
 // Map the MCP endpoint – secured with the MCP API key Bearer scheme
-// This must be mapped BEFORE UseAntiforgery and MapRazorComponents to avoid antiforgery and Blazor router conflicts
-// Antiforgery is disabled because MCP uses Bearer token authentication, not cookies
+// Antiforgery is disabled here because MCP uses Bearer token authentication, not cookies,
+// and to avoid antiforgery and Blazor router conflicts for this non-browser API endpoint
 app.MapMcp("/mcp")
     .RequireAuthorization(policy => policy
         .AddAuthenticationSchemes(McpApiKeyAuthHandler.SchemeName)
