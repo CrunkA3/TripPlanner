@@ -80,9 +80,6 @@
     [SupplyParameterFromForm]
     private string? ProviderKey { get; set; }
 
-    [SupplyParameterFromQuery]
-    private string? Action { get; set; }
-
     protected override async Task OnInitializedAsync()
     {
         user = await UserManager.GetUserAsync(HttpContext.User);
@@ -105,9 +102,13 @@
 
         showRemoveButton = passwordHash is not null || currentLogins.Count > 1;
 
-        if (HttpMethods.IsGet(HttpContext.Request.Method) && Action == LinkLoginCallbackAction)
+        if (HttpMethods.IsGet(HttpContext.Request.Method))
         {
-            await OnGetLinkLoginCallbackAsync();
+            var action = HttpContext.Request.Query["Action"].ToString();
+            if (string.Equals(action, LinkLoginCallbackAction, StringComparison.Ordinal))
+            {
+                await OnGetLinkLoginCallbackAsync();
+            }
         }
     }
 
