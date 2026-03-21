@@ -42,6 +42,7 @@ public class PlaceRepository : IPlaceRepository
                             userWishlistIds.Contains(p.WishlistId!) ||
                             tripPlaceIds.Contains(p.Id)))
             .OrderBy(p => p.Name)
+            .ThenBy(p => p.Id)
             .Include(p => p.Wishlist)
             .Include(p => p.Trip)
             .Select(p => new
