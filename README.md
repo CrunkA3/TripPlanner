@@ -10,8 +10,17 @@ Eine moderne **Blazor Server**-Webanwendung zur Reiseplanung und Verwaltung von 
 ### Wunschlisten
 ![Wunschlisten](/assets/screenshots/04-wishlists-with-data.png)
 
+### Orte
+![Orte](/assets/screenshots/06-wishlist-detail-with-places.png)
+
 ### Reisen
-![Reisen](https://github.com/user-attachments/assets/7e49bee7-de4b-4f4d-8a5a-20c5473c5224)
+![Reisen](/assets/screenshots/09-trips-with-data.png)
+
+### Karte
+![Landkarte](/assets/screenshots/11-map.png)
+
+### Chat
+![Chat](/assets/screenshots/12-chat.png)
 
 ---
 
