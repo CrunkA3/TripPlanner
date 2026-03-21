@@ -115,13 +115,13 @@ else
     </EditForm>
 </FluentDialog>
 
-<FluentDialog @ref="shareDialog" Hidden="@(!showShareDialog)" Modal="true">
+<FluentDialog @ref="shareDialog" Hidden="@hideShareDialog" Modal="true">
     <h3>Share Wishlist: @selectedWishlist?.Name</h3>
     <FluentStack Orientation="Orientation.Vertical">
         <FluentTextField @bind-Value="shareEmail" Label="Email address to share with" Style="width: 100%;" />
         <FluentStack Orientation="Orientation.Horizontal">
             <FluentButton Appearance="Appearance.Accent" OnClick="@ShareWishlist">Share</FluentButton>
-            <FluentButton Appearance="Appearance.Neutral" OnClick="@(() => hideCreateDialog = true)">Cancel</FluentButton>
+            <FluentButton Appearance="Appearance.Neutral" OnClick="@(() => hideShareDialog = true)">Cancel</FluentButton>
         </FluentStack>
     </FluentStack>
 </FluentDialog>
@@ -135,7 +135,7 @@ else
     private FluentDialog? createDialog;
     private FluentDialog? shareDialog;
     private bool hideCreateDialog = true;
-    private bool showShareDialog;
+    private bool hideShareDialog = true;
     private Wishlist newWishlist = new();
     private Wishlist? selectedWishlist;
     private string shareEmail = string.Empty;
@@ -179,7 +179,7 @@ else
     {
         selectedWishlist = wishlist;
         shareEmail = string.Empty;
-        showShareDialog = true;
+        hideShareDialog = false;
     }
 
     private async Task ShareWishlist()
@@ -196,7 +196,7 @@ else
             await LoadWishlists();
         }
         
-        showShareDialog = false;
+        hideShareDialog = true;
     }
 
     private async Task DeleteWishlist(string id)
