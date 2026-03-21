@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Primitives;
 using System.Security.Claims;
 using System.Text.Json;
+using TripPlanner.Web.Components.Account;
 using TripPlanner.Web.Components.Account.Pages;
 using TripPlanner.Web.Components.Account.Pages.Manage;
 using TripPlanner.Web.Models;
@@ -30,7 +31,7 @@ namespace Microsoft.AspNetCore.Routing
             {
                 IEnumerable<KeyValuePair<string, StringValues>> query = [
                     new("ReturnUrl", returnUrl),
-                    new("Action", ExternalLogin.LoginCallbackAction)];
+                    new(IdentityPageConstants.ActionQueryParameterName, ExternalLogin.LoginCallbackAction)];
 
                 var redirectUrl = UriHelper.BuildRelative(
                     context.Request.PathBase,
@@ -104,7 +105,7 @@ namespace Microsoft.AspNetCore.Routing
                 var redirectUrl = UriHelper.BuildRelative(
                     context.Request.PathBase,
                     "/Account/Manage/ExternalLogins",
-                    QueryString.Create("Action", ExternalLogins.LinkLoginCallbackAction));
+                    QueryString.Create(IdentityPageConstants.ActionQueryParameterName, ExternalLogins.LinkLoginCallbackAction));
 
                 provider = TemporaryFluentButtonFix(provider);
 
