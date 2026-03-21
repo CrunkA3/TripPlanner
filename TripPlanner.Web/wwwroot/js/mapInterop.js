@@ -28,6 +28,8 @@ window.mapInterop = {
         self.map.on('moveend', self.boundsChangeHandler);
         // Invoke once immediately so initial bounds are propagated even if no moveend occurs
         self.boundsChangeHandler();
+        // Invoke once immediately so initial bounds are propagated even if no moveend occurs
+        self.boundsChangeHandler();
     },
 
     onViewPlace: function (placeId) {

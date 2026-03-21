@@ -276,7 +276,6 @@
         if (firstRender)
         {
             await InitializeMap();
-            await JSRuntime.InvokeVoidAsync("mapInterop.registerBoundsCallback", _dotNetRef, "OnBoundsChanged");
             await UpdateMapContent();
 
 
@@ -300,6 +299,7 @@
             await JSRuntime.InvokeVoidAsync("mapInterop.initializeMap", "map", centerLat, centerLng, zoom);
             _dotNetRef = DotNetObjectReference.Create(this);
             await JSRuntime.InvokeVoidAsync("mapInterop.setDotNetRef", _dotNetRef);
+            await JSRuntime.InvokeVoidAsync("mapInterop.registerBoundsCallback", _dotNetRef, "OnBoundsChanged");
             MapInitialized = true;
         }
         catch (Exception ex)
@@ -493,7 +493,7 @@
 
 
     [JSInvokable]
-    public void OnBoundsChanged(double north, double south, double east, double west)
+    public async Task OnBoundsChanged(double north, double south, double east, double west)
     {
         _boundsNorth = north;
         _boundsSouth = south;
@@ -501,7 +501,7 @@
         _boundsWest = west;
         _boundsKnown = true;
         InvalidateVisiblePlaces();
-        InvokeAsync(StateHasChanged);
+        await InvokeAsync(StateHasChanged);
     }
 
     [JSInvokable]
