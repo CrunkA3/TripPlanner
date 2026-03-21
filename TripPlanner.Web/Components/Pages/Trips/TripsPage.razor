@@ -117,12 +117,12 @@
         @if (EditingTrip != null)
         {
             <FluentStack Orientation="Orientation.Vertical">
-                <FluentTextField @bind-Value="@EditingTrip.Name" Label="Trip Name" Required Style="width: 100%;" />
-                <FluentTextArea @bind-Value="@EditingTrip.Description" Label="Description" Rows="3" Style="width: 100%;" />
+                <FluentTextField @bind-Value="@EditingTrip.Name" Label="Trip Name" Required Style="width: 100%;" data-testid="trip-name" />
+                <FluentTextArea @bind-Value="@EditingTrip.Description" Label="Description" Rows="3" Style="width: 100%;" data-testid="trip-description" />
                 
                 <FluentStack Orientation="Orientation.Horizontal">
-                    <FluentTextField Value="@_startDateString" Label="Start Date (YYYY-MM-DD)" Style="width: 100%;" ValueChanged="@OnStartDateChanged" />
-                    <FluentTextField Value="@_endDateString" Label="End Date (YYYY-MM-DD)" Style="width: 100%;" ValueChanged="@OnEndDateChanged" />
+                    <FluentTextField Value="@_startDateString" Label="Start Date (YYYY-MM-DD)" Style="width: 100%;" ValueChanged="@OnStartDateChanged" data-testid="trip-start-date" />
+                    <FluentTextField Value="@_endDateString" Label="End Date (YYYY-MM-DD)" Style="width: 100%;" ValueChanged="@OnEndDateChanged" data-testid="trip-end-date" />
                 </FluentStack>
                 
                 <FluentNumberField @bind-Value="@NumDays" Label="Number of Days" Min="1" Max="30" Style="width: 100%;" />

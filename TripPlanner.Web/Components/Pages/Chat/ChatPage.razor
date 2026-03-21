@@ -149,13 +149,15 @@
                                 Style="flex: 1; resize: none;"
                                 Rows="1"
                                 @onkeydown="HandleKeyDown"
-                                Disabled="@_isThinking" />
+                                Disabled="@_isThinking"
+                                data-testid="chat-input" />
                 <FluentButton Appearance="Appearance.Accent"
                               OnClick="@SendMessage"
                               Disabled="@(_isThinking || string.IsNullOrWhiteSpace(_userInput))"
                               IconStart="@(new Icons.Regular.Size20.Send())"
                               Style="align-self: flex-end;"
-                              AriaLabel="Send message">
+                              AriaLabel="Send message"
+                              data-testid="send-message-button">
                     <span class="chat-input-send-label">Send</span>
                 </FluentButton>
             </FluentStack>

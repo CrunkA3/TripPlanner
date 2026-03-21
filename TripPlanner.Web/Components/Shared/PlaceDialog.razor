@@ -90,8 +90,8 @@
                             </FluentStack>
                         </FluentCard>
                     }
-                    <FluentTextField @bind-Value="@Content.Name" Label="Name" Required Style="width: 100%;" />
-                    <FluentTextArea @bind-Value="@Content.Description" Label="Description" Rows="3" Style="width: 100%;" />
+                    <FluentTextField @bind-Value="@Content.Name" Label="Name" Required Style="width: 100%;" data-testid="place-name" />
+                    <FluentTextArea @bind-Value="@Content.Description" Label="Description" Rows="3" Style="width: 100%;" data-testid="place-description" />
                     <FluentSelect TOption="string" Value="@_newPlaceCategoryString" Label="Category" Style="width: 100%;" ValueChanged="@OnNewPlaceCategoryChanged">
                         @foreach (var category in Enum.GetValues<PlaceCategory>())
                         {
