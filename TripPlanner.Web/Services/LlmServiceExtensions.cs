@@ -65,16 +65,25 @@ internal static class LlmServiceExtensions
 #pragma warning restore EXTEXP0001
 
         // Register AI services based on the configured provider
-        var aiProvider = builder.Configuration["AI:Provider"] ?? "OpenAI";
+        var aiProviderRaw = builder.Configuration["AI:Provider"];
+        var aiProvider = string.IsNullOrWhiteSpace(aiProviderRaw)
+            ? "OpenAI"
+            : aiProviderRaw.Trim();
+
         if (string.Equals(aiProvider, "OpenAI", StringComparison.OrdinalIgnoreCase))
         {
             builder.Services.AddScoped<IPlaceAnalysisService, OpenAIPlaceAnalysisService>();
             builder.Services.AddScoped<IChatService, OpenAIChatService>();
         }
-        else
+        else if (string.Equals(aiProvider, "Ollama", StringComparison.OrdinalIgnoreCase))
         {
             builder.Services.AddScoped<IPlaceAnalysisService, OllamaPlaceAnalysisService>();
             builder.Services.AddScoped<IChatService, OllamaChatService>();
+        }
+        else
+        {
+            throw new InvalidOperationException(
+                $"Invalid AI provider '{aiProviderRaw}'. Valid values are 'OpenAI' or 'Ollama'.");
         }
 
         return builder;
