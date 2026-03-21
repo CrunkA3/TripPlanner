@@ -8,6 +8,7 @@
 @using TripPlanner.Web.Services
 
 @attribute [Authorize]
+@implements IDisposable
 
 @inject IWishlistRepository WishlistRepository
 @inject IPlaceRepository PlaceRepository
@@ -73,6 +74,7 @@ else
                                   IconStart="@(new Icons.Regular.Size20.Bot())"
                                   OnClick="@RunSemanticSearchAsync"
                                   Disabled="@(string.IsNullOrWhiteSpace(SearchText) || IsSemanticSearching)"
+                                  AriaLabel="AI Search"
                                   title="Search with AI (semantic search)">
                         @if (IsSemanticSearching)
                         {
@@ -260,6 +262,7 @@ else
     private bool SemanticSearchActive { get; set; } = false;
     private IReadOnlyList<Place>? SemanticSearchResults { get; set; }
     private string LastSemanticQuery { get; set; } = string.Empty;
+    private CancellationTokenSource? _semanticSearchCts;
 
     private IEnumerable<Place> FilteredPlaces =>
         (SemanticSearchActive && SemanticSearchResults != null
@@ -302,6 +305,7 @@ else
 
     private void ClearSemanticSearch()
     {
+        _semanticSearchCts?.Cancel();
         SemanticSearchActive = false;
         SemanticSearchResults = null;
         LastSemanticQuery = string.Empty;
@@ -311,18 +315,34 @@ else
     {
         if (places is null || string.IsNullOrWhiteSpace(SearchText)) return;
 
+        _semanticSearchCts?.Cancel();
+        _semanticSearchCts?.Dispose();
+        _semanticSearchCts = new CancellationTokenSource();
+        var cts = _semanticSearchCts;
+
         IsSemanticSearching = true;
         StateHasChanged();
         try
         {
             LastSemanticQuery = SearchText;
-            SemanticSearchResults = await SemanticSearchService.SearchAsync(SearchText, places);
-            SemanticSearchActive = true;
+            SemanticSearchResults = await SemanticSearchService.SearchAsync(SearchText, places, cts.Token);
+            if (!cts.Token.IsCancellationRequested)
+                SemanticSearchActive = true;
+        }
+        catch (OperationCanceledException)
+        {
+            // Search was superseded by a newer request or component disposal; discard results.
         }
         finally
         {
             IsSemanticSearching = false;
         }
+    }
+
+    public void Dispose()
+    {
+        _semanticSearchCts?.Cancel();
+        _semanticSearchCts?.Dispose();
     }
 
 
