@@ -1,0 +1,69 @@
+@implements IDialogContentComponent<CreateWishlistDialogContent>
+
+@using TripPlanner.Web.Models
+@using TripPlanner.Web.Repositories
+@using TripPlanner.Web.Services
+
+@inject IWishlistRepository WishlistRepository
+@inject UserService UserService
+
+<FluentDialogHeader>
+    <FluentLabel Typo="Typography.PaneHeader">Create New Wishlist</FluentLabel>
+</FluentDialogHeader>
+
+<FluentDialogBody>
+    <EditForm EditContext="@_editContext">
+        <DataAnnotationsValidator />
+        <FluentStack Orientation="Orientation.Vertical">
+            <FluentTextField @bind-Value="Content.Wishlist.Name" Label="Name" Required="true" Style="width: 100%;" data-testid="wishlist-name" />
+            <FluentValidationSummary />
+            <FluentTextArea @bind-Value="Content.Wishlist.Description" Label="Description" Style="width: 100%;" data-testid="wishlist-description" />
+        </FluentStack>
+    </EditForm>
+</FluentDialogBody>
+
+<FluentDialogFooter>
+    <FluentButton Appearance="Appearance.Accent" OnClick="@SubmitAsync" data-testid="submit-new-wishlist-button">Create</FluentButton>
+    <FluentButton Appearance="Appearance.Neutral" OnClick="@CancelAsync">Cancel</FluentButton>
+</FluentDialogFooter>
+
+@code {
+    [Parameter]
+    public CreateWishlistDialogContent Content { get; set; } = default!;
+
+    [CascadingParameter]
+    public FluentDialog Dialog { get; set; } = default!;
+
+    private EditContext _editContext = default!;
+
+    protected override void OnInitialized()
+    {
+        _editContext = new EditContext(Content.Wishlist);
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (!_editContext.Validate())
+            return;
+
+        await CreateWishlistAsync();
+    }
+
+    private async Task CreateWishlistAsync()
+    {
+        var currentUserId = await UserService.GetCurrentUserIdAsync();
+        if (currentUserId != null)
+        {
+            Content.Wishlist.SharedWith.Add(new UserWishlist 
+            { 
+                Level = ShareLevel.Owner, 
+                UserId = currentUserId, 
+                SharedAt = DateTimeOffset.UtcNow 
+            });
+            await WishlistRepository.AddAsync(Content.Wishlist);
+            await Dialog.CloseAsync(Content);
+        }
+    }
+
+    private async Task CancelAsync() => await Dialog.CancelAsync();
+}

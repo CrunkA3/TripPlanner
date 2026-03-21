@@ -19,8 +19,6 @@
 
 @implements IAsyncDisposable
 
-@rendermode InteractiveServer
-
 <PageTitle>Map View</PageTitle>
 
 <FluentStack Orientation="Orientation.Vertical" Width="100%" Style="height: calc(100vh - 200px);">
@@ -197,8 +195,6 @@
         </FluentStack>
     </FluentCard>
 </FluentStack>
-
-<FluentDialogProvider />
 
 @code {
     private List<Place> Places { get; set; } = new();

@@ -1,0 +1,59 @@
+@implements IDialogContentComponent<ShareWishlistDialogContent>
+
+@using TripPlanner.Web.Models
+@using TripPlanner.Web.Repositories
+@using TripPlanner.Web.Services
+
+@inject IWishlistRepository WishlistRepository
+@inject UserService UserService
+
+<FluentDialogHeader>
+    <FluentLabel Typo="Typography.PaneHeader">Share Wishlist: @Content.WishlistName</FluentLabel>
+</FluentDialogHeader>
+
+<FluentDialogBody>
+    <FluentStack Orientation="Orientation.Vertical">
+        <FluentTextField @bind-Value="shareEmail" Label="Email address to share with" Style="width: 100%;" />
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <FluentLabel Color="Color.Error" Style="font-size: 0.875em;">@errorMessage</FluentLabel>
+        }
+    </FluentStack>
+</FluentDialogBody>
+
+<FluentDialogFooter>
+    <FluentButton Appearance="Appearance.Accent" OnClick="@ShareWishlistAsync">Share</FluentButton>
+    <FluentButton Appearance="Appearance.Neutral" OnClick="@CancelAsync">Cancel</FluentButton>
+</FluentDialogFooter>
+
+@code {
+    [Parameter]
+    public ShareWishlistDialogContent Content { get; set; } = default!;
+
+    [CascadingParameter]
+    public FluentDialog Dialog { get; set; } = default!;
+
+    private string shareEmail = string.Empty;
+    private string? errorMessage;
+
+    private async Task ShareWishlistAsync()
+    {
+        if (string.IsNullOrWhiteSpace(shareEmail))
+        {
+            errorMessage = "Please enter an email address.";
+            return;
+        }
+
+        var userToShareWith = await UserService.GetUserByEmailAsync(shareEmail);
+        if (userToShareWith == null)
+        {
+            errorMessage = "User not found.";
+            return;
+        }
+
+        await WishlistRepository.ShareWithUserAsync(Content.WishlistId, userToShareWith.Id);
+        await Dialog.CloseAsync(Content);
+    }
+
+    private async Task CancelAsync() => await Dialog.CancelAsync();
+}

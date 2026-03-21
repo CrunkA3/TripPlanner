@@ -16,8 +16,6 @@
 @inject IDialogService DialogService
 @inject NavigationManager NavigationManager
 
-@rendermode InteractiveServer
-
 <PageTitle>@(wishlist?.Name ?? "Wishlist")</PageTitle>
 
 @if (wishlist == null)
@@ -209,9 +207,6 @@ else
         }
     </FluentStack>
 }
-
-<FluentDialogProvider />
-
 
 
 @code {

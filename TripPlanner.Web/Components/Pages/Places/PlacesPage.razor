@@ -16,8 +16,6 @@
 @inject UserService UserService
 @inject IDialogService DialogService
 
-@rendermode InteractiveServer
-
 <PageTitle>Wishlist</PageTitle>
 
 <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Stretch" Width="100%">
@@ -177,7 +175,6 @@
     </FluentDialogFooter>
 </FluentDialog>
 
-<FluentDialogProvider />
 
 @code {
     private List<Wishlist>? Wishlists { get; set; }
