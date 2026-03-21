@@ -129,8 +129,8 @@ public partial class OllamaChatService(
                 foreach (var toolCall in response.Message.ToolCalls)
                 {
                     var toolResult = await ExecuteToolAsync(toolCall, userId, ct);
-                    logger.LogInformation("Tool {Tool} returned: {Result}", toolCall.Function.Name,
-                        toolResult[..Math.Min(200, toolResult.Length)]);
+                    logger.LogInformation("Tool {Tool} executed. Result length: {Length}", toolCall.Function.Name,
+                        toolResult.Length);
                     History.Add(new ChatMessage { Role = "tool", Content = toolResult });
                     await ConversationRepository.AddMessageAsync(CurrentConversationId, "tool", toolResult, userId);
                 }
