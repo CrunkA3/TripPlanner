@@ -9,6 +9,7 @@
 @using static TripPlanner.Web.Components.Shared.GpxFileUpload
 
 @attribute [Authorize]
+@implements IDisposable
 
 @inject IWishlistRepository WishlistRepository
 @inject IPlaceRepository PlaceRepository
@@ -16,6 +17,7 @@
 @inject GpxService GpxService
 @inject UserService UserService
 @inject IDialogService DialogService
+@inject ISemanticSearchService SemanticSearchService
 
 <PageTitle>Wishlist</PageTitle>
 <FluentDialogProvider />
@@ -34,6 +36,28 @@
 
     <FluentCard AreaRestricted="false">
         <FluentStack Orientation="Orientation.Horizontal" Width="100%" Wrap="true">
+            <FluentSearch @bind-Value="@SearchText"
+                          Placeholder="Search by name, description or tags…"
+                          Label="Search"
+                          Style="min-width: 220px;"
+                          Immediate="true"
+                          ImmediateDelay="200" />
+            <FluentButton Appearance="Appearance.Accent"
+                          IconStart="@(new Icons.Regular.Size20.Bot())"
+                          OnClick="@RunSemanticSearchAsync"
+                          Disabled="@(string.IsNullOrWhiteSpace(SearchText) || IsSemanticSearching)"
+                          AriaLabel="AI Search"
+                          title="Search with AI (semantic search)">
+                @if (IsSemanticSearching)
+                {
+                    <FluentProgressRing Width="16px" />
+                }
+                else
+                {
+                    <span>AI Search</span>
+                }
+            </FluentButton>
+
             <FluentSelect TOption="string" @bind-Value="@FilterCategoryString" Label="Category" Style="min-width: 200px;">
                 <FluentOption TOption="string" Value="">All Categories</FluentOption>
                 @foreach (var category in Enum.GetValues<PlaceCategory>())
@@ -62,13 +86,20 @@
                 Clear
             </FluentButton>
         </FluentStack>
+        @if (SemanticSearchActive)
+        {
+            <FluentMessageBar Intent="MessageIntent.Info" Style="margin-top: 8px;">
+                <FluentIcon Value="@(new Icons.Regular.Size16.Bot())" Style="margin-right: 4px;" />
+                Showing AI-ranked results for &ldquo;@LastSemanticQuery&rdquo;. <FluentButton Appearance="Appearance.Lightweight" OnClick="@ClearSemanticSearch" Class="semantic-search-clear-btn">Return to normal search</FluentButton>
+            </FluentMessageBar>
+        }
     </FluentCard>
 
     @if (IsLoading)
     {
         <FluentProgressRing />
     }
-    else if (FilteredPlaces is null || !FilteredPlaces.Any())
+    else if (DisplayedPlaces is null || !DisplayedPlaces.Any())
     {
         <FluentCard>
             <FluentStack HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
@@ -79,7 +110,7 @@
     }
     else
     {
-        <WishlistPlacesGrid CanEdit="true" Places="FilteredPlaces" OnEditPlace="EditPlace" OnDeletePlace="DeletePlace" OnNotesPlace="OpenNotes" OnRemoveReview="RemoveReview" />
+        <WishlistPlacesGrid CanEdit="true" Places="DisplayedPlaces" OnEditPlace="EditPlace" OnDeletePlace="DeletePlace" OnNotesPlace="OpenNotes" OnRemoveReview="RemoveReview" />
     }
 </FluentStack>
 
@@ -184,16 +215,38 @@
 
     private IQueryable<Place>? Places { get; set; }
     private IQueryable<Place>? FilteredPlaces => Places?
+        .Where(p => string.IsNullOrWhiteSpace(SearchText) ||
+            p.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
+            (p.Description != null && p.Description.Contains(SearchText, StringComparison.OrdinalIgnoreCase)) ||
+            (p.Tags != null && p.Tags.Any(t => t.Contains(SearchText, StringComparison.OrdinalIgnoreCase))))
         .Where(p => !FilterCategory.HasValue || p.Category == FilterCategory.Value)
         .Where(p => !FilterHasGpx.GetValueOrDefault(false) || p.GpxTrackId != null)
         .Where(p => FilterDateFrom == null || (p.VisitDate.HasValue && p.VisitDate.Value.DateTime >= FilterDateFrom.Value))
         .Where(p => FilterDateTo == null || (p.VisitDate.HasValue && p.VisitDate.Value.DateTime <= FilterDateTo.Value))
         .Where(p => !FilterTags.Any() || FilterTags.All(t => (p.Tags ?? Enumerable.Empty<string>()).Contains(t)));
 
+    // When semantic search is active, show its ranked results (still subject to non-text filters);
+    // otherwise fall through to the normal text-filtered list.
+    private IEnumerable<Place>? DisplayedPlaces =>
+        SemanticSearchActive && SemanticSearchResults != null
+            ? SemanticSearchResults
+                .Where(p => !FilterCategory.HasValue || p.Category == FilterCategory.Value)
+                .Where(p => !FilterHasGpx.GetValueOrDefault(false) || p.GpxTrackId != null)
+                .Where(p => FilterDateFrom == null || (p.VisitDate.HasValue && p.VisitDate.Value.DateTime >= FilterDateFrom.Value))
+                .Where(p => FilterDateTo == null || (p.VisitDate.HasValue && p.VisitDate.Value.DateTime <= FilterDateTo.Value))
+                .Where(p => !FilterTags.Any() || FilterTags.All(t => (p.Tags ?? Enumerable.Empty<string>()).Contains(t)))
+            : FilteredPlaces?.AsEnumerable();
+
     private List<GpxTrack> GpxTracks { get; set; } = new();
     private bool IsLoading { get; set; } = true;
     private bool HideAddDialog { get; set; } = true;
     private Place? EditingPlace { get; set; }
+    private string SearchText { get; set; } = string.Empty;
+    private bool IsSemanticSearching { get; set; } = false;
+    private bool SemanticSearchActive { get; set; } = false;
+    private IReadOnlyList<Place>? SemanticSearchResults { get; set; }
+    private string LastSemanticQuery { get; set; } = string.Empty;
+    private CancellationTokenSource? _semanticSearchCts;
     private PlaceCategory? FilterCategory { get; set; }
     private string FilterCategoryString { get; set; } = string.Empty;
     private bool? FilterHasGpx { get; set; }
@@ -270,6 +323,7 @@
 
     private async Task ClearFilters()
     {
+        SearchText = string.Empty;
         FilterCategory = null;
         FilterCategoryString = string.Empty;
         FilterHasGpx = null;
@@ -277,7 +331,50 @@
         FilterDateFrom = null;
         FilterDateTo = null;
         FilterTags = Array.Empty<string>();
+        ClearSemanticSearch();
         await LoadPlaces();
+    }
+
+    private void ClearSemanticSearch()
+    {
+        _semanticSearchCts?.Cancel();
+        SemanticSearchActive = false;
+        SemanticSearchResults = null;
+        LastSemanticQuery = string.Empty;
+    }
+
+    private async Task RunSemanticSearchAsync()
+    {
+        if (Places is null || string.IsNullOrWhiteSpace(SearchText)) return;
+
+        _semanticSearchCts?.Cancel();
+        _semanticSearchCts?.Dispose();
+        _semanticSearchCts = new CancellationTokenSource();
+        var cts = _semanticSearchCts;
+
+        IsSemanticSearching = true;
+        StateHasChanged();
+        try
+        {
+            LastSemanticQuery = SearchText;
+            SemanticSearchResults = await SemanticSearchService.SearchAsync(SearchText, Places, cts.Token);
+            if (!cts.Token.IsCancellationRequested)
+                SemanticSearchActive = true;
+        }
+        catch (OperationCanceledException)
+        {
+            // Search was superseded by a newer request or component disposal; discard results.
+        }
+        finally
+        {
+            IsSemanticSearching = false;
+        }
+    }
+
+    public void Dispose()
+    {
+        _semanticSearchCts?.Cancel();
+        _semanticSearchCts?.Dispose();
     }
 
     private async Task CreateNewPlace()

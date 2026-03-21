@@ -8,6 +8,7 @@
 @using TripPlanner.Web.Services
 
 @attribute [Authorize]
+@implements IDisposable
 
 @inject IWishlistRepository WishlistRepository
 @inject IPlaceRepository PlaceRepository
@@ -16,6 +17,7 @@
 @inject UserService UserService
 @inject IDialogService DialogService
 @inject NavigationManager NavigationManager
+@inject ISemanticSearchService SemanticSearchService
 
 <PageTitle>@(wishlist?.Name ?? "Wishlist")</PageTitle>
 <FluentDialogProvider />
@@ -62,16 +64,44 @@ else
         {
             <FluentCard AreaRestricted="false">
                 <FluentStack Orientation="Orientation.Horizontal" Width="100%" Wrap="true">
+                    <FluentSearch @bind-Value="@SearchText"
+                                  Placeholder="Search by name, description or tags…"
+                                  Label="Search"
+                                  Style="min-width: 220px;"
+                                  Immediate="true"
+                                  ImmediateDelay="200" />
+                    <FluentButton Appearance="Appearance.Accent"
+                                  IconStart="@(new Icons.Regular.Size20.Bot())"
+                                  OnClick="@RunSemanticSearchAsync"
+                                  Disabled="@(string.IsNullOrWhiteSpace(SearchText) || IsSemanticSearching)"
+                                  AriaLabel="AI Search"
+                                  title="Search with AI (semantic search)">
+                        @if (IsSemanticSearching)
+                        {
+                            <FluentProgressRing Width="16px" />
+                        }
+                        else
+                        {
+                            <span>AI Search</span>
+                        }
+                    </FluentButton>
                     <FluentAutocomplete TOption="string"
                                         Label="Filter by Tags"
                                         Placeholder="Filter by tags…"
                                         OnOptionsSearch="@OnTagFilterSearchAsync"
                                         @bind-SelectedOptions="@FilterTags"
                                         Style="min-width: 200px;" />
-                    <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size20.Eraser())" OnClick="@ClearTagFilter">
+                    <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size20.Eraser())" OnClick="@ClearFilters">
                         Clear
                     </FluentButton>
                 </FluentStack>
+                @if (SemanticSearchActive)
+                {
+                    <FluentMessageBar Intent="MessageIntent.Info" Style="margin-top: 8px;">
+                        <FluentIcon Value="@(new Icons.Regular.Size16.Bot())" Style="margin-right: 4px;" />
+                        Showing AI-ranked results for &ldquo;@LastSemanticQuery&rdquo;. <FluentButton Appearance="Appearance.Lightweight" OnClick="@ClearSemanticSearch" Class="semantic-search-clear-btn">Return to normal search</FluentButton>
+                    </FluentMessageBar>
+                }
             </FluentCard>
         }
 
@@ -225,16 +255,31 @@ else
     private string urlInputText = string.Empty;
     private string? urlSubmitError;
 
+    private string SearchText { get; set; } = string.Empty;
     private IEnumerable<string> FilterTags { get; set; } = Array.Empty<string>();
 
+    private bool IsSemanticSearching { get; set; } = false;
+    private bool SemanticSearchActive { get; set; } = false;
+    private IReadOnlyList<Place>? SemanticSearchResults { get; set; }
+    private string LastSemanticQuery { get; set; } = string.Empty;
+    private CancellationTokenSource? _semanticSearchCts;
+
     private IEnumerable<Place> FilteredPlaces =>
-        places?.Where(p => !FilterTags.Any() || FilterTags.All(t => (p.Tags ?? Enumerable.Empty<string>()).Contains(t)))
-        ?? Enumerable.Empty<Place>();
+        (SemanticSearchActive && SemanticSearchResults != null
+            ? SemanticSearchResults.AsEnumerable()
+            : places?
+                .Where(p => string.IsNullOrWhiteSpace(SearchText) ||
+                    p.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
+                    (p.Description?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) == true) ||
+                    (p.Tags != null && p.Tags.Any(t => t.Contains(SearchText, StringComparison.OrdinalIgnoreCase))))
+                .AsEnumerable()
+            ?? Enumerable.Empty<Place>())
+        .Where(p => !FilterTags.Any() || FilterTags.All(t => (p.Tags ?? Enumerable.Empty<string>()).Contains(t)));
 
     private string EmptyPlacesMessage =>
         places?.Count == 0
             ? "This wishlist doesn't have any places yet. Click \"Add Place\" to start adding places."
-            : "No places match the selected tag filter.";
+            : "No places match the current filter.";
 
     private Task OnTagFilterSearchAsync(OptionsSearchEventArgs<string> e)
     {
@@ -251,9 +296,53 @@ else
         return Task.CompletedTask;
     }
 
-    private void ClearTagFilter()
+    private void ClearFilters()
     {
+        SearchText = string.Empty;
         FilterTags = Array.Empty<string>();
+        ClearSemanticSearch();
+    }
+
+    private void ClearSemanticSearch()
+    {
+        _semanticSearchCts?.Cancel();
+        SemanticSearchActive = false;
+        SemanticSearchResults = null;
+        LastSemanticQuery = string.Empty;
+    }
+
+    private async Task RunSemanticSearchAsync()
+    {
+        if (places is null || string.IsNullOrWhiteSpace(SearchText)) return;
+
+        _semanticSearchCts?.Cancel();
+        _semanticSearchCts?.Dispose();
+        _semanticSearchCts = new CancellationTokenSource();
+        var cts = _semanticSearchCts;
+
+        IsSemanticSearching = true;
+        StateHasChanged();
+        try
+        {
+            LastSemanticQuery = SearchText;
+            SemanticSearchResults = await SemanticSearchService.SearchAsync(SearchText, places, cts.Token);
+            if (!cts.Token.IsCancellationRequested)
+                SemanticSearchActive = true;
+        }
+        catch (OperationCanceledException)
+        {
+            // Search was superseded by a newer request or component disposal; discard results.
+        }
+        finally
+        {
+            IsSemanticSearching = false;
+        }
+    }
+
+    public void Dispose()
+    {
+        _semanticSearchCts?.Cancel();
+        _semanticSearchCts?.Dispose();
     }
 
 
