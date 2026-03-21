@@ -7,6 +7,8 @@
 
 @inject UserManager<ApplicationUser> UserManager
 @inject NavigationManager NavigationManager
+@inject UserService UserService
+@inject IHttpContextAccessor _httpContextAccessor
 
 <PageTitle>MCP API Key</PageTitle>
 
@@ -56,15 +58,13 @@
     }
 
     <FluentStack Orientation="Orientation.Horizontal">
-        <FluentButton Appearance="Appearance.Accent" OnClick="@GenerateKey">
-            <FluentIcon Value="@(new Icons.Regular.Size16.Key())" />
+        <FluentButton Appearance="Appearance.Accent" IconStart="@(new Icons.Regular.Size16.Key())" OnClick="@GenerateKey">
             @(hasKey ? "Regenerate API Key" : "Generate API Key")
         </FluentButton>
 
         @if (hasKey)
         {
-            <FluentButton Appearance="Appearance.Outline" OnClick="@RevokeKey">
-                <FluentIcon Value="@(new Icons.Regular.Size16.Delete())" />
+            <FluentButton Appearance="Appearance.Outline" IconStart="@(new Icons.Regular.Size16.Delete())" OnClick="@RevokeKey">
                 Revoke API Key
             </FluentButton>
         }
@@ -82,18 +82,16 @@
     private string newlyGeneratedKey = string.Empty;
     private string statusMessage = string.Empty;
 
-    [CascadingParameter]
-    private HttpContext HttpContext { get; set; } = default!;
-
-    private string McpEndpointUrl => $"{HttpContext.Request.Scheme}://{HttpContext.Request.Host}/mcp";
+    private string? McpEndpointUrl;
 
     protected override async Task OnInitializedAsync()
     {
-        if (HttpContext is null) return;
-        user = await UserManager.GetUserAsync(HttpContext.User);
+        user = await UserService.GetCurrentUserAsync();
         if (user is null) return;
-
         hasKey = !string.IsNullOrEmpty(user.McpApiKeyHash);
+
+        if (_httpContextAccessor.HttpContext is null) return;
+        McpEndpointUrl = $"{_httpContextAccessor.HttpContext.Request.Scheme}://{_httpContextAccessor.HttpContext.Request.Host}/mcp";
     }
 
     private async Task GenerateKey()
