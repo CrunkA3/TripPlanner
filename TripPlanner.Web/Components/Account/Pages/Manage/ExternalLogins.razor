@@ -2,6 +2,7 @@
 
 @using Microsoft.AspNetCore.Authentication
 @using Microsoft.AspNetCore.Identity
+@using TripPlanner.Web.Components.Account
 @using TripPlanner.Web.Data
 @using TripPlanner.Web.Models
 
@@ -104,7 +105,7 @@
 
         if (HttpMethods.IsGet(HttpContext.Request.Method))
         {
-            var action = HttpContext.Request.Query["Action"].ToString();
+            var action = HttpContext.Request.Query[IdentityPageConstants.ActionQueryParameterName].ToString();
             if (string.Equals(action, LinkLoginCallbackAction, StringComparison.Ordinal))
             {
                 await OnGetLinkLoginCallbackAsync();
