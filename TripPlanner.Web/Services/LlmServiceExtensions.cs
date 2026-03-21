@@ -7,13 +7,6 @@ internal static class LlmServiceExtensions
 {
     internal static IHostApplicationBuilder AddLlmServices(this IHostApplicationBuilder builder)
     {
-        // Register HttpClient for fetching web page content for AI analysis
-        builder.Services.AddHttpClient("UrlFetch", client =>
-        {
-            client.Timeout = TimeSpan.FromSeconds(30);
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 TripPlanner/1.0");
-        });
-
         // Register a separate HttpClient for user-supplied URL fetches that must not follow
         // redirects automatically; each redirect Location is validated against UrlSecurityHelper
         // before being followed, preventing redirect-based SSRF attacks.
