@@ -250,6 +250,7 @@ public class PlaceRepository : IPlaceRepository
 
         var queryWithImageIds = query
             .OrderBy(p => p.Name)
+            .ThenBy(p => p.Id)
             .Include(p => p.Wishlist)
             .Select(p => new
             {
