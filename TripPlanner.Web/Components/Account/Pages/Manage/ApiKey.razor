@@ -7,6 +7,7 @@
 
 @inject UserManager<ApplicationUser> UserManager
 @inject NavigationManager NavigationManager
+@inject UserService UserService
 
 <PageTitle>MCP API Key</PageTitle>
 
@@ -56,8 +57,7 @@
     }
 
     <FluentStack Orientation="Orientation.Horizontal">
-        <FluentButton Appearance="Appearance.Accent" OnClick="@GenerateKey">
-            <FluentIcon Value="@(new Icons.Regular.Size16.Key())" />
+        <FluentButton Appearance="Appearance.Accent" IconStart="@(new Icons.Regular.Size16.Key())" OnClick="@GenerateKey">
             @(hasKey ? "Regenerate API Key" : "Generate API Key")
         </FluentButton>
 
@@ -85,13 +85,17 @@
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
 
-    private string McpEndpointUrl => $"{HttpContext.Request.Scheme}://{HttpContext.Request.Host}/mcp";
+    private string? McpEndpointUrl { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
-        if (HttpContext is null) return;
-        user = await UserManager.GetUserAsync(HttpContext.User);
+        user = await UserService.GetCurrentUserAsync();
         if (user is null) return;
+
+        if (HttpContext is null) return;
+        
+
+        McpEndpointUrl = $"{HttpContext.Request.Scheme}://{HttpContext.Request.Host}/mcp";
 
         hasKey = !string.IsNullOrEmpty(user.McpApiKeyHash);
     }
