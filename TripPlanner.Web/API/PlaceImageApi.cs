@@ -180,10 +180,7 @@ internal static class PlaceImageApi
 
         public async Task ExecuteAsync(HttpContext httpContext)
         {
-            if (httpContext is null)
-            {
-                throw new ArgumentNullException(nameof(httpContext));
-            }
+            ArgumentNullException.ThrowIfNull(httpContext);
 
             var response = httpContext.Response;
 
