@@ -44,7 +44,7 @@
                 SharedAt = DateTimeOffset.UtcNow 
             });
             await WishlistRepository.AddAsync(Content.Wishlist);
-            await Dialog.CloseAsync(Content.Wishlist);
+            await Dialog.CloseAsync(Content);
         }
     }
 
