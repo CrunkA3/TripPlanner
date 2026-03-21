@@ -54,12 +54,11 @@ async function fillByLabel(page, label, value) {
 }
 
 /**
- * Clicks a fluent-text-field 
- * to give it focus, then types the value via keyboard and presses Tab
- * to trigger the Blazor onchange binding.
+ * Locates an element by its data-testid attribute, gives it focus, then types
+ * the value via keyboard and presses Tab to trigger the Blazor onchange binding.
+ * Works with fluent-text-field and fluent-text-area components.
  */
 async function fillByTestId(page, testId, value) {
-    // Covers fluent-text-field and fluent-text-area with a [label] attribute
     const locator = page.getByTestId(testId);
     await locator.click();
     await page.keyboard.press('Control+a');
@@ -201,8 +200,8 @@ async function main() {
         await page.getByTestId('add-place-button').click();
         await page.waitForTimeout(2000);
 
-        await fillByLabel(page, 'Name', 'Eiffel Tower');
-        await fillByLabel(page, 'Description', 'Iconic iron lattice tower on the Champ de Mars in Paris');
+        await fillByTestId(page, 'place-name', 'Eiffel Tower');
+        await fillByTestId(page, 'place-description', 'Iconic iron lattice tower on the Champ de Mars in Paris');
 
         await page.getByTestId('save-place-button').click();
         await page.waitForTimeout(2500);
@@ -211,45 +210,57 @@ async function main() {
         await page.getByTestId('add-place-button').click();
         await page.waitForTimeout(2000);
 
-        await fillByLabel(page, 'Name', 'Colosseum');
-        await fillByLabel(page, 'Description', 'Ancient amphitheatre in the centre of Rome');
+        await fillByTestId(page, 'place-name', 'Colosseum');
+        await fillByTestId(page, 'place-description', 'Ancient amphitheatre in the centre of Rome');
 
         await page.getByTestId('save-place-button').click();
         await page.waitForTimeout(2500);
 
         await screenshot(page, '06-wishlist-detail-with-places.png', 'Wishlist detail – with places');
 
-        // ── 9. Trips page (empty) ──────────────────────────────────────────────
-        console.log('\n[9] Trips page');
+        // ── 9. Places page ────────────────────────────────────────────────────
+        console.log('\n[9] Places page');
+        await page.goto(`${BASE_URL}/places`, { waitUntil: 'domcontentloaded' });
+        await page.waitForTimeout(1500);
+        await screenshot(page, '07-places.png', 'Places page – wishlist');
+
+        // ── 10. Trips page (empty) ─────────────────────────────────────────────
+        console.log('\n[10] Trips page');
         await page.goto(`${BASE_URL}/trips`, { waitUntil: 'domcontentloaded' });
         await page.waitForTimeout(1500);
-        await screenshot(page, '07-trips-empty.png', 'Trips page – empty');
+        await screenshot(page, '08-trips-empty.png', 'Trips page – empty');
 
-        // ── 10. Create a trip ─────────────────────────────────────────────────
-        console.log('\n[10] Create trip');
+        // ── 11. Create a trip ─────────────────────────────────────────────────
+        console.log('\n[11] Create trip');
         await page.getByTestId('create-trip-button').click();
         await page.waitForTimeout(1500);
 
-        await fillByLabel(page, 'Trip Name', 'Paris 2025');
-        await fillByLabel(page, 'Description', 'A week exploring the best of Paris');
-        await fillByLabel(page, 'Start Date (YYYY-MM-DD)', '2025-06-01');
-        await fillByLabel(page, 'End Date (YYYY-MM-DD)', '2025-06-07');
+        await fillByTestId(page, 'trip-name', 'Paris 2025');
+        await fillByTestId(page, 'trip-description', 'A week exploring the best of Paris');
+        await fillByTestId(page, 'trip-start-date', '2025-06-01');
+        await fillByTestId(page, 'trip-end-date', '2025-06-07');
 
         await page.getByTestId('save-trip-button').click();
         await page.waitForTimeout(2500);
-        await screenshot(page, '08-trips-with-data.png', 'Trips page – with trip');
+        await screenshot(page, '09-trips-with-data.png', 'Trips page – with trip');
 
-        // ── 11. Trip plan page ─────────────────────────────────────────────────
-        console.log('\n[11] Trip plan page');
+        // ── 12. Trip plan page ─────────────────────────────────────────────────
+        console.log('\n[12] Trip plan page');
         await page.getByTestId('plan-trip-button').first().click();
         await page.waitForTimeout(3000);
-        await screenshot(page, '09-trip-plan.png', 'Trip plan page');
+        await screenshot(page, '10-trip-plan.png', 'Trip plan page');
 
-        // ── 12. Map page ───────────────────────────────────────────────────────
-        console.log('\n[12] Map page');
+        // ── 13. Map page ───────────────────────────────────────────────────────
+        console.log('\n[13] Map page');
         await page.goto(`${BASE_URL}/map`, { waitUntil: 'domcontentloaded' });
         await page.waitForTimeout(2000);
-        await screenshot(page, '10-map.png', 'Map page');
+        await screenshot(page, '11-map.png', 'Map page');
+
+        // ── 14. Chat page ──────────────────────────────────────────────────────
+        console.log('\n[14] Chat page');
+        await page.goto(`${BASE_URL}/chat`, { waitUntil: 'domcontentloaded' });
+        await page.waitForTimeout(2000);
+        await screenshot(page, '12-chat.png', 'Chat page – AI Trip Assistant');
 
         console.log('\n✓ All screenshots saved to:', SCREENSHOTS_DIR);
     } catch (err) {
