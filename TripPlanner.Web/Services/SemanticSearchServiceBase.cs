@@ -35,8 +35,8 @@ public abstract class SemanticSearchServiceBase(IMemoryCache cache, ILogger logg
         var queryEmbResult = await GetEmbeddingsAsync([query], ct);
         if (queryEmbResult is null || queryEmbResult.Length == 0 || queryEmbResult[0].Length == 0)
         {
-            logger.LogWarning("Semantic search: could not obtain query embedding; falling back to original order.");
-            return placeList;
+            logger.LogWarning("Semantic search: could not obtain query embedding; failing semantic search.");
+            throw new InvalidOperationException("Semantic search failed: could not obtain query embedding.");
         }
         var queryEmb = queryEmbResult[0];
 
