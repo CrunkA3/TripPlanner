@@ -227,21 +227,24 @@ app.UseRequestLocalization(options =>
 });
 app.UseAntiforgery();
 
+// Map the MCP endpoint – secured with the MCP API key Bearer scheme
+// This must be mapped BEFORE UseAntiforgery and MapRazorComponents to avoid antiforgery and Blazor router conflicts
+// Antiforgery is disabled because MCP uses Bearer token authentication, not cookies
+app.MapMcp("/mcp")
+    .RequireAuthorization(policy => policy
+        .AddAuthenticationSchemes(McpApiKeyAuthHandler.SchemeName)
+        .RequireAuthenticatedUser())
+    .DisableAntiforgery();
+
+// Map API Endpoints (also disable antiforgery for API endpoints)
+app.MapPlaceImageApi();
+
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 // Add additional endpoints required by the Identity /Account Razor components.
 app.MapAdditionalIdentityEndpoints();
-
-// Map the MCP endpoint – secured with the MCP API key Bearer scheme
-app.MapMcp("/mcp")
-    .RequireAuthorization(policy => policy
-        .AddAuthenticationSchemes(McpApiKeyAuthHandler.SchemeName)
-        .RequireAuthenticatedUser());
-
-// Map API Endpoints
-app.MapPlaceImageApi();
 
 app.MapDefaultEndpoints();
 
