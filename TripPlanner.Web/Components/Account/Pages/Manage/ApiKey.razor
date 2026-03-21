@@ -8,6 +8,7 @@
 @inject UserManager<ApplicationUser> UserManager
 @inject NavigationManager NavigationManager
 @inject UserService UserService
+@inject IHttpContextAccessor _httpContextAccessor
 
 <PageTitle>MCP API Key</PageTitle>
 
@@ -63,8 +64,7 @@
 
         @if (hasKey)
         {
-            <FluentButton Appearance="Appearance.Outline" OnClick="@RevokeKey">
-                <FluentIcon Value="@(new Icons.Regular.Size16.Delete())" />
+            <FluentButton Appearance="Appearance.Outline" IconStart="@(new Icons.Regular.Size16.Delete())" OnClick="@RevokeKey">
                 Revoke API Key
             </FluentButton>
         }
@@ -73,6 +73,7 @@
     <p style="font-size: 0.875em; color: var(--neutral-foreground-hint);">
         The MCP server endpoint is <code>@McpEndpointUrl</code>.
         Anyone with this key can read and modify your data, so keep it secret.
+        @hasKey
     </p>
 </FluentStack>
 
@@ -82,22 +83,16 @@
     private string newlyGeneratedKey = string.Empty;
     private string statusMessage = string.Empty;
 
-    [CascadingParameter]
-    private HttpContext HttpContext { get; set; } = default!;
-
-    private string? McpEndpointUrl { get; set; }
+    private string? McpEndpointUrl;
 
     protected override async Task OnInitializedAsync()
     {
         user = await UserService.GetCurrentUserAsync();
         if (user is null) return;
-
-        if (HttpContext is null) return;
-        
-
-        McpEndpointUrl = $"{HttpContext.Request.Scheme}://{HttpContext.Request.Host}/mcp";
-
         hasKey = !string.IsNullOrEmpty(user.McpApiKeyHash);
+
+        if (_httpContextAccessor.HttpContext is null) return;
+        McpEndpointUrl = $"{_httpContextAccessor.HttpContext.Request.Scheme}://{_httpContextAccessor.HttpContext.Request.Host}/mcp";
     }
 
     private async Task GenerateKey()
