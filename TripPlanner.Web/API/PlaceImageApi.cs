@@ -201,11 +201,11 @@ internal static class PlaceImageApi
 
             response.StatusCode = StatusCodes.Status200OK;
             response.ContentType = _contentType;
-            response.Headers["X-Content-Type-Options"] = "nosniff";
+            response.Headers.XContentTypeOptions = "nosniff";
 
             if (_data.Length > 0)
             {
-                await response.Body.WriteAsync(_data, 0, _data.Length);
+                await response.Body.WriteAsync(_data);
             }
         }
     }
