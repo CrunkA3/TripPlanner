@@ -1,0 +1,52 @@
+@implements IDialogContentComponent<CreateWishlistDialogContent>
+
+@using TripPlanner.Web.Models
+@using TripPlanner.Web.Repositories
+@using TripPlanner.Web.Services
+
+@inject IWishlistRepository WishlistRepository
+@inject UserService UserService
+
+<FluentDialogHeader>
+    <FluentLabel Typo="Typography.PaneHeader">Create New Wishlist</FluentLabel>
+</FluentDialogHeader>
+
+<FluentDialogBody>
+    <EditForm Model="@Content.Wishlist" OnValidSubmit="@CreateWishlistAsync">
+        <FluentStack Orientation="Orientation.Vertical">
+            <FluentTextField @bind-Value="Content.Wishlist.Name" Label="Name" Required="true" Style="width: 100%;" data-testid="wishlist-name" />
+            <FluentTextArea @bind-Value="Content.Wishlist.Description" Label="Description" Style="width: 100%;" data-testid="wishlist-description" />
+        </FluentStack>
+    </EditForm>
+</FluentDialogBody>
+
+<FluentDialogFooter>
+    <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" OnClick="@CreateWishlistAsync" data-testid="submit-new-wishlist-button">Create</FluentButton>
+    <FluentButton Appearance="Appearance.Neutral" OnClick="@CancelAsync">Cancel</FluentButton>
+</FluentDialogFooter>
+
+@code {
+    [Parameter]
+    public CreateWishlistDialogContent Content { get; set; } = default!;
+
+    [CascadingParameter]
+    public FluentDialog Dialog { get; set; } = default!;
+
+    private async Task CreateWishlistAsync()
+    {
+        var currentUserId = await UserService.GetCurrentUserIdAsync();
+        if (currentUserId != null)
+        {
+            Content.Wishlist.SharedWith.Add(new UserWishlist 
+            { 
+                Level = ShareLevel.Owner, 
+                UserId = currentUserId, 
+                SharedAt = DateTimeOffset.UtcNow 
+            });
+            await WishlistRepository.AddAsync(Content.Wishlist);
+            await Dialog.CloseAsync(Content.Wishlist);
+        }
+    }
+
+    private async Task CancelAsync() => await Dialog.CancelAsync();
+}

@@ -101,42 +101,9 @@ else
     }
 }
 
-<FluentDialog @ref="createDialog" Hidden="@hideCreateDialog" Modal="true">
-    <h3>Create New Wishlist</h3>
-    <EditForm Model="@newWishlist" OnValidSubmit="@CreateWishlist">
-        <FluentStack Orientation="Orientation.Vertical">
-            <FluentTextField @bind-Value="newWishlist.Name" Label="Name" Required="true" Style="width: 100%;" data-testid="wishlist-name" />
-            <FluentTextArea @bind-Value="newWishlist.Description" Label="Description" Style="width: 100%;" data-testid="wishlist-description" />
-            <FluentStack Orientation="Orientation.Horizontal">
-                <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" data-testid="submit-new-wishlist-button">Create</FluentButton>
-                <FluentButton Appearance="Appearance.Neutral" OnClick="@(() => hideCreateDialog = true)">Cancel</FluentButton>
-            </FluentStack>
-        </FluentStack>
-    </EditForm>
-</FluentDialog>
-
-<FluentDialog @ref="shareDialog" Hidden="@hideShareDialog" Modal="true">
-    <h3>Share Wishlist: @selectedWishlist?.Name</h3>
-    <FluentStack Orientation="Orientation.Vertical">
-        <FluentTextField @bind-Value="shareEmail" Label="Email address to share with" Style="width: 100%;" />
-        <FluentStack Orientation="Orientation.Horizontal">
-            <FluentButton Appearance="Appearance.Accent" OnClick="@ShareWishlist">Share</FluentButton>
-            <FluentButton Appearance="Appearance.Neutral" OnClick="@(() => hideShareDialog = true)">Cancel</FluentButton>
-        </FluentStack>
-    </FluentStack>
-</FluentDialog>
-
 @code {
     private List<Wishlist>? wishlists;
     private string? currentUserId;
-
-    private FluentDialog? createDialog;
-    private FluentDialog? shareDialog;
-    private bool hideCreateDialog = true;
-    private bool hideShareDialog = true;
-    private Wishlist newWishlist = new();
-    private Wishlist? selectedWishlist;
-    private string shareEmail = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -156,45 +123,31 @@ else
         }
     }
 
-    private void ShowCreateDialog()
+    private async Task ShowCreateDialog()
     {
-        newWishlist = new Wishlist();
-        hideCreateDialog = false;
-    }
+        var newWishlist = new Wishlist();
+        var dialog = await DialogService.ShowDialogAsync<CreateWishlistDialog>(
+            new CreateWishlistDialogContent(newWishlist),
+            new DialogParameters { Modal = true, PreventDismissOnOverlayClick = true });
 
-    private async Task CreateWishlist()
-    {
-        if (currentUserId != null)
+        var result = await dialog.Result;
+        if (!result.Cancelled)
         {
-            newWishlist.SharedWith.Add(new UserWishlist { Level = ShareLevel.Owner, UserId = currentUserId, SharedAt = DateTimeOffset.UtcNow });
-            await WishlistRepository.AddAsync(newWishlist);
-            await LoadWishlists();
-            hideCreateDialog = true;
-        }
-    }
-
-    private void ShowShareDialog(Wishlist wishlist)
-    {
-        selectedWishlist = wishlist;
-        shareEmail = string.Empty;
-        hideShareDialog = false;
-    }
-
-    private async Task ShareWishlist()
-    {
-        if (selectedWishlist == null || string.IsNullOrWhiteSpace(shareEmail))
-        {
-            return;
-        }
-
-        var userToShareWith = await UserService.GetUserByEmailAsync(shareEmail);
-        if (userToShareWith != null)
-        {
-            await WishlistRepository.ShareWithUserAsync(selectedWishlist.Id, userToShareWith.Id);
             await LoadWishlists();
         }
-        
-        hideShareDialog = true;
+    }
+
+    private async Task ShowShareDialog(Wishlist wishlist)
+    {
+        var dialog = await DialogService.ShowDialogAsync<ShareWishlistDialog>(
+            new ShareWishlistDialogContent(wishlist.Id, wishlist.Name),
+            new DialogParameters { Modal = true, PreventDismissOnOverlayClick = true });
+
+        var result = await dialog.Result;
+        if (!result.Cancelled)
+        {
+            await LoadWishlists();
+        }
     }
 
     private async Task DeleteWishlist(string id)
