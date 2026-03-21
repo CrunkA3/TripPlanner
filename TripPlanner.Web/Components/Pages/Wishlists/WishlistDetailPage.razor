@@ -18,6 +18,7 @@
 @inject NavigationManager NavigationManager
 
 <PageTitle>@(wishlist?.Name ?? "Wishlist")</PageTitle>
+<FluentDialogProvider />
 
 @if (wishlist == null)
 {
