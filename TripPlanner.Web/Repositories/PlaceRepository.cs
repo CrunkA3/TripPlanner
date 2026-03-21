@@ -38,10 +38,11 @@ public class PlaceRepository : IPlaceRepository
 
         var query = _context.Places
             .AsNoTracking()
-            .Include(p => p.Wishlist)
             .Where(p => p.Wishlist != null && (
                             userWishlistIds.Contains(p.WishlistId!) ||
                             tripPlaceIds.Contains(p.Id)))
+            .OrderBy(p => p.Name)
+            .Include(p => p.Wishlist)
             .Include(p => p.Trip)
             .Select(p => new
             {
@@ -66,6 +67,7 @@ public class PlaceRepository : IPlaceRepository
         var query = _context.Places
             .AsNoTracking()
             .Where(p => p.WishlistId != null && userWishlistIds.Contains(p.WishlistId))
+            .OrderBy(p => p.Name)
             .Include(p => p.Wishlist)
             .ThenInclude(wl => wl!.SharedWith)
             .Select(p => new
@@ -88,6 +90,7 @@ public class PlaceRepository : IPlaceRepository
         var query = _context.Places
             .AsNoTracking()
             .Where(p => p.TripId == tripId)
+            .OrderBy(p => p.Name)
             .Include(p => p.Wishlist)
             .Select(p => new
             {
@@ -245,6 +248,7 @@ public class PlaceRepository : IPlaceRepository
 
 
         var queryWithImageIds = query
+            .OrderBy(p => p.Name)
             .Include(p => p.Wishlist)
             .Select(p => new
             {
@@ -271,6 +275,7 @@ public class PlaceRepository : IPlaceRepository
         var query = _context.Places
             .AsNoTracking()
             .Where(p => p.WishlistId == wishlistId)
+            .OrderBy(p => p.Name)
             .Select(p => new
             {
                 Place = p,
