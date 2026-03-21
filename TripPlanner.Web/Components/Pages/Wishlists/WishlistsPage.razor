@@ -1,4 +1,5 @@
 @page "/wishlists"
+@rendermode InteractiveServer
 
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
@@ -14,6 +15,7 @@
 @inject IDialogService DialogService
 
 <PageTitle>My Wishlists</PageTitle>
+<FluentDialogProvider />
 
 <h1>My Wishlists</h1>
 

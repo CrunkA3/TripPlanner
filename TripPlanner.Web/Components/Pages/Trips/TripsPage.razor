@@ -1,4 +1,5 @@
 @page "/trips"
+@rendermode InteractiveServer
 
 @using Microsoft.AspNetCore.Authorization
 @using System.Globalization
@@ -16,6 +17,7 @@
 @inject IDialogService DialogService
 
 <PageTitle>Trips</PageTitle>
+<FluentDialogProvider />
 <FluentGrid Spacing="3" Justify="JustifyContent.FlexStart">
 
     <FluentGridItem xs="12">

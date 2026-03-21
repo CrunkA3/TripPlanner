@@ -1,4 +1,5 @@
 ﻿@page "/trips/{tripId}"
+@rendermode InteractiveServer
 
 @using Microsoft.AspNetCore.Authorization
 @using TripPlanner.Web.Models
@@ -18,6 +19,7 @@
 @implements IAsyncDisposable
 
 <PageTitle>Trip Planner - @(PlanningTrip?.Name ?? TripId)</PageTitle>
+<FluentDialogProvider />
 
 
 @* <FluentStack Orientation="Orientation.Vertical">
