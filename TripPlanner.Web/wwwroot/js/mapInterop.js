@@ -5,10 +5,31 @@ window.mapInterop = {
     gpxTracks: [],
     homeMarker: null,
     mapClickHandler: null,
+    boundsChangeHandler: null,
     dotNetRef: null,
 
     setDotNetRef: function (dotNetRef) {
         this.dotNetRef = dotNetRef;
+    },
+
+    registerBoundsCallback: function (dotNetRef, methodName) {
+        var self = this;
+        if (!self.map) return;
+        if (self.boundsChangeHandler) {
+            self.map.off('moveend', self.boundsChangeHandler);
+        }
+        self.boundsChangeHandler = function () {
+            if (!self.map) return;
+            var bounds = self.map.getBounds();
+            dotNetRef.invokeMethodAsync(methodName,
+                bounds.getNorth(), bounds.getSouth(),
+                bounds.getEast(), bounds.getWest());
+        };
+        self.map.on('moveend', self.boundsChangeHandler);
+        // Invoke once immediately so initial bounds are propagated even if no moveend occurs
+        self.boundsChangeHandler();
+        // Invoke once immediately so initial bounds are propagated even if no moveend occurs
+        self.boundsChangeHandler();
     },
 
     onViewPlace: function (placeId) {
@@ -295,6 +316,10 @@ window.mapInterop = {
             if (this.mapClickHandler) {
                 this.map.off('click', this.mapClickHandler);
                 this.mapClickHandler = null;
+            }
+            if (this.boundsChangeHandler) {
+                this.map.off('moveend', this.boundsChangeHandler);
+                this.boundsChangeHandler = null;
             }
             if (this.homeMarker) {
                 this.homeMarker.remove();
