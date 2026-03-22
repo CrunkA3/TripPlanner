@@ -565,6 +565,7 @@
 
         if (!result.Cancelled && result.Data is not null)
         {
+            InvalidateVisiblePlaces();
             StateHasChanged();
             await UpdateMapContent();
         }
