@@ -154,6 +154,7 @@
     private string? DraggedFromDayId { get; set; }
     private int DraggedFromOrder { get; set; }
     private string? CurrentDropTarget { get; set; }
+    private IDialogReference? _placesPanelRef;
 
 
     // Accommodation state
@@ -457,6 +458,17 @@
         DraggedFromOrder = fromOrder;
     }
 
+    private async Task HandleDragStartFromPlacesPanel(string placeId)
+    {
+        HandleDragStart(placeId, null, -1);
+        if (_placesPanelRef != null)
+        {
+            await _placesPanelRef.CloseAsync();
+            _placesPanelRef = null;
+        }
+        await ShowPanelDays();
+    }
+
     private void HandleDragEnd()
     {
         // Keep the state until drop completes
@@ -587,11 +599,11 @@
             TotalPlacesCount = AllPlaces.Count,
             OnAddPlaceClick = EventCallback.Factory.Create(this, () => OpenAddPlaceDialog()),
             OnEditPlaceClick = EventCallback.Factory.Create<Place>(this, (place) => OpenEditPlaceDialog(place)),
-            OnHandleDragStart = EventCallback.Factory.Create<string>(this, (placeId) => HandleDragStart(placeId, null, -1)),
+            OnHandleDragStart = EventCallback.Factory.Create<string>(this, async (placeId) => await HandleDragStartFromPlacesPanel(placeId)),
             OnHandleDragEnd = EventCallback.Factory.Create(this, () => HandleDragEnd())
         };
 
-        await DialogService.ShowPanelAsync<TripPlanPanelPlaces>(content, new DialogParameters<TripPlanPanelPlaces.TripPlanPanelPlacesContent>()
+        _placesPanelRef = await DialogService.ShowPanelAsync<TripPlanPanelPlaces>(content, new DialogParameters<TripPlanPanelPlaces.TripPlanPanelPlacesContent>()
         {
             Alignment = HorizontalAlignment.Right,
             Title = "Places",
