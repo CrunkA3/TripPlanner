@@ -7,7 +7,7 @@
     {
         <TripPlanSectionPlaces PlanningTrip="Content.PlanningTrip"
                                Places="Content.Places"
-                               MapBoundsActive="Content.MapBoundsActive"
+                               TotalPlacesCount="Content.TotalPlacesCount"
                                OnHandleDragStart="Content.OnHandleDragStart"
                                OnHandleDragEnd="Content.OnHandleDragEnd"
                                OnAddPlaceClick="Content.OnAddPlaceClick"
@@ -25,7 +25,7 @@
 
         public required Trip? PlanningTrip { get; set; }
 
-        public bool MapBoundsActive { get; set; }
+        public int TotalPlacesCount { get; set; }
     
         public required EventCallback<string> OnHandleDragStart { get; set; }
     
