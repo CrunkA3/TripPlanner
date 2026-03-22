@@ -7,6 +7,7 @@
 @using TripPlanner.Web.Services
 
 @attribute [Authorize]
+@inherits TripPlanPageBase
 
 @inject ITripRepository TripRepository
 @inject IPlaceRepository PlaceRepository
@@ -38,7 +39,8 @@
         <FluentStack Orientation="Orientation.Vertical" Class="hide-md-down" Style="flex-basis:25%;">
             <FluentStack Orientation="Orientation.Horizontal">
                 <TripPlanSectionPlaces PlanningTrip="PlanningTrip"
-                                       Places="AllPlaces"
+                                       Places="VisiblePlaces"
+                                       TotalPlacesCount="AllPlaces.Count"
                                        OnHandleDragStart="(placeId) => HandleDragStart(placeId, null, -1)"
                                        OnHandleDragEnd="() => HandleDragEnd()"
                                        OnAddPlaceClick="() => OpenAddPlaceDialog()"
@@ -130,14 +132,11 @@
     [Parameter]
     public string TripId { get; set; } = string.Empty;
 
-    private List<Place> AllPlaces { get; set; } = new();
     private List<GpxTrack> GpxTracks { get; set; } = new();
 
     private Trip? PlanningTrip;
 
     private Dictionary<string, DailyWeather> WeatherByDayId { get; set; } = new();
-
-
 
 
     // Drag and drop state
@@ -184,6 +183,7 @@
             await JSRuntime.InvokeVoidAsync("mapInterop.initializeMap", "trip-map", 48.8566, 2.3522, 4);
             _dotNetRef = DotNetObjectReference.Create(this);
             await JSRuntime.InvokeVoidAsync("mapInterop.setDotNetRef", _dotNetRef);
+            await JSRuntime.InvokeVoidAsync("mapInterop.registerBoundsCallback", _dotNetRef, "OnBoundsChanged");
             MapInitialized = true;
         }
         catch (Exception ex)
@@ -545,6 +545,7 @@
         if (!result.Cancelled && result.Data is not null)
         {
             AllPlaces.Add((Place)result.Data);
+            InvalidateVisiblePlaces();
             StateHasChanged();
             await UpdateMapContent();
         }
@@ -564,6 +565,7 @@
 
         if (!result.Cancelled && result.Data is not null)
         {
+            InvalidateVisiblePlaces();
             StateHasChanged();
             await UpdateMapContent();
         }
@@ -574,7 +576,8 @@
         var content = new TripPlanPanelPlaces.TripPlanPanelPlacesContent()
         {
             PlanningTrip = PlanningTrip,
-            Places = AllPlaces,
+            Places = VisiblePlaces,
+            TotalPlacesCount = AllPlaces.Count,
             OnAddPlaceClick = EventCallback.Factory.Create(this, () => OpenAddPlaceDialog()),
             OnEditPlaceClick = EventCallback.Factory.Create<Place>(this, (place) => OpenEditPlaceDialog(place)),
             OnHandleDragStart = EventCallback.Factory.Create<string>(this, (placeId) => HandleDragStart(placeId, null, -1)),
