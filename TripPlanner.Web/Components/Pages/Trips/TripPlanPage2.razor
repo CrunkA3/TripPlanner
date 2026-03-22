@@ -190,7 +190,6 @@
         {
             await JSRuntime.InvokeVoidAsync("mapInterop.initializeMap", "trip-map", 48.8566, 2.3522, 4);
             _dotNetRef = DotNetObjectReference.Create(this);
-            await JSRuntime.InvokeVoidAsync("mapInterop.setDotNetRef", _dotNetRef);
             await JSRuntime.InvokeVoidAsync("mapInterop.registerBoundsCallback", _dotNetRef, "OnBoundsChanged");
             MapInitialized = true;
         }
