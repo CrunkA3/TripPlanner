@@ -42,7 +42,7 @@
                 <div style="height: 100%; overflow: auto;">
                     <TripPlanSectionPlaces PlanningTrip="PlanningTrip"
                                            Places="VisiblePlaces"
-                                           MapBoundsActive="BoundsKnown"
+                                           MapBoundsActive="BoundsKnown && AllPlaces.Any()"
                                            OnHandleDragStart="(placeId) => HandleDragStart(placeId, null, -1)"
                                            OnHandleDragEnd="() => HandleDragEnd()"
                                            OnAddPlaceClick="() => OpenAddPlaceDialog()"
