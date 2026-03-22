@@ -6,7 +6,14 @@
 }
 else if (!Places.Any())
 {
-    <FluentLabel>No places available. Please add some places to your trip.</FluentLabel>
+    @if (MapBoundsActive)
+    {
+        <FluentLabel>No places visible in current map area</FluentLabel>
+    }
+    else
+    {
+        <FluentLabel>No places available. Please add some places to your trip.</FluentLabel>
+    }
 }
 else
 {
@@ -56,6 +63,9 @@ else
 
     [Parameter, EditorRequired]
     public Trip? PlanningTrip { get; set; }
+
+    [Parameter]
+    public bool MapBoundsActive { get; set; }
     
     [Parameter, EditorRequired]
     public EventCallback<string> OnHandleDragStart { get; set; }
