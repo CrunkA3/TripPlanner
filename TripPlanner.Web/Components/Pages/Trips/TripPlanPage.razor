@@ -40,7 +40,7 @@
             <FluentStack Orientation="Orientation.Horizontal">
                 <TripPlanSectionPlaces PlanningTrip="PlanningTrip"
                                        Places="VisiblePlaces"
-                                       MapBoundsActive="BoundsKnown"
+                                       MapBoundsActive="@(BoundsKnown && AllPlaces.Any())"
                                        OnHandleDragStart="(placeId) => HandleDragStart(placeId, null, -1)"
                                        OnHandleDragEnd="() => HandleDragEnd()"
                                        OnAddPlaceClick="() => OpenAddPlaceDialog()"
