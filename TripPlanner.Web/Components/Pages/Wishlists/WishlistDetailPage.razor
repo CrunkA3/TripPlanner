@@ -18,6 +18,8 @@
 @inject IDialogService DialogService
 @inject NavigationManager NavigationManager
 @inject ISemanticSearchService SemanticSearchService
+@inject WishlistImportExportService ImportExportService
+@inject IJSRuntime JS
 
 <PageTitle>@(wishlist?.Name ?? "Wishlist")</PageTitle>
 <FluentDialogProvider />
@@ -45,6 +47,28 @@ else
                 @wishlist.Name
             </FluentLabel>
             <FluentSpacer />
+            <FluentButton Appearance="Appearance.Lightweight"
+                          IconStart="@(new Icons.Regular.Size20.ArrowDownload())"
+                          OnClick="@ExportYaml"
+                          title="Export wishlist as YAML"
+                          data-testid="export-wishlist-button">
+                Export
+            </FluentButton>
+            @if (canEdit)
+            {
+                <FluentButton Appearance="Appearance.Lightweight"
+                              IconStart="@(new Icons.Regular.Size20.ArrowUpload())"
+                              OnClick="@TriggerImportInput"
+                              title="Import places from YAML file"
+                              data-testid="import-wishlist-button">
+                    Import
+                </FluentButton>
+                <InputFile @ref="_importFileInput"
+                           id="@_importFileInputId"
+                           OnChange="@HandleImportFileSelected"
+                           accept=".yaml,.yml"
+                           style="display:none;" />
+            }
             @if (canEdit)
             {
                 <FluentButton Appearance="Appearance.Accent" IconStart="@(new Icons.Regular.Size20.Add())" OnClick="@ShowAddPlaceDialog" data-testid="add-place-button">
@@ -52,6 +76,13 @@ else
                 </FluentButton>
             }
         </FluentToolbar>
+
+        @if (!string.IsNullOrEmpty(_importExportMessage))
+        {
+            <FluentMessageBar Intent="@_importExportMessageIntent" OnDismiss="@(() => _importExportMessage = null)" Style="margin-top: 4px;">
+                @_importExportMessage
+            </FluentMessageBar>
+        }
 
         @if (!string.IsNullOrEmpty(wishlist.Description))
         {
@@ -254,6 +285,11 @@ else
 
     private string urlInputText = string.Empty;
     private string? urlSubmitError;
+
+    private InputFile? _importFileInput;
+    private string _importFileInputId = $"import-yaml-{Guid.NewGuid():N}";
+    private string? _importExportMessage;
+    private MessageIntent _importExportMessageIntent = MessageIntent.Info;
 
     private string SearchText { get; set; } = string.Empty;
     private IEnumerable<string> FilterTags { get; set; } = Array.Empty<string>();
@@ -532,5 +568,66 @@ else
 
         await PlaceRepository.MarkAsReviewedAsync(placeId, currentUserId);
         await LoadPlaces();
+    }
+
+    private async Task ExportYaml()
+    {
+        if (currentUserId is null || wishlist is null) return;
+
+        _importExportMessage = null;
+        try
+        {
+            var yaml = await ImportExportService.ExportToYamlAsync(WishlistId, currentUserId);
+            var safeName = string.Concat(wishlist.Name.Split(System.IO.Path.GetInvalidFileNameChars()));
+            var filename = $"{safeName}-export.yaml";
+            await JS.InvokeVoidAsync("downloadTextFile", filename, "application/x-yaml", yaml);
+        }
+        catch (Exception ex)
+        {
+            _importExportMessage = $"Export failed: {ex.Message}";
+            _importExportMessageIntent = MessageIntent.Error;
+        }
+    }
+
+    private async Task TriggerImportInput()
+    {
+        await JS.InvokeVoidAsync("clickElementById", _importFileInputId);
+    }
+
+    private async Task HandleImportFileSelected(InputFileChangeEventArgs e)
+    {
+        if (currentUserId is null) return;
+
+        _importExportMessage = null;
+        var file = e.File;
+
+        // Max 5 MB for YAML files
+        const long maxSize = 5 * 1024 * 1024;
+        if (file.Size > maxSize)
+        {
+            _importExportMessage = "File is too large. Maximum size is 5 MB.";
+            _importExportMessageIntent = MessageIntent.Error;
+            return;
+        }
+
+        try
+        {
+            using var reader = new System.IO.StreamReader(file.OpenReadStream(maxAllowedSize: maxSize));
+            var yaml = await reader.ReadToEndAsync();
+            var count = await ImportExportService.ImportFromYamlAsync(yaml, WishlistId, currentUserId);
+            _importExportMessage = $"Successfully imported {count} place(s).";
+            _importExportMessageIntent = MessageIntent.Success;
+            await LoadPlaces();
+        }
+        catch (FormatException fex)
+        {
+            _importExportMessage = $"Import failed: {fex.Message}";
+            _importExportMessageIntent = MessageIntent.Error;
+        }
+        catch (Exception ex)
+        {
+            _importExportMessage = $"Import failed: {ex.Message}";
+            _importExportMessageIntent = MessageIntent.Error;
+        }
     }
 }
