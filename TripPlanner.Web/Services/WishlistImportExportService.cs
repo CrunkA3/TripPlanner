@@ -253,31 +253,48 @@ public class WishlistImportExportService(
             // Import GPX track as polyline
             if (placeDto.GpxTrack is { Polyline.Count: > 0 })
             {
-                var track = new GpxTrack
-                {
-                    Name = placeDto.GpxTrack.Name,
-                    Description = placeDto.GpxTrack.Description,
-                    TotalDistance = placeDto.GpxTrack.TotalDistanceKm,
-                    ElevationGain = placeDto.GpxTrack.ElevationGainM,
-                    ElevationLoss = placeDto.GpxTrack.ElevationLossM,
-                    CreatedAt = DateTimeOffset.UtcNow
-                };
-
-                var order = 1;
+                // Ensure there are at least two valid coordinate points before creating a track
+                var validPointCount = 0;
                 foreach (var point in placeDto.GpxTrack.Polyline)
                 {
-                    if (point.Count < 2) continue;
-                    track.Points.Add(new GpxPoint
+                    if (point.Count >= 2)
                     {
-                        GpxTrackId = track.Id,
-                        Latitude = point[0],
-                        Longitude = point[1],
-                        Order = order++
-                    });
+                        validPointCount++;
+                        if (validPointCount >= 2)
+                        {
+                            break;
+                        }
+                    }
                 }
 
-                var savedTrack = await gpxRepository.AddAsync(track);
-                place.GpxTrackId = savedTrack.Id;
+                if (validPointCount >= 2)
+                {
+                    var track = new GpxTrack
+                    {
+                        Name = placeDto.GpxTrack.Name,
+                        Description = placeDto.GpxTrack.Description,
+                        TotalDistance = placeDto.GpxTrack.TotalDistanceKm,
+                        ElevationGain = placeDto.GpxTrack.ElevationGainM,
+                        ElevationLoss = placeDto.GpxTrack.ElevationLossM,
+                        CreatedAt = DateTimeOffset.UtcNow
+                    };
+
+                    var order = 1;
+                    foreach (var point in placeDto.GpxTrack.Polyline)
+                    {
+                        if (point.Count < 2) continue;
+                        track.Points.Add(new GpxPoint
+                        {
+                            GpxTrackId = track.Id,
+                            Latitude = point[0],
+                            Longitude = point[1],
+                            Order = order++
+                        });
+                    }
+
+                    var savedTrack = await gpxRepository.AddAsync(track);
+                    place.GpxTrackId = savedTrack.Id;
+                }
             }
 
             await placeRepository.AddAsync(place);
