@@ -112,8 +112,6 @@ public class WishlistImportExportService(
     private static readonly IDeserializer YamlDeserializer = new DeserializerBuilder()
         .WithNamingConvention(UnderscoredNamingConvention.Instance)
         .IgnoreUnmatchedProperties()
-        .WithMaxRecursion(32)
-        .WithMaxAliasesForCollections(64)
         .Build();
 
     /// <summary>

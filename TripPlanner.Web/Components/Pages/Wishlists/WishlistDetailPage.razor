@@ -63,8 +63,7 @@ else
                               data-testid="import-wishlist-button">
                     Import
                 </FluentButton>
-                <InputFile @ref="_importFileInput"
-                           id="@_importFileInputId"
+                <InputFile id="@_importFileInputId"
                            OnChange="@HandleImportFileSelected"
                            accept=".yaml,.yml"
                            style="display:none;" />
@@ -286,7 +285,6 @@ else
     private string urlInputText = string.Empty;
     private string? urlSubmitError;
 
-    private InputFile? _importFileInput;
     private string _importFileInputId = $"import-yaml-{Guid.NewGuid():N}";
     private string? _importExportMessage;
     private MessageIntent _importExportMessageIntent = MessageIntent.Info;
