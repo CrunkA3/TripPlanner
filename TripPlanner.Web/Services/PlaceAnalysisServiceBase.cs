@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Text.Json;
 using TripPlanner.Web.Models;
 
@@ -9,24 +10,22 @@ namespace TripPlanner.Web.Services;
 /// Handles the shared steps of URL fetching and geocoding fallback so that
 /// concrete implementations only need to provide the LLM-specific call.
 /// </summary>
-public abstract class PlaceAnalysisServiceBase : IPlaceAnalysisService
+public abstract partial class PlaceAnalysisServiceBase(
+    IHttpClientFactory httpClientFactory,
+    ILogger logger,
+    IGeocodingService geocodingService) : IPlaceAnalysisService
 {
     // Maximum number of characters of page text sent to the LLM to stay within prompt limits.
     protected const int MaxContentLength = 5000;
 
-    private readonly ILogger _logger;
-    private readonly IGeocodingService _geocodingService;
-    protected readonly IHttpClientFactory _httpClientFactory;
-
-    protected PlaceAnalysisServiceBase(
-        IHttpClientFactory httpClientFactory,
-        ILogger logger,
-        IGeocodingService geocodingService)
+    private static JsonSerializerOptions _jsonSerializerOptions = new()
     {
-        _httpClientFactory = httpClientFactory;
-        _logger = logger;
-        _geocodingService = geocodingService;
-    }
+        PropertyNameCaseInsensitive = true
+    };
+
+    private readonly ILogger _logger = logger;
+    private readonly IGeocodingService _geocodingService = geocodingService;
+    protected readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
 
     /// <summary>
     /// Sends the extracted page content to the LLM and returns the raw JSON response text
@@ -123,10 +122,8 @@ public abstract class PlaceAnalysisServiceBase : IPlaceAnalysisService
         PlaceSuggestion? suggestion;
         try
         {
-            suggestion = JsonSerializer.Deserialize<PlaceSuggestion>(responseText, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+
+            suggestion = JsonSerializer.Deserialize<PlaceSuggestion>(responseText, _jsonSerializerOptions);
         }
         catch (JsonException ex)
         {
@@ -143,10 +140,7 @@ public abstract class PlaceAnalysisServiceBase : IPlaceAnalysisService
 
             if (!string.IsNullOrWhiteSpace(geocodeQuery))
             {
-                _logger.LogDebug(
-                    "LLM did not return coordinates, geocoding using {Source}: '{Query}'.",
-                    hasAddress ? "address" : "place name",
-                    geocodeQuery);
+                LogLlmNoCoordinates(hasAddress ? "address" : "place name", geocodeQuery);
                 var geoResult = await _geocodingService.GeocodeAsync(geocodeQuery, cancellationToken);
                 if (geoResult != null)
                 {
@@ -164,4 +158,9 @@ public abstract class PlaceAnalysisServiceBase : IPlaceAnalysisService
             GpxFileUrls = gpxFileUrls,
         };
     }
+
+    [LoggerMessage(
+        Level = LogLevel.Debug,
+        Message = "LLM did not return coordinates, geocoding using {Source}: '{Query}'.")]
+    private partial void LogLlmNoCoordinates(string source, string query);
 }

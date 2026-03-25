@@ -9,7 +9,7 @@ namespace TripPlanner.Web.Services;
 /// Shared helpers used by both <see cref="OllamaPlaceAnalysisService"/> and
 /// <see cref="OpenAI.OpenAIPlaceAnalysisService"/> to prepare web-page content for LLM analysis.
 /// </summary>
-internal static class PlaceAnalysisHelpers
+internal static partial class PlaceAnalysisHelpers
 {
     // Elements whose full content (including text) must be removed before Markdown conversion.
     private static readonly string[] StrippedElements = ["script", "style", "head", "noscript"];
@@ -56,8 +56,7 @@ internal static class PlaceAnalysisHelpers
         var baseUri = Uri.TryCreate(pageUrl, UriKind.Absolute, out var u) ? u : null;
         var results = new List<string>();
 
-        foreach (Match m in Regex.Matches(html, @"href\s*=\s*[""']([^""']*\.gpx[^""']*)[""']",
-            RegexOptions.IgnoreCase))
+        foreach (Match m in GpxRegex().Matches(html))
         {
             // HTML-decode the attribute value so entities like &amp; become & in the URL.
             var href = WebUtility.HtmlDecode(m.Groups[1].Value);
@@ -74,6 +73,9 @@ internal static class PlaceAnalysisHelpers
                 results.Add(resolved.ToString());
         }
 
-        return results.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        return [.. results.Distinct(StringComparer.OrdinalIgnoreCase)];
     }
+
+    [GeneratedRegex(@"href\s*=\s*[""']([^""']*\.gpx[^""']*)[""']", RegexOptions.IgnoreCase, "de-DE")]
+    private static partial Regex GpxRegex();
 }

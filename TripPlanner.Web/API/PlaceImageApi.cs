@@ -133,7 +133,7 @@ internal static class PlaceImageApi
     /// Normalizes and validates the stored image content type against an allowlist of safe types.
     /// Returns the normalized content type if allowed; otherwise, null.
     /// </summary>
-    private static string? NormalizeAllowedImageContentType(string? contentType)
+    internal static string? NormalizeAllowedImageContentType(string? contentType)
     {
         if (string.IsNullOrWhiteSpace(contentType))
         {
@@ -165,18 +165,11 @@ internal static class PlaceImageApi
     /// X-Content-Type-Options: nosniff, ETag, and Cache-Control headers.
     /// Returns 304 Not Modified when the client's cached copy is still valid.
     /// </summary>
-    private sealed class SafeImageResult : IResult
+    private sealed class SafeImageResult(byte[] data, string contentType, string etag) : IResult
     {
-        private readonly byte[] _data;
-        private readonly string _contentType;
-        private readonly string _etag;
-
-        public SafeImageResult(byte[] data, string contentType, string etag)
-        {
-            _data = data ?? throw new ArgumentNullException(nameof(data));
-            _contentType = contentType ?? throw new ArgumentNullException(nameof(contentType));
-            _etag = etag ?? throw new ArgumentNullException(nameof(etag));
-        }
+        private readonly byte[] _data = data ?? throw new ArgumentNullException(nameof(data));
+        private readonly string _contentType = contentType ?? throw new ArgumentNullException(nameof(contentType));
+        private readonly string _etag = etag ?? throw new ArgumentNullException(nameof(etag));
 
         public async Task ExecuteAsync(HttpContext httpContext)
         {
