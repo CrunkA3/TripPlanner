@@ -1,9 +1,9 @@
+using Microsoft.EntityFrameworkCore;
 using TripPlanner.Web.Data;
 using TripPlanner.Web.Models;
 using TripPlanner.Web.Repositories;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
-using Microsoft.EntityFrameworkCore;
 
 namespace TripPlanner.Web.Services;
 
