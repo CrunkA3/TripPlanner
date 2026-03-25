@@ -253,7 +253,7 @@ public class WishlistImportExportService(
 
             using var scope = new TransactionScope(
                 TransactionScopeOption.Required,
-                new TransactionOptions { IsolationLevel = IsolationLevel.ReadUncommitted }, TransactionScopeAsyncFlowOption.Enabled);
+                TransactionScopeAsyncFlowOption.Enabled);
 
             // Import GPX track as polyline
             if (placeDto.GpxTrack is { Polyline.Count: > 0 })
