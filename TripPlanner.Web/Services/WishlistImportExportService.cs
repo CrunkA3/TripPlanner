@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using System.Transactions;
+using TripPlanner.Web.API;
 using TripPlanner.Web.Data;
 using TripPlanner.Web.Models;
 using TripPlanner.Web.Repositories;
@@ -99,10 +100,11 @@ public sealed class WishlistExportDto
 /// <summary>
 /// Service for exporting a wishlist to YAML and importing places from a YAML file.
 /// </summary>
-public class WishlistImportExportService(
+public partial class WishlistImportExportService(
     IWishlistRepository wishlistRepository,
     IPlaceRepository placeRepository,
     IGpxRepository gpxRepository,
+    ILogger<WishlistImportExportService> logger,
     ApplicationDbContext dbContext)
 {
     private static readonly ISerializer YamlSerializer = new SerializerBuilder()
@@ -150,7 +152,7 @@ public class WishlistImportExportService(
                 .Include(t => t.Points.OrderBy(p => p.Order))
                 .Where(t => gpxTrackIds.Contains(t.Id))
                 .ToDictionaryAsync(t => t.Id)
-            : new Dictionary<string, GpxTrack>();
+            : [];
 
         var placeExportDtos = new List<PlaceExportDto>();
         foreach (var place in places)
@@ -233,8 +235,10 @@ public class WishlistImportExportService(
                 foreach (var imgDto in placeDto.Images)
                 {
                     if (string.IsNullOrWhiteSpace(imgDto.Data)) continue;
+                    // Do not serve potentially unsafe image types (e.g., SVG); treat as a bad request.
                     try
                     {
+                        var safeContentType = PlaceImageApi.NormalizeAllowedImageContentType(imgDto.ContentType) ?? throw new ArgumentException("Unsupported image content type.");
                         var imageData = Convert.FromBase64String(imgDto.Data);
                         place.Images.Add(new PlaceImage
                         {
@@ -243,6 +247,11 @@ public class WishlistImportExportService(
                             ImageContentType = string.IsNullOrEmpty(imgDto.ContentType) ? "image/jpeg" : imgDto.ContentType,
                             SortOrder = sortOrder++
                         });
+                    }
+                    catch (ArgumentException)
+                    {
+                        // Skip unsupported image types
+                        LogSkippingUnsupportedImageContentType(imgDto.ContentType);
                     }
                     catch (FormatException)
                     {
@@ -334,10 +343,9 @@ public class WishlistImportExportService(
         TotalDistanceKm = track.TotalDistance,
         ElevationGainM = track.ElevationGain,
         ElevationLossM = track.ElevationLoss,
-        Polyline = track.Points
+        Polyline = [.. track.Points
             .OrderBy(p => p.Order)
-            .Select(p => new List<double> { p.Latitude, p.Longitude })
-            .ToList()
+            .Select(p => new List<double> { p.Latitude, p.Longitude })]
     };
 
     private static PlaceCategory ParseCategory(string? value)
@@ -348,4 +356,9 @@ public class WishlistImportExportService(
             ? parsed
             : PlaceCategory.Other;
     }
+
+
+    [LoggerMessage(LogLevel.Debug, Message = "Skipping image with unsupported content type: {contentType}")]
+    private partial void LogSkippingUnsupportedImageContentType(string contentType);
+
 }
