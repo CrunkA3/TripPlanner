@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using System.Transactions;
 using TripPlanner.Web.Data;
 using TripPlanner.Web.Models;
 using TripPlanner.Web.Repositories;
@@ -250,6 +251,10 @@ public class WishlistImportExportService(
                 }
             }
 
+            using var scope = new TransactionScope(
+                TransactionScopeOption.Required,
+                new TransactionOptions { IsolationLevel = IsolationLevel.ReadUncommitted }, TransactionScopeAsyncFlowOption.Enabled);
+
             // Import GPX track as polyline
             if (placeDto.GpxTrack is { Polyline.Count: > 0 })
             {
@@ -298,6 +303,7 @@ public class WishlistImportExportService(
             }
 
             await placeRepository.AddAsync(place);
+            scope.Complete();
             imported++;
         }
 
