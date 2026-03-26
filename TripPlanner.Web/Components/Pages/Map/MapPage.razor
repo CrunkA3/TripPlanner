@@ -287,7 +287,7 @@
 
         if (CurrentUser is not null)
         {
-            Places = await PlaceRepository.GetAllByUserAsync(CurrentUser.Id);
+            Places = (await PlaceRepository.GetAllByUserAsync(CurrentUser.Id)).Where(x => x.Latitude != 0 && x.Longitude != 0).ToList();
             var ownedTrips = await TripRepository.GetByOwnerAsync(CurrentUser.Id);
             var sharedTrips = await TripRepository.GetSharedWithUserAsync(CurrentUser.Id);
             Trips = ownedTrips.UnionBy(sharedTrips, t => t.Id).ToList();
