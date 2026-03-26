@@ -23,21 +23,20 @@
 <FluentDialogProvider />
 
 
-@* <FluentStack Orientation="Orientation.Vertical">
- *@    <div class="hide-lg-up">
-<FluentStack Orientation="Orientation.Horizontal">
-    <FluentButton OnClick="ShowPanelPlaces">Places</FluentButton>
-    <FluentButton OnClick="ShowPanelDays">Days</FluentButton>
-    <FluentButton OnClick="ShowPanelAccommodations">Accommodations</FluentButton>
-</FluentStack>
+<div class="hide-lg-up">
+    <FluentStack Orientation="Orientation.Horizontal">
+        <FluentButton OnClick="ShowPanelPlaces">Places</FluentButton>
+        <FluentButton OnClick="ShowPanelDays">Days</FluentButton>
+        <FluentButton OnClick="ShowPanelAccommodations">Accommodations</FluentButton>
+    </FluentStack>
 </div>
 
-<FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Stretch" VerticalGap="3">
+<FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Stretch" VerticalGap="3" Style="height: 100%">
 
     @if (PlanningTrip != null)
     {
-        <FluentStack Orientation="Orientation.Vertical" Class="hide-md-down" Style="flex-basis:25%;">
-            <FluentStack Orientation="Orientation.Horizontal">
+        <FluentStack Orientation="Orientation.Vertical" Class="hide-md-down" Style="flex-basis:25%; max-height: 100%">
+            <FluentStack Orientation="Orientation.Horizontal" Style="max-height: 100%">
                 <TripPlanSectionPlaces PlanningTrip="PlanningTrip"
                                        Places="VisiblePlaces"
                                        TotalPlacesCount="AllPlaces.Count"
@@ -69,8 +68,7 @@
     <!-- Map -->
     <div id="trip-map" style="width: 100%; border-radius: 8px; min-height:50vh"></div>
 </FluentStack>
-@* </FluentStack>
- *@
+
 
 <FluentDialog @bind-Hidden="@HideAccommodationDialog" Modal="true" TrapFocus="true">
     <FluentDialogHeader>
@@ -232,13 +230,14 @@
             // Add markers for unscheduled places (grey)
             foreach (var place in AllPlaces)
             {
+                if (place.Latitude == 0 || place.Longitude == 0) continue;
+
                 bool isScheduled = PlanningTrip.Days.Any(d => d.Places.Any(p => p.PlaceId == place.Id));
-                if (!isScheduled)
-                {
-                    await JSRuntime.InvokeVoidAsync("mapInterop.addMarker",
-                        place.Id, place.Latitude, place.Longitude,
-                        place.Name, place.Category.ToString(), "#9E9E9E");
-                }
+                if (isScheduled) continue;
+                
+                await JSRuntime.InvokeVoidAsync("mapInterop.addMarker",
+                    place.Id, place.Latitude, place.Longitude,
+                    place.Name, place.Category.ToString(), "#9E9E9E");
             }
 
 

@@ -9,7 +9,7 @@ namespace TripPlanner.Web.Components.Pages.Trips;
 /// </summary>
 public abstract class TripPlanPageBase : ComponentBase
 {
-    private List<Place> _allPlaces = new();
+    private List<Place> _allPlaces = [];
 
     protected List<Place> AllPlaces
     {
@@ -34,7 +34,7 @@ public abstract class TripPlanPageBase : ComponentBase
 
     private List<Place> ComputeVisiblePlaces() =>
         _boundsKnown
-            ? AllPlaces.Where(p => IsInBounds(p.Latitude, p.Longitude)).ToList()
+            ? [.. AllPlaces.Where(p => IsInBounds(p.Latitude, p.Longitude))]
             : AllPlaces;
 
     protected void InvalidateVisiblePlaces()

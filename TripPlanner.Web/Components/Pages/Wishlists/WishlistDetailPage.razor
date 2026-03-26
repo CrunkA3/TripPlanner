@@ -599,11 +599,11 @@ else
         _importExportMessage = null;
         var file = e.File;
 
-        // Max 5 MB for YAML files
-        const long maxSize = 5 * 1024 * 1024;
+        // Max 150 MB for YAML files
+        const long maxSize = 150 * 1024 * 1024;
         if (file.Size > maxSize)
         {
-            _importExportMessage = "File is too large. Maximum size is 5 MB.";
+            _importExportMessage = "File is too large. Maximum size is 150 MB.";
             _importExportMessageIntent = MessageIntent.Error;
             return;
         }
