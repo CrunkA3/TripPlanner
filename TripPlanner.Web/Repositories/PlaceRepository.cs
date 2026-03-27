@@ -277,6 +277,8 @@ public class PlaceRepository : IPlaceRepository
         var query = _context.Places
             .AsNoTracking()
             .Where(p => p.WishlistId == wishlistId)
+            .Include(p => p.Wishlist)
+            .ThenInclude(wl => wl!.SharedWith)
             .OrderBy(p => p.Name)
             .Select(p => new
             {
