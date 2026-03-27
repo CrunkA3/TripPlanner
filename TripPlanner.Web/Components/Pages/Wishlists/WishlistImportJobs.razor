@@ -1,0 +1,235 @@
+﻿@using System.ComponentModel.DataAnnotations
+@using TripPlanner.Web.Models
+@using TripPlanner.Web.Repositories
+
+@inject BrowserTimeZoneService BrowserTimeZoneService
+@inject IDialogService DialogService
+@inject UserService UserService
+@inject IUrlImportJobRepository UrlImportJobRepository
+
+@if (CanEdit)
+{
+    <FluentCard>
+        <FluentStack Orientation="Orientation.Vertical" Style="gap: 8px;">
+            <FluentLabel Typo="Typography.H5">
+                <FluentIcon Value="@(new Icons.Regular.Size20.Link())" Style="margin-right: 6px;" />
+                Import Places from URLs
+            </FluentLabel>
+            <FluentLabel>
+                Enter one or more URLs (one per line). Each URL will be analysed by AI and a new place will be created for review.
+            </FluentLabel>
+            <FluentTextArea @bind-Value="urlInputText"
+                            Placeholder="https://example.com/place-to-visit"
+                            Rows="4"
+                            Style="width: 100%; font-family: monospace;" />
+            @if (!string.IsNullOrEmpty(urlSubmitError))
+            {
+                <FluentMessageBar Intent="MessageIntent.Error">@urlSubmitError</FluentMessageBar>
+            }
+            <FluentButton Appearance="Appearance.Accent"
+                          IconStart="@(new Icons.Regular.Size20.ArrowUpload())"
+                          OnClick="@SubmitUrls"
+                          Disabled="@(string.IsNullOrWhiteSpace(urlInputText))">
+                Add to Import Queue
+            </FluentButton>
+        </FluentStack>
+    </FluentCard>
+}
+
+@if (importJobs != null && importJobs.Count > 0)
+{
+    <FluentCard>
+        <FluentStack Orientation="Orientation.Vertical" Style="gap: 8px;">
+            <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                <FluentLabel Typo="Typography.H5">
+                    <FluentIcon Value="@(new Icons.Regular.Size20.ClipboardTask())" Style="margin-right: 6px;" />
+                    Import Queue
+                </FluentLabel>
+                <FluentSpacer />
+                <FluentButton Appearance="Appearance.Lightweight"
+                              IconStart="@(new Icons.Regular.Size20.ArrowClockwise())"
+                              OnClick="@RefreshJobs"
+                              title="Refresh">
+                    Refresh
+                </FluentButton>
+            </FluentStack>
+
+            <FluentDataGrid Items="@importJobs.AsQueryable()" GridTemplateColumns="3fr 1fr 1fr auto" Style="width: 100%;">
+                <PropertyColumn Property="@(j => j.Url)" Title="URL" />
+                <TemplateColumn Title="Status">
+                    @{
+                        var statusIcon = context.Status switch
+                        {
+                            UrlImportJobStatus.Pending => "⏳",
+                            UrlImportJobStatus.Processing => "⚙️",
+                            UrlImportJobStatus.Completed => "✅",
+                            UrlImportJobStatus.Failed => "❌",
+                            _ => "?"
+                        };
+                    }
+                    <span>@statusIcon @context.Status</span>
+                </TemplateColumn>
+                <TemplateColumn Title="Created">
+                    <span title="@context.CreatedAt.ToString("o")">@context.CreatedAt.ToLocalTime().ToString("g")</span>
+                </TemplateColumn>
+                <TemplateColumn Title="Actions">
+                    @if (context.Status == UrlImportJobStatus.Failed)
+                    {
+                        <FluentStack Orientation="Orientation.Horizontal" Style="gap: 4px;">
+                            <FluentTooltip Anchor="@($"retry-btn-{context.Id}")" Position="TooltipPosition.Left">
+                                @context.ErrorMessage
+                            </FluentTooltip>
+                            <FluentButton Id="@($"retry-btn-{context.Id}")"
+                                          Appearance="Appearance.Lightweight"
+                                          IconStart="@(new Icons.Regular.Size20.ArrowClockwise())"
+                                          OnClick="@(() => RetryJob(context))"
+                                          title="@context.ErrorMessage">
+                                Retry
+                            </FluentButton>
+                            @if (CanEdit)
+                            {
+                                <FluentButton Appearance="Appearance.Lightweight"
+                                              IconStart="@(new Icons.Regular.Size20.Delete())"
+                                              OnClick="@(() => DeleteJob(context.Id))">
+                                </FluentButton>
+                            }
+                            @if (!string.IsNullOrEmpty(context.AiPrompt) || !string.IsNullOrEmpty(context.AiResponse))
+                            {
+                                <FluentButton Appearance="Appearance.Lightweight"
+                                              IconStart="@(new Icons.Regular.Size20.Bot())"
+                                              OnClick="@(() => OpenJobDetails(context))"
+                                              title="Show AI prompt and response">
+                                    Details
+                                </FluentButton>
+                            }
+                        </FluentStack>
+                    }
+                    else if (context.Status == UrlImportJobStatus.Completed && context.CreatedPlaceId != null)
+                    {
+                        <FluentStack Orientation="Orientation.Horizontal" Style="gap: 4px;">
+                            <FluentLabel Color="Color.Success" Style="font-size: 0.85em;">Place created</FluentLabel>
+                            @if (!string.IsNullOrEmpty(context.AiPrompt) || !string.IsNullOrEmpty(context.AiResponse))
+                            {
+                                <FluentButton Appearance="Appearance.Lightweight"
+                                              IconStart="@(new Icons.Regular.Size20.Bot())"
+                                              OnClick="@(() => OpenJobDetails(context))"
+                                              title="Show AI prompt and response">
+                                    Details
+                                </FluentButton>
+                            }
+                        </FluentStack>
+                    }
+                </TemplateColumn>
+            </FluentDataGrid>
+        </FluentStack>
+    </FluentCard>
+}
+
+
+@code {
+    [Parameter, EditorRequired]
+    public string WishlistId { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public bool CanEdit { get; set; }
+
+    private List<UrlImportJob>? importJobs;
+
+    private string urlInputText = string.Empty;
+    private string? urlSubmitError;
+    private string? currentUserId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentUserId = await UserService.GetCurrentUserIdAsync();
+        if (currentUserId != null)
+        {
+            await LoadImportJobs();
+        }
+    }
+
+
+    private async Task LoadImportJobs()
+    {
+        importJobs = await UrlImportJobRepository.GetByWishlistIdAsync(WishlistId);
+    }
+
+    private async Task SubmitUrls()
+    {
+        urlSubmitError = null;
+
+        if (currentUserId == null || string.IsNullOrWhiteSpace(urlInputText))
+            return;
+
+        var lines = urlInputText
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToList();
+
+        if (lines.Count == 0)
+        {
+            urlSubmitError = "Please enter at least one URL.";
+            return;
+        }
+
+        var invalid = lines.Where(l => !Uri.TryCreate(l, UriKind.Absolute, out var u) ||
+            (u.Scheme != Uri.UriSchemeHttp && u.Scheme != Uri.UriSchemeHttps) ||
+            UrlSecurityHelper.IsPrivateOrLocalUri(u)).ToList();
+        if (invalid.Count > 0)
+        {
+            urlSubmitError = $"Invalid URL(s): {string.Join(", ", invalid)}";
+            return;
+        }
+
+        foreach (var url in lines)
+        {
+            var job = new UrlImportJob
+            {
+                WishlistId = WishlistId,
+                Url = url,
+                CreatedByUserId = currentUserId,
+                Status = UrlImportJobStatus.Pending,
+                LanguageTag = BrowserTimeZoneService.LanguageTag,
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+            await UrlImportJobRepository.AddAsync(job);
+        }
+
+        urlInputText = string.Empty;
+        await LoadImportJobs();
+    }
+
+
+    private async Task RefreshJobs()
+    {
+        await LoadImportJobs();
+    }
+
+    private async Task RetryJob(UrlImportJob job)
+    {
+        job.Status = UrlImportJobStatus.Pending;
+        job.ErrorMessage = null;
+        job.ProcessedAt = null;
+        await UrlImportJobRepository.UpdateAsync(job);
+        await LoadImportJobs();
+    }
+
+    private async Task DeleteJob(string jobId)
+    {
+        await UrlImportJobRepository.DeleteAsync(jobId);
+        await LoadImportJobs();
+    }
+
+    private async Task OpenJobDetails(UrlImportJob job)
+    {
+        var panel = await DialogService.ShowPanelAsync<UrlImportJobDetailsDrawer>(job, new DialogParameters()
+        {
+            Title = $"AI Details: {job.Url}",
+            Width = "min(95vw, 900px)",
+            PreventDismissOnOverlayClick = false,
+        });
+
+        await panel.Result;
+    }
+
+
+}
