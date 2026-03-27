@@ -100,8 +100,8 @@
                     </FluentSelect>
                     <FluentAutocomplete TOption="string" Label="Tags" OnOptionsSearch="@OnTagSearchAsync" @bind-SelectedOptions="@SelectedTags" />
                     <FluentStack Orientation="Orientation.Horizontal" Style="width: 100%; gap: 8px;">
-                        <FluentNumberField @bind-Value="@Content.Latitude" Label="Latitude" Step="0.0001" Style="flex: 1;" />
-                        <FluentNumberField @bind-Value="@Content.Longitude" Label="Longitude" Step="0.0001" Style="flex: 1;" />
+                        <FluentNumberField @bind-Value="@Content.Latitude" Label="Latitude" Step="0.0001" Style="flex: 1;" data-testid="place-latitude" />
+                        <FluentNumberField @bind-Value="@Content.Longitude" Label="Longitude" Step="0.0001" Style="flex: 1;" data-testid="place-longitude" />
                     </FluentStack>
                 </FluentStack>
             </FluentTab>

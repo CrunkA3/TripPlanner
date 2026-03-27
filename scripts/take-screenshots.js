@@ -202,6 +202,8 @@ async function main() {
 
         await fillByTestId(page, 'place-name', 'Eiffel Tower');
         await fillByTestId(page, 'place-description', 'Iconic iron lattice tower on the Champ de Mars in Paris');
+        await fillByTestId(page, 'place-latitude', '48.858');
+        await fillByTestId(page, 'place-longitude', '2.294');
 
         await page.getByTestId('save-place-button').click();
         await page.waitForTimeout(2500);
@@ -212,6 +214,8 @@ async function main() {
 
         await fillByTestId(page, 'place-name', 'Colosseum');
         await fillByTestId(page, 'place-description', 'Ancient amphitheatre in the centre of Rome');
+        await fillByTestId(page, 'place-latitude', '41.890');
+        await fillByTestId(page, 'place-longitude', '12.492');
 
         await page.getByTestId('save-place-button').click();
         await page.waitForTimeout(2500);
