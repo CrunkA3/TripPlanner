@@ -432,7 +432,6 @@
         if (PlanningTrip == null)
             return;
 
-        PlanningTrip.UpdatedAt = DateTimeOffset.UtcNow;
         await TripRepository.UpdateAsync(PlanningTrip);
 
         PlanningTrip = null;
