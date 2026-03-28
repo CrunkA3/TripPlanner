@@ -14,6 +14,7 @@
 @inject IGpxRepository GpxRepository
 @inject UserService UserService
 @inject IDialogService DialogService
+@inject IToastService ToastService
 @inject IJSRuntime JSRuntime
 @inject WeatherService WeatherService
 
@@ -21,6 +22,7 @@
 
 <PageTitle>Trip Planner - @(PlanningTrip?.Name ?? TripId)</PageTitle>
 <FluentDialogProvider />
+<FluentToastProvider MaxToastCount="10" />
 
 
 <div class="hide-lg-up">
@@ -408,23 +410,28 @@
         var day = PlanningTrip.Days.FirstOrDefault(d => d.Id == dayId);
         var placeToRemove = day?.Places.FirstOrDefault(p => p.PlaceId == placeId);
         var placeName = placeToRemove?.Place?.Name ?? "this place";
+
+        if (placeToRemove is null) return;
+
+
         var dialog = await DialogService.ShowDialogAsync<ConfirmDialog>(
             new ConfirmDialogContent($"Are you sure you want to remove \"{placeName}\" from this day?", "Remove"),
             new DialogParameters { Title = "Confirm Remove", PreventDismissOnOverlayClick = true });
+
         var result = await dialog.Result;
         if (result.Cancelled) return;
 
-        if (placeToRemove != null)
+        await TripRepository.DeleteTripPlaceAsync(placeToRemove.Id, CurrentUser.Id);
+        day!.Places.Remove(placeToRemove);
+        // Reorder remaining places
+        var order = 1;
+        foreach (var p in day.Places.OrderBy(p => p.Order))
         {
-            day!.Places.Remove(placeToRemove);
-            // Reorder remaining places
-            var order = 1;
-            foreach (var p in day.Places.OrderBy(p => p.Order))
-            {
-                p.Order = order++;
-            }
+            p.Order = order++;
         }
+                        
         await UpdateMapContent();
+        ToastService.ShowSuccess($"\"{placeName}\" removed from day {day.DayNumber}");
     }
 
     private async Task SaveTripPlan()
@@ -519,8 +526,8 @@
                 Place = place
             };
             tripPlace = await TripRepository.AddTripPlaceAsync(tripPlace);
-
             toDay.Places.Add(tripPlace);
+            ToastService.ShowSuccess("Trip plan updated");
         }
 
 

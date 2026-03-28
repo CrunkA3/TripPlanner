@@ -29,6 +29,13 @@ public class TripRepository(ApplicationDbContext context) : ITripRepository
         await _context.SaveChangesAsync();
         return trip;
     }
+    public async Task<TripPlace> AddTripPlaceAsync(TripPlace tripPlace)
+    {
+        _context.Entry(tripPlace).State = EntityState.Added;
+        await _context.SaveChangesAsync();
+        return tripPlace;
+    }
+
 
     public async Task<Trip> UpdateAsync(Trip trip)
     {
@@ -37,6 +44,7 @@ public class TripRepository(ApplicationDbContext context) : ITripRepository
 
         var states = tripPlaces.Select(tp => _context.Entry(tp).State);
         var entry = _context.Entry(trip);
+
         _context.Entry(trip).State = EntityState.Modified;
         await _context.SaveChangesAsync();
         return trip;
@@ -52,12 +60,19 @@ public class TripRepository(ApplicationDbContext context) : ITripRepository
         }
     }
 
-
-    public async Task<TripPlace> AddTripPlaceAsync(TripPlace tripPlace)
+    public async Task DeleteTripPlaceAsync(string id, string userId)
     {
-        _context.Entry(tripPlace).State = EntityState.Added;
-        await _context.SaveChangesAsync();
-        return tripPlace;
+        var tripFound = await _context.Trips
+            .Include(t => t.Days)
+            .ThenInclude(d => d.Places)
+            .Where(t => t.OwnerId == userId && t.Days.Any(d => d.Places.Any(p => p.Id == id)))
+            .AnyAsync();
+
+        if (!tripFound) throw new KeyNotFoundException($"Trip with id {id} not found for user {userId}");
+
+        await _context.TripPlaces
+            .Where(tp => tp.Id == id)
+            .ExecuteDeleteAsync();
     }
 
 
