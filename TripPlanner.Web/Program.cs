@@ -81,7 +81,7 @@ builder.Services.AddHttpClient("DbTransit", client =>
 
 // Register TripPlanner repositories (EF Core)
 builder.Services.AddScoped<IPlaceRepository, PlaceRepository>();
-builder.Services.AddScoped<ITripRepository, EfTripRepository>();
+builder.Services.AddScoped<ITripRepository, TripRepository>();
 builder.Services.AddScoped<IGpxRepository, GpxRepository>();
 builder.Services.AddScoped<IWishlistRepository, WishlistRepository>();
 builder.Services.AddScoped<IUrlImportJobRepository, UrlImportJobRepository>();

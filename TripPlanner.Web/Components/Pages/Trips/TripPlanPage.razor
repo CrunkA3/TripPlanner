@@ -234,7 +234,7 @@
 
                 bool isScheduled = PlanningTrip.Days.Any(d => d.Places.Any(p => p.PlaceId == place.Id));
                 if (isScheduled) continue;
-                
+
                 await JSRuntime.InvokeVoidAsync("mapInterop.addMarker",
                     place.Id, place.Latitude, place.Longitude,
                     place.Name, place.Category.ToString(), "#9E9E9E");
@@ -432,7 +432,6 @@
         if (PlanningTrip == null)
             return;
 
-        PlanningTrip.UpdatedAt = DateTimeOffset.UtcNow;
         await TripRepository.UpdateAsync(PlanningTrip);
 
         PlanningTrip = null;
@@ -512,13 +511,19 @@
         if (place != null)
         {
             var newOrder = toDay.Places.Any() ? toDay.Places.Max(p => p.Order) + 1 : 1;
-            toDay.Places.Add(new TripPlace
+            var tripPlace = new TripPlace
             {
+                TripDayId = toDay.Id,
                 PlaceId = place.Id,
                 Order = newOrder,
                 Place = place
-            });
+            };
+            tripPlace = await TripRepository.AddTripPlaceAsync(tripPlace);
+
+            toDay.Places.Add(tripPlace);
         }
+
+
 
         // Clear drag state
         DraggedPlaceId = null;

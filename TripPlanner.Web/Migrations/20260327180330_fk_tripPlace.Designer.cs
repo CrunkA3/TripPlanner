@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TripPlanner.Web.Data;
 
@@ -11,9 +12,11 @@ using TripPlanner.Web.Data;
 namespace TripPlanner.Web.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260327180330_fk_tripPlace")]
+    partial class fk_tripPlace
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -674,8 +677,6 @@ namespace TripPlanner.Web.Migrations
                         .HasColumnType("datetimeoffset");
 
                     b.Property<string>("TripDayId")
-                        .IsRequired()
-                        .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("TripId")
@@ -1012,8 +1013,7 @@ namespace TripPlanner.Web.Migrations
                     b.HasOne("TripPlanner.Web.Models.TripDay", null)
                         .WithMany("Places")
                         .HasForeignKey("TripDayId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("TripPlanner.Web.Models.Trip", null)
                         .WithMany("UnscheduledPlaces")

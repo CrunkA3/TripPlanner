@@ -92,6 +92,11 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .WithMany(t => t.Days)
             .OnDelete(DeleteBehavior.Cascade);
 
+        modelBuilder.Entity<TripPlace>()
+            .HasOne<TripDay>()
+            .WithMany(d => d.Places)
+            .OnDelete(DeleteBehavior.Cascade);
+
         // Configure Accommodation
         modelBuilder.Entity<Accommodation>()
             .HasOne(a => a.Trip)
