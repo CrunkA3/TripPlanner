@@ -4,14 +4,9 @@ using TripPlanner.Web.Models;
 
 namespace TripPlanner.Web.Repositories;
 
-public class EfTripRepository : ITripRepository
+public class TripRepository(ApplicationDbContext context) : ITripRepository
 {
-    private readonly ApplicationDbContext _context;
-
-    public EfTripRepository(ApplicationDbContext context)
-    {
-        _context = context;
-    }
+    private readonly ApplicationDbContext _context = context;
 
     public async Task<List<Trip>> GetAllAsync()
     {
@@ -38,6 +33,10 @@ public class EfTripRepository : ITripRepository
     public async Task<Trip> UpdateAsync(Trip trip)
     {
         trip.UpdatedAt = DateTimeOffset.UtcNow;
+        var tripPlaces = trip.Days.SelectMany(d => d.Places).ToList();
+
+        var states = tripPlaces.Select(tp => _context.Entry(tp).State);
+        var entry = _context.Entry(trip);
         _context.Entry(trip).State = EntityState.Modified;
         await _context.SaveChangesAsync();
         return trip;
@@ -52,6 +51,15 @@ public class EfTripRepository : ITripRepository
             await _context.SaveChangesAsync();
         }
     }
+
+
+    public async Task<TripPlace> AddTripPlaceAsync(TripPlace tripPlace)
+    {
+        _context.Entry(tripPlace).State = EntityState.Added;
+        await _context.SaveChangesAsync();
+        return tripPlace;
+    }
+
 
     public async Task<List<Trip>> GetByOwnerAsync(string userId)
     {

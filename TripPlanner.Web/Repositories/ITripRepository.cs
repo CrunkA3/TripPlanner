@@ -7,6 +7,8 @@ public interface ITripRepository
     Task<List<Trip>> GetAllAsync();
     Task<Trip?> GetByIdAsync(string id);
     Task<Trip> AddAsync(Trip trip);
+    Task<TripPlace> AddTripPlaceAsync(TripPlace tripPlace);
+
     Task<Trip> UpdateAsync(Trip trip);
     Task DeleteAsync(string id, string userId);
     Task<List<Trip>> GetByOwnerAsync(string userId);
