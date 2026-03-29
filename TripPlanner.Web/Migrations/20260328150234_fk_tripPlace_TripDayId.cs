@@ -10,6 +10,8 @@ namespace TripPlanner.Web.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.Sql("DELETE FROM TripPlaces WHERE TripDayId IS NULL");
+
             migrationBuilder.AlterColumn<string>(
                 name: "TripDayId",
                 table: "TripPlaces",
