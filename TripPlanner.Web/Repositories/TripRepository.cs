@@ -50,6 +50,22 @@ public class TripRepository(ApplicationDbContext context) : ITripRepository
         return trip;
     }
 
+    public async Task<int> UpdateTipPlaceDateTimeAsync(TripPlace tripPlace, DateTimeOffset? scheduledTime, string userId)
+    {
+        var tripFound = await _context.Trips
+            .Include(t => t.Days)
+            .ThenInclude(d => d.Places)
+            .Where(t => t.OwnerId == userId && t.Days.Any(d => d.Places.Any(p => p.Id == tripPlace.Id)))
+            .AnyAsync();
+
+        if (!tripFound) throw new KeyNotFoundException($"TripPlace with id {tripPlace.Id} not found for user {userId}");
+
+        return await _context.TripPlaces
+            .Where(tp => tp.Id == tripPlace.Id)
+            .ExecuteUpdateAsync(tp => tp.SetProperty(p => p.ScheduledTime, scheduledTime));
+    }
+
+
     public async Task DeleteAsync(string id, string userId)
     {
         var trip = await _context.Trips.FirstOrDefaultAsync(t => t.Id == id && t.OwnerId == userId);

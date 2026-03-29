@@ -1,4 +1,12 @@
 ﻿@using TripPlanner.Web.Models
+@using TripPlanner.Web.Repositories
+
+@inject ITripRepository TripRepository
+@inject IToastService ToastService
+@inject UserService UserService
+@inject BrowserTimeZoneService BrowserTimeZoneService
+
+
 <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Stretch" VerticalGap="6">
     <FluentButton Appearance="Appearance.Accent" OnClick="async (e) => await OnSaveTripPlan.InvokeAsync()">Save Plan</FluentButton>
     <FluentStack Orientation="Orientation.Vertical" VerticalGap="6">
@@ -47,8 +55,8 @@
                                         <FluentIcon Value="@(new Icons.Regular.Size16.Navigation())" />
                                         <FluentLabel Weight="FontWeight.Bold" Style="flex: 1;overflow: hidden;text-overflow: ellipsis;" @ondblclick="@(async () => await OnEditPlaceClick.InvokeAsync(tripPlace.Place!))">@(tripPlace.Place?.Name ?? "Unknown")</FluentLabel>
                                         <input type="time"
-                                               value="@(tripPlace.ScheduledTime.HasValue? tripPlace.ScheduledTime.Value.ToString("HH:mm") : "")"
-                                               @onchange="@(async (e) => await OnUpdateScheduledTime.InvokeAsync((tripPlace, e.Value?.ToString(), day.Date)))"
+                                               value="@(tripPlace.ScheduledTime.HasValue ? tripPlace.ScheduledTime.Value.ToString("HH:mm") : "")"
+                                               @onchange="@(async (e) => await UpdateScheduledTimeAsync(tripPlace, e.Value?.ToString(), day.Date))"
                                                style="border: 1px solid var(--neutral-stroke-rest); border-radius: 4px; padding: 2px 4px; font-size: 0.875em; background: transparent;" />
                                         <FluentButton Appearance="Appearance.Lightweight"
                                                       OnClick="@(async () => await OnRemovePlaceFromDay.InvokeAsync((day.Id, tripPlace.PlaceId)))"
@@ -69,19 +77,21 @@
 
 
 @code {
+    private ApplicationUser? CurrentUser { get; set; }
+
     [Parameter, EditorRequired]
     public Trip? PlanningTrip { get; set; }
 
     [Parameter, EditorRequired]
     public string? CurrentDropTarget { get; set; }
 
-    
+
     [Parameter, EditorRequired]
     public EventCallback<(string PlaceId, string? FromDayId, int FromOrder)> OnHandleDragStart { get; set; }
-    
+
     [Parameter, EditorRequired]
     public EventCallback OnHandleDragEnd { get; set; }
-    
+
     [Parameter, EditorRequired]
     public EventCallback<Place> OnEditPlaceClick { get; set; }
 
@@ -98,10 +108,30 @@
     public EventCallback OnSaveTripPlan { get; set; }
 
     [Parameter, EditorRequired]
-    public EventCallback<(TripPlace tripPlace, string? timeString, DateTimeOffset? date)> OnUpdateScheduledTime { get; set; }
-
-    [Parameter, EditorRequired]
     public EventCallback<(string dayId, string placeId)> OnRemovePlaceFromDay { get; set; }
 
 
+    protected override async Task OnInitializedAsync()
+    {
+        CurrentUser = await UserService.GetCurrentUserAsync();
+    }
+
+
+    private async Task UpdateScheduledTimeAsync(TripPlace tripPlace, string? timeString, DateTimeOffset? dayDate)
+    {
+        if (CurrentUser is null) return;
+
+        if (string.IsNullOrEmpty(timeString))
+        {
+            tripPlace.ScheduledTime = null;
+        }
+        else if (TimeOnly.TryParse(timeString, out var time))
+        {
+            var baseDate = DateOnly.FromDateTime(dayDate?.Date ?? DateTime.Today);
+            tripPlace.ScheduledTime = new DateTimeOffset(baseDate, time, BrowserTimeZoneService.GetTimeZone().BaseUtcOffset);
+        }
+
+        var result = await TripRepository.UpdateTipPlaceDateTimeAsync(tripPlace, tripPlace.ScheduledTime, CurrentUser.Id);
+        ToastService.ShowSuccess("Schedule time saved");
+    }
 }
