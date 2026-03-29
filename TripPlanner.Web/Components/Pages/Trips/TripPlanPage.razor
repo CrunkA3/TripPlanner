@@ -53,7 +53,6 @@
                                      OnHandleDragEnter="(dayId) => HandleDragEnter(dayId)"
                                      OnHandleDragLeave="() => HandleDragLeave()"
                                      OnHandleDrop="(dayId) => HandleDrop(dayId)"
-                                     OnUpdateScheduledTime="(args) => UpdateScheduledTime(args.tripPlace, args.timeString, args.date)"
                                      OnRemovePlaceFromDay="(args) => RemovePlaceFromDay(args.dayId, args.placeId)"
                                      OnEditPlaceClick="OpenEditPlaceDialog"
                                      OnSaveTripPlan="SaveTripPlan" />
@@ -541,19 +540,6 @@
         await UpdateMapContent();
     }
 
-    private void UpdateScheduledTime(TripPlace tripPlace, string? timeString, DateTimeOffset? dayDate)
-    {
-        if (string.IsNullOrEmpty(timeString))
-        {
-            tripPlace.ScheduledTime = null;
-        }
-        else if (TimeOnly.TryParse(timeString, out var time))
-        {
-            var baseDate = dayDate?.Date ?? DateTime.Today;
-            tripPlace.ScheduledTime = baseDate.Add(time.ToTimeSpan());
-        }
-    }
-
     private async Task OpenAddPlaceDialog()
     {
         var dialog = await DialogService.ShowDialogAsync<PlaceDialog>(new Place() { TripId = TripId }, new DialogParameters()
@@ -627,7 +613,6 @@
             OnHandleDragEnter = EventCallback.Factory.Create<string>(this, (dayId) => HandleDragEnter(dayId)),
             OnHandleDragLeave = EventCallback.Factory.Create(this, () => HandleDragLeave()),
             OnHandleDrop = EventCallback.Factory.Create<string>(this, (dayId) => HandleDrop(dayId)),
-            OnUpdateScheduledTime = EventCallback.Factory.Create<(TripPlace tripPlace, string? timeString, DateTimeOffset? date)>(this, (args) => UpdateScheduledTime(args.tripPlace, args.timeString, args.date)),
             OnRemovePlaceFromDay = EventCallback.Factory.Create<(string dayId, string placeId)>(this, (args) => RemovePlaceFromDay(args.dayId, args.placeId)),
             OnSaveTripPlan = EventCallback.Factory.Create(this, () => SaveTripPlan()),
             CurrentDropTarget = CurrentDropTarget

@@ -12,7 +12,6 @@
                              OnHandleDragEnter="Content.OnHandleDragEnter"
                              OnHandleDragLeave="Content.OnHandleDragLeave"
                              OnHandleDrop="Content.OnHandleDrop"
-                             OnUpdateScheduledTime="Content.OnUpdateScheduledTime"
                              OnRemovePlaceFromDay="Content.OnRemovePlaceFromDay"
                              OnEditPlaceClick="Content.OnEditPlaceClick"
                              OnSaveTripPlan="Content.OnSaveTripPlan" />
@@ -42,8 +41,6 @@
         public required EventCallback<string> OnHandleDrop { get; set; }
 
         public required EventCallback OnSaveTripPlan { get; set; }
-
-        public required EventCallback<(TripPlace tripPlace, string? timeString, DateTimeOffset? date)> OnUpdateScheduledTime { get; set; }
 
         public required EventCallback<(string dayId, string placeId)> OnRemovePlaceFromDay { get; set; }
     }
