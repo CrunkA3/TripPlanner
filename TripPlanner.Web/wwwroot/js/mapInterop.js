@@ -240,7 +240,7 @@ window.mapInterop = {
         this.routes.forEach(function (r) { r.coords.forEach(function (c) { bounds.extend(c); }); });
         this.gpxTracks.forEach(function (t) { t.coords.forEach(function (c) { bounds.extend(c); }); });
         if (!bounds.isEmpty()) {
-            this.map.fitBounds(bounds, { padding: 50 });
+            this.map.fitBounds(bounds, { padding: { top: 80, bottom: 50, left: 50, right: 300 } });
         }
     },
 
