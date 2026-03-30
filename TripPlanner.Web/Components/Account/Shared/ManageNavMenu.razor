@@ -1,8 +1,11 @@
-﻿@using Microsoft.AspNetCore.Identity
+﻿@implements IDisposable
+
+@using Microsoft.AspNetCore.Identity
 @using TripPlanner.Web.Data
 @using TripPlanner.Web.Models
 
 @inject SignInManager<ApplicationUser> SignInManager
+@inject NavigationManager NavigationManager
 
 <FluentNavMenu Collapse="false">
     <FluentNavLink Href="Account/Manage" Match="NavLinkMatch.All">Profile</FluentNavLink>
@@ -18,14 +21,34 @@
     <FluentNavLink Href="Account/Manage/ApiKey">MCP API Key</FluentNavLink>
     <FluentNavLink Href="Account/Manage/PersonalData">Personal data</FluentNavLink>
 
+    <form action="Account/Logout" method="post">
+        <AntiforgeryToken />
+        <input type="hidden" name="ReturnUrl" value="@currentUrl" />
+        <FluentButton Type="ButtonType.Submit" Style="width: 100%;">Logout</FluentButton>
+    </form>
+
 </FluentNavMenu>
 
 
 @code {
     private bool hasExternalLogins;
+    private string? currentUrl;
 
     protected override async Task OnInitializedAsync()
     {
         hasExternalLogins = (await SignInManager.GetExternalAuthenticationSchemesAsync()).Any();
+        NavigationManager.LocationChanged += OnLocationChanged;
     }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
+    }
+
 }
