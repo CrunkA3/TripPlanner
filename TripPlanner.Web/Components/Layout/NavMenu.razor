@@ -1,6 +1,4 @@
-﻿@implements IDisposable
-
-@inject NavigationManager NavigationManager
+﻿@inject NavigationManager NavigationManager
 
 <div class="navmenu">
     <input type="checkbox" title="Menu expand/collapse toggle" id="navmenu-toggle" class="navmenu-icon" />
@@ -15,13 +13,6 @@
                     <FluentNavLink Href="trips" Icon="@(new Icons.Regular.Size20.VehicleCar())" IconColor="Color.Accent">Trips</FluentNavLink>
                     <FluentNavLink Href="map" Icon="@(new Icons.Regular.Size20.Map())" IconColor="Color.Accent">Map</FluentNavLink>
                     <FluentNavLink Href="chat" Icon="@(new Icons.Regular.Size20.Bot())" IconColor="Color.Accent">Chat</FluentNavLink>
-
-                    <FluentNavLink Href="Account/Manage">@context.User.Identity?.Name</FluentNavLink>
-                    <form action="Account/Logout" method="post">
-                        <AntiforgeryToken />
-                        <input type="hidden" name="ReturnUrl" value="@currentUrl" />
-                        <FluentButton Type="ButtonType.Submit" Style="width: 100%;">Logout</FluentButton>
-                    </form>
                 </Authorized>
                 <NotAuthorized>
                     <FluentNavLink Href="Account/Register">Register</FluentNavLink>
@@ -34,22 +25,4 @@
 
 @code {
     private bool expanded = true;
-    private string? currentUrl;
-
-    protected override void OnInitialized()
-    {
-        currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
-        NavigationManager.LocationChanged += OnLocationChanged;
-    }
-
-    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
-    {
-        currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
-        StateHasChanged();
-    }
-
-    public void Dispose()
-    {
-        NavigationManager.LocationChanged -= OnLocationChanged;
-    }
 }
