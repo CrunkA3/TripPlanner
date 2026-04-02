@@ -38,6 +38,6 @@ public partial class OptionalPhoneAttribute : ValidationAttribute
     /// number formats.</remarks>
     /// <returns>A <see cref="Regex"/> instance that matches phone numbers with optional plus sign, digits, spaces, or hyphens.</returns>
 
-    [GeneratedRegex(@"^\+?[0-9\s\-]+$")]
+    [GeneratedRegex(@"^(?=\+?[0-9\s\-]*\d)\+?[0-9\s\-]+$")]
     private static partial Regex PhoneNumberRegex();
 }
