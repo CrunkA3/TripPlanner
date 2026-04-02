@@ -209,12 +209,15 @@ window.mapInterop = {
         wrapper.appendChild(el);
 
         wrapper.addEventListener('click', function () {
+            self.selectMarker(id);
             if (self.dotNetRef) self.dotNetRef.invokeMethodAsync('OnMarkerClicked', id);
         });
         wrapper.addEventListener('mouseenter', function () {
+            self.hoverMarker(id);
             if (self.dotNetRef) self.dotNetRef.invokeMethodAsync('OnMarkerHovered', id);
         });
         wrapper.addEventListener('mouseleave', function () {
+            self.unhoverMarker(id);
             if (self.dotNetRef) self.dotNetRef.invokeMethodAsync('OnMarkerUnhovered');
         });
 
