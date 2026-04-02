@@ -142,7 +142,7 @@
                                 @if (currentImg is not null)
                                 {
                                     <div class="map-card-image-container" style="height:70px;">
-                                        <img @key="@currentImg" src="/api/placeImages/@currentImg" alt="@place.Name" class="map-card-image" />
+                                        <img @key="@currentImg" src="/api/placeImages/@currentImg?width=400" alt="@place.Name" class="map-card-image" />
                                     </div>
                                 }
                                 <FluentStack Orientation="Orientation.Vertical">
