@@ -186,7 +186,7 @@
                             @if (currentImg is not null)
                             {
                                 <div class="map-card-image-container">
-                                    <img @key="@currentImg" src="/api/placeImages/@currentImg" alt="@tripPlace.Place.Name" class="map-card-image" />
+                                    <img @key="@currentImg" src="/api/placeImages/@currentImg?width=400" alt="@tripPlace.Place.Name" class="map-card-image" />
                                     @if (imageCount > 1)
                                     {
                                         <div class="map-card-dots">
