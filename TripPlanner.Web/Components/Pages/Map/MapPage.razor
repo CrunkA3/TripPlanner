@@ -619,9 +619,12 @@
         {
             await InvokeAsync(() =>
             {
-                foreach (var place in Places.Where(p => p.ImageIds.Count > 1))
-                    _currentImageIndex[place.Id] = (_currentImageIndex.GetValueOrDefault(place.Id) + 1) % place.ImageIds.Count;
-                foreach (var tp in SelectedTripPlaces.Where(tp => tp.Place?.ImageIds.Count > 1))
+                if (ShowWishlist)
+                {
+                    foreach (var place in VisibleWishlistPlaces.Where(p => p.ImageIds.Count > 1))
+                        _currentImageIndex[place.Id] = (_currentImageIndex.GetValueOrDefault(place.Id) + 1) % place.ImageIds.Count;
+                }
+                foreach (var tp in VisibleTripPlaces.Where(tp => tp.Place?.ImageIds.Count > 1))
                     _currentImageIndex[tp.Place!.Id] = (_currentImageIndex.GetValueOrDefault(tp.Place.Id) + 1) % tp.Place.ImageIds.Count;
                 StateHasChanged();
             });
