@@ -1,0 +1,118 @@
+@using TripPlanner.Web.Models
+@using TripPlanner.Web.Components.Shared
+@using TripPlanner.Web.Services
+@using System.Globalization
+
+<div id="place-@Place.Id"
+     class="map-side-card-wrapper"
+     @onclick="OnCardClicked"
+     @onmouseenter="OnCardHovered"
+     @onmouseleave="OnCardUnhovered">
+    @if (Compact)
+    {
+        <FluentCard Style="@($"height:180px;width:150px;padding:6px;{(IsHighlighted ? "border: 2px solid var(--accent-fill-rest); box-shadow: 0 0 10px rgba(0,0,0,0.25);" : "")}")">
+            @if (CurrentImage is not null)
+            {
+                <div class="map-card-image-container" style="height:70px;">
+                    <img @key="@CurrentImage"
+                         src="/api/placeImages/@CurrentImage?width=400"
+                         alt="@Place.Name"
+                         class="map-card-image" />
+                </div>
+            }
+            <FluentStack Orientation="Orientation.Vertical">
+                <FluentLabel Weight="FontWeight.Bold">@Place.Name</FluentLabel>
+                @if (ShowCategory)
+                {
+                    <FluentBadge BackgroundColor="var(--neutral-layer-3)">@Place.Category</FluentBadge>
+                }
+                <FluentLabel Style="font-size: 0.75em;">
+                    <a href="@_googleMapsUrl" target="_blank" rel="noopener noreferrer" @onclick:stopPropagation="true">📍 Maps</a>
+                </FluentLabel>
+                @if (ShowWeather && Weather != null)
+                {
+                    <FluentLabel Style="font-size: 0.75em;" title="@Weather.GetDescription()">
+                        @Weather.GetSummary()
+                    </FluentLabel>
+                }
+            </FluentStack>
+        </FluentCard>
+    }
+    else
+    {
+        <FluentCard Style="@(IsHighlighted ? "border: 2px solid var(--accent-fill-rest); box-shadow: 0 0 10px rgba(0,0,0,0.25); padding: 8px;" : "padding: 8px;")">
+            @if (CurrentImage is not null)
+            {
+                <div class="map-card-image-container">
+                    <img @key="@CurrentImage"
+                         src="/api/placeImages/@CurrentImage?width=400"
+                         srcset="@PlaceImageHelper.BuildSrcSet(CurrentImage)"
+                         sizes="(max-width: 768px) 100vw, 400px"
+                         alt="@Place.Name"
+                         class="map-card-image" />
+                    @if (_imageCount > 1)
+                    {
+                        <div class="map-card-dots">
+                            @for (int i = 0; i < _imageCount; i++)
+                            {
+                                var dotIdx = i;
+                                <button type="button"
+                                        class="map-card-dot @(dotIdx == CurrentImageIndex ? "map-card-dot-active" : "")"
+                                        @onclick:stopPropagation="true"
+                                        @onclick="@(() => OnSetImageIndex.InvokeAsync(dotIdx))"
+                                        aria-label="@($"Image {dotIdx + 1}")"></button>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+            <FluentStack Orientation="Orientation.Vertical">
+                <FluentLabel Weight="FontWeight.Bold">@Place.Name</FluentLabel>
+                @if (ShowCategory)
+                {
+                    <FluentBadge BackgroundColor="var(--neutral-layer-3)">@Place.Category</FluentBadge>
+                }
+                @if (ScheduledTime.HasValue)
+                {
+                    <FluentLabel Style="font-size: 0.875em;">
+                        <FluentIcon Icon="Icons.Regular.Size12.Clock" />
+                        @ScheduledTime.Value.ToString("HH:mm")
+                    </FluentLabel>
+                }
+                <FluentLabel Style="font-size: 0.875em;">
+                    <a href="@_googleMapsUrl" target="_blank" rel="noopener noreferrer" @onclick:stopPropagation="true">📍 Google Maps</a>
+                </FluentLabel>
+                @if (ShowWeather && Weather != null)
+                {
+                    <FluentLabel Style="font-size: 0.875em;" title="@Weather.GetDescription()">
+                        @Weather.GetSummary()
+                    </FluentLabel>
+                }
+            </FluentStack>
+        </FluentCard>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Place Place { get; set; } = null!;
+    [Parameter] public bool IsHighlighted { get; set; }
+    [Parameter] public bool ShowWeather { get; set; }
+    [Parameter] public DailyWeather? Weather { get; set; }
+    [Parameter] public DateTimeOffset? ScheduledTime { get; set; }
+    /// <summary>Compact portrait mode: smaller fixed-size card with no dots or srcset.</summary>
+    [Parameter] public bool Compact { get; set; }
+    [Parameter] public bool ShowCategory { get; set; } = true;
+    [Parameter] public int CurrentImageIndex { get; set; }
+    [Parameter] public EventCallback OnCardClicked { get; set; }
+    [Parameter] public EventCallback OnCardHovered { get; set; }
+    [Parameter] public EventCallback OnCardUnhovered { get; set; }
+    [Parameter] public EventCallback<int> OnSetImageIndex { get; set; }
+
+    private string _googleMapsUrl =>
+        $"https://www.google.com/maps?q={Place.Latitude.ToString("F6", CultureInfo.InvariantCulture)},{Place.Longitude.ToString("F6", CultureInfo.InvariantCulture)}";
+
+    private int _imageCount => Place.ImageIds.Count;
+
+    private string? CurrentImage =>
+        _imageCount > 0 ? Place.ImageIds[Math.Clamp(CurrentImageIndex, 0, _imageCount - 1)] : null;
+}

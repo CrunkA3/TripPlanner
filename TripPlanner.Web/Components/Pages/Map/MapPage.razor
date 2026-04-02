@@ -7,7 +7,6 @@
 @using TripPlanner.Web.Services
 @using Microsoft.JSInterop
 @using TripPlanner.Web.Components.Shared
-@using System.Globalization
 
 @inject IPlaceRepository PlaceRepository
 @inject ITripRepository TripRepository
@@ -61,64 +60,20 @@
 
         @if (ShowWishlist)
         {
-            
             @if (isLandscape)
             {
                 <FluentStack Orientation="Orientation.Vertical" Style="max-height:100%;">
                     @foreach (var place in VisibleWishlistPlaces)
                     {
-                        var weather = WeatherByPlaceId.GetValueOrDefault(place.Id);
-                        var isHighlighted = _selectedPlaceId == place.Id || _hoveredPlaceId == place.Id;
-                        var imageCount = place.ImageIds.Count;
-                        var currentIdx = imageCount > 0 ? Math.Clamp(_currentImageIndex.GetValueOrDefault(place.Id, 0), 0, imageCount - 1) : 0;
-                        var currentImg = imageCount > 0 ? place.ImageIds[currentIdx] : null;
-                        var googleMapsUrl = $"https://www.google.com/maps?q={place.Latitude.ToString("F6", CultureInfo.InvariantCulture)},{place.Longitude.ToString("F6", CultureInfo.InvariantCulture)}";
-                        <div id="place-@place.Id"
-                             class="map-side-card-wrapper"
-                             @onclick="@(() => OnCardClicked(place.Id))"
-                             @onmouseenter="@(() => OnCardHovered(place.Id))"
-                             @onmouseleave="@(() => OnCardUnhovered(place.Id))">
-                            <FluentCard Style="@(isHighlighted ? "border: 2px solid var(--accent-fill-rest); box-shadow: 0 0 10px rgba(0,0,0,0.25); padding: 8px;" : "padding: 8px;")">
-                                @if (currentImg is not null)
-                                {
-                                    <div class="map-card-image-container">
-                                        <img @key="@currentImg"
-                                             src="/api/placeImages/@currentImg?width=400"
-                                             srcset="@PlaceImageHelper.BuildSrcSet(currentImg)"
-                                             sizes="(max-width: 768px) 100vw, 400px"
-                                             alt="@place.Name"
-                                             class="map-card-image" />
-                                        @if (imageCount > 1)
-                                        {
-                                            <div class="map-card-dots">
-                                                @for (int i = 0; i < imageCount; i++)
-                                                {
-                                                    var dotIdx = i;
-                                                    <button type="button"
-                                                            class="map-card-dot @(dotIdx == currentIdx ? "map-card-dot-active" : "")"
-                                                            @onclick:stopPropagation="true"
-                                                            @onclick="@(() => SetImageIndex(place.Id, dotIdx))"
-                                                            aria-label="@($"Image {dotIdx + 1}")"></button>
-                                                }
-                                            </div>
-                                        }
-                                    </div>
-                                }
-                                <FluentStack Orientation="Orientation.Vertical">
-                                    <FluentLabel Weight="FontWeight.Bold">@place.Name</FluentLabel>
-                                    <FluentBadge BackgroundColor="var(--neutral-layer-3)">@place.Category</FluentBadge>
-                                    <FluentLabel Style="font-size: 0.875em;">
-                                        <a href="@googleMapsUrl" target="_blank" rel="noopener noreferrer" @onclick:stopPropagation="true">📍 Google Maps</a>
-                                    </FluentLabel>
-                                    @if (ShowWeather && weather != null)
-                                    {
-                                        <FluentLabel Style="font-size: 0.875em;" title="@weather.GetDescription()">
-                                            @weather.GetSummary()
-                                        </FluentLabel>
-                                    }
-                                </FluentStack>
-                            </FluentCard>
-                        </div>
+                        <MapPlaceCard Place="@place"
+                                      IsHighlighted="@(_selectedPlaceId == place.Id || _hoveredPlaceId == place.Id)"
+                                      ShowWeather="@ShowWeather"
+                                      Weather="@WeatherByPlaceId.GetValueOrDefault(place.Id)"
+                                      CurrentImageIndex="@_currentImageIndex.GetValueOrDefault(place.Id, 0)"
+                                      OnCardClicked="@(() => OnCardClicked(place.Id))"
+                                      OnCardHovered="@(() => OnCardHovered(place.Id))"
+                                      OnCardUnhovered="@(() => OnCardUnhovered(place.Id))"
+                                      OnSetImageIndex="@((idx) => SetImageIndex(place.Id, idx))" />
                     }
                 </FluentStack>
             }
@@ -127,103 +82,37 @@
                 <FluentHorizontalScroll Speed="600" Easing=ScrollEasing.EaseInOut>
                     @foreach (var place in VisibleWishlistPlaces)
                     {
-                        var weather = WeatherByPlaceId.GetValueOrDefault(place.Id);
-                        var isHighlighted = _selectedPlaceId == place.Id || _hoveredPlaceId == place.Id;
-                        var imageCount = place.ImageIds.Count;
-                        var currentIdx = imageCount > 0 ? Math.Clamp(_currentImageIndex.GetValueOrDefault(place.Id, 0), 0, imageCount - 1) : 0;
-                        var currentImg = imageCount > 0 ? place.ImageIds[currentIdx] : null;
-                        var googleMapsUrl = $"https://www.google.com/maps?q={place.Latitude.ToString("F6", CultureInfo.InvariantCulture)},{place.Longitude.ToString("F6", CultureInfo.InvariantCulture)}";
-                        <div id="place-@place.Id"
-                             class="map-side-card-wrapper"
-                             @onclick="@(() => OnCardClicked(place.Id))"
-                             @onmouseenter="@(() => OnCardHovered(place.Id))"
-                             @onmouseleave="@(() => OnCardUnhovered(place.Id))">
-                            <FluentCard Style="@($"height:180px;width:150px;padding:6px;{(isHighlighted ? "border: 2px solid var(--accent-fill-rest); box-shadow: 0 0 10px rgba(0,0,0,0.25);" : "")}")">
-                                @if (currentImg is not null)
-                                {
-                                    <div class="map-card-image-container" style="height:70px;">
-                                        <img @key="@currentImg" src="/api/placeImages/@currentImg?width=400" alt="@place.Name" class="map-card-image" />
-                                    </div>
-                                }
-                                <FluentStack Orientation="Orientation.Vertical">
-                                    <FluentLabel Weight="FontWeight.Bold">@place.Name</FluentLabel>
-                                    <FluentBadge BackgroundColor="var(--neutral-layer-3)">@place.Category</FluentBadge>
-                                    <FluentLabel Style="font-size: 0.75em;">
-                                        <a href="@googleMapsUrl" target="_blank" rel="noopener noreferrer" @onclick:stopPropagation="true">📍 Maps</a>
-                                    </FluentLabel>
-                                    @if (ShowWeather && weather != null)
-                                    {
-                                        <FluentLabel Style="font-size: 0.75em;" title="@weather.GetDescription()">
-                                            @weather.GetSummary()
-                                        </FluentLabel>
-                                    }
-                                </FluentStack>
-                            </FluentCard>
-                        </div>
+                        <MapPlaceCard Place="@place"
+                                      IsHighlighted="@(_selectedPlaceId == place.Id || _hoveredPlaceId == place.Id)"
+                                      ShowWeather="@ShowWeather"
+                                      Weather="@WeatherByPlaceId.GetValueOrDefault(place.Id)"
+                                      CurrentImageIndex="@_currentImageIndex.GetValueOrDefault(place.Id, 0)"
+                                      Compact="true"
+                                      OnCardClicked="@(() => OnCardClicked(place.Id))"
+                                      OnCardHovered="@(() => OnCardHovered(place.Id))"
+                                      OnCardUnhovered="@(() => OnCardUnhovered(place.Id))"
+                                      OnSetImageIndex="@((idx) => SetImageIndex(place.Id, idx))" />
                     }
                 </FluentHorizontalScroll>
             }
         }
 
-     
         <FluentStack Orientation="Orientation.Vertical">
             @foreach (var tripPlace in VisibleTripPlaces)
             {
                 @if (tripPlace.Place != null)
                 {
-                    var weather = WeatherByPlaceId.GetValueOrDefault(tripPlace.Place.Id);
-                    var isHighlighted = _selectedPlaceId == tripPlace.Place.Id || _hoveredPlaceId == tripPlace.Place.Id;
-                    var imageCount = tripPlace.Place.ImageIds.Count;
-                    var currentIdx = imageCount > 0 ? Math.Clamp(_currentImageIndex.GetValueOrDefault(tripPlace.Place.Id, 0), 0, imageCount - 1) : 0;
-                    var currentImg = imageCount > 0 ? tripPlace.Place.ImageIds[currentIdx] : null;
-                    var googleMapsUrl = $"https://www.google.com/maps?q={tripPlace.Place.Latitude.ToString("F6", CultureInfo.InvariantCulture)},{tripPlace.Place.Longitude.ToString("F6", CultureInfo.InvariantCulture)}";
-                    <div id="place-@tripPlace.Place.Id"
-                         class="map-side-card-wrapper"
-                         @onclick="@(() => OnCardClicked(tripPlace.Place.Id))"
-                         @onmouseenter="@(() => OnCardHovered(tripPlace.Place.Id))"
-                         @onmouseleave="@(() => OnCardUnhovered(tripPlace.Place.Id))">
-                        <FluentCard Style="@(isHighlighted ? "border: 2px solid var(--accent-fill-rest); box-shadow: 0 0 10px rgba(0,0,0,0.25); padding: 8px;" : "padding: 8px;")">
-                            @if (currentImg is not null)
-                            {
-                                <div class="map-card-image-container">
-                                    <img @key="@currentImg" src="/api/placeImages/@currentImg?width=400" alt="@tripPlace.Place.Name" class="map-card-image" />
-                                    @if (imageCount > 1)
-                                    {
-                                        <div class="map-card-dots">
-                                            @for (int i = 0; i < imageCount; i++)
-                                            {
-                                                var dotIdx = i;
-                                                <button type="button"
-                                                        class="map-card-dot @(dotIdx == currentIdx ? "map-card-dot-active" : "")"
-                                                        @onclick:stopPropagation="true"
-                                                        @onclick="@(() => SetImageIndex(tripPlace.Place.Id, dotIdx))"
-                                                        aria-label="@($"Image {dotIdx + 1}")"></button>
-                                            }
-                                        </div>
-                                    }
-                                </div>
-                            }
-                            <FluentStack Orientation="Orientation.Vertical">
-                                <FluentLabel Weight="FontWeight.Bold">@tripPlace.Place.Name</FluentLabel>
-                                @if (tripPlace.ScheduledTime.HasValue)
-                                {
-                                    <FluentLabel Style="font-size: 0.875em;">
-                                        <FluentIcon Icon="Icons.Regular.Size12.Clock" />
-                                        @tripPlace.ScheduledTime.Value.ToString("HH:mm")
-                                    </FluentLabel>
-                                }
-                                <FluentLabel Style="font-size: 0.875em;">
-                                    <a href="@googleMapsUrl" target="_blank" rel="noopener noreferrer" @onclick:stopPropagation="true">📍 Google Maps</a>
-                                </FluentLabel>
-                                @if (ShowWeather && weather != null)
-                                {
-                                    <FluentLabel Style="font-size: 0.875em;" title="@weather.GetDescription()">
-                                        @weather.GetSummary()
-                                    </FluentLabel>
-                                }
-                            </FluentStack>
-                        </FluentCard>
-                    </div>
+                    <MapPlaceCard Place="@tripPlace.Place"
+                                  IsHighlighted="@(_selectedPlaceId == tripPlace.Place.Id || _hoveredPlaceId == tripPlace.Place.Id)"
+                                  ShowWeather="@ShowWeather"
+                                  Weather="@WeatherByPlaceId.GetValueOrDefault(tripPlace.Place.Id)"
+                                  ScheduledTime="@tripPlace.ScheduledTime"
+                                  ShowCategory="false"
+                                  CurrentImageIndex="@_currentImageIndex.GetValueOrDefault(tripPlace.Place.Id, 0)"
+                                  OnCardClicked="@(() => OnCardClicked(tripPlace.Place.Id))"
+                                  OnCardHovered="@(() => OnCardHovered(tripPlace.Place.Id))"
+                                  OnCardUnhovered="@(() => OnCardUnhovered(tripPlace.Place.Id))"
+                                  OnSetImageIndex="@((idx) => SetImageIndex(tripPlace.Place.Id, idx))" />
                 }
             }
         </FluentStack>
