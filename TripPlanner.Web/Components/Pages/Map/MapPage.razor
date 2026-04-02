@@ -592,8 +592,9 @@
 
     private void UpdateCarouselTimer()
     {
-        var needsTimer = Places.Any(p => p.ImageIds.Count > 1)
-            || SelectedTripPlaces.Any(tp => tp.Place?.ImageIds.Count > 1);
+        var needsTimer =
+            (ShowWishlist && VisibleWishlistPlaces.Any(p => p.ImageIds.Count > 1))
+            || VisibleTripPlaces.Any(tp => tp.Place?.ImageIds.Count > 1);
 
         if (needsTimer && _carouselTimer == null)
         {
