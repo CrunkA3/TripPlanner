@@ -30,14 +30,14 @@
     <div id="map" style="height:100%; width:100%;"></div>
 
     <FluentToolbar style="position: absolute; top: 6px; left: 6px; max-width: calc(100% - min(320px, 50%) - 18px); max-height: 25%;">
-        <FluentSelect TOption="string" @bind-Value="@SelectedTripId" Style="min-width: min(250px, 100%);">
+        <FluentSelect TOption="string" @bind-Value="@SelectedTripId" Style="width:100%; min-width:50px;">
             <FluentOption TOption="string" Value="@string.Empty">All Trips</FluentOption>
             @foreach (var trip in Trips)
             {
                 <FluentOption TOption="string" Value="@trip.Id">@trip.Name</FluentOption>
             }
         </FluentSelect>
-        <FluentSelect TOption="string" Value="@SelectedWeatherDayStr" ValueChanged="@OnWeatherDayChanged" Disabled="@(!ShowWeather)" Style="min-width: min(250px, 100%);">
+        <FluentSelect TOption="string" Value="@SelectedWeatherDayStr" ValueChanged="@OnWeatherDayChanged" Disabled="@(!ShowWeather)" Style="width:100%; min-width:50px;">
             @for (int i = 0; i < 7; i++)
             {
                 var day = i;
@@ -46,11 +46,12 @@
                 <FluentOption TOption="string" Value="@day.ToString()">@label</FluentOption>
             }
         </FluentSelect>
-        <FluentButton Appearance="Appearance.Outline" IconStart="@(new Icons.Regular.Size20.ArrowSync())" OnClick="@LoadMapData" />
-        <FluentButton Appearance="@(ShowWishlist ? Appearance.Accent : Appearance.Outline)" IconStart="@(new Icons.Regular.Size20.Heart())" OnClick="@(() => ShowWishlist = !ShowWishlist)" />
-        <FluentButton Appearance="@(ShowGpxTracks ? Appearance.Accent : Appearance.Outline)" IconStart="@(new Icons.Regular.Size20.MountainTrail())" OnClick="@(() => ShowGpxTracks = !ShowGpxTracks)" />
-        <FluentButton Appearance="@(ShowRoutes ? Appearance.Accent : Appearance.Outline)" IconStart="@(new Icons.Regular.Size20.Road())" OnClick="@(() => ShowRoutes = !ShowRoutes)" />
-        <FluentButton Appearance="@(ShowWeather ? Appearance.Accent : Appearance.Outline)" IconStart="@(new Icons.Regular.Size20.WeatherHailDay())" OnClick="@(() => ShowWeather = !ShowWeather)" />
+
+        <FluentButton Appearance="Appearance.Outline" IconStart="@(new Icons.Regular.Size20.ArrowSync())" OnClick="@LoadMapData" aria-label="refresh map" />
+        <FluentButton Appearance="@(ShowWishlist ? Appearance.Accent : Appearance.Outline)" IconStart="@(new Icons.Regular.Size20.Heart())" OnClick="@(() => ShowWishlist = !ShowWishlist)" aria-label="toggle show wishlist" />
+        <FluentButton Appearance="@(ShowGpxTracks ? Appearance.Accent : Appearance.Outline)" IconStart="@(new Icons.Regular.Size20.MountainTrail())" OnClick="@(() => ShowGpxTracks = !ShowGpxTracks)" aria-label="toggle show gpx tracks" />
+        <FluentButton Appearance="@(ShowRoutes ? Appearance.Accent : Appearance.Outline)" IconStart="@(new Icons.Regular.Size20.Road())" OnClick="@(() => ShowRoutes = !ShowRoutes)" aria-label="toggle show routes" />
+        <FluentButton Appearance="@(ShowWeather ? Appearance.Accent : Appearance.Outline)" IconStart="@(new Icons.Regular.Size20.WeatherHailDay())" OnClick="@(() => ShowWeather = !ShowWeather)" aria-label="toggle show weather" />
     </FluentToolbar>
 
 
