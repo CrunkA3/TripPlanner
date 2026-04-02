@@ -82,7 +82,12 @@
                                 @if (currentImg is not null)
                                 {
                                     <div class="map-card-image-container">
-                                        <img @key="@currentImg" src="/api/placeImages/@currentImg" alt="@place.Name" class="map-card-image" />
+                                        <img @key="@currentImg"
+                                             src="/api/placeImages/@currentImg?width=400"
+                                             srcset="@PlaceImageHelper.BuildSrcSet(currentImg)"
+                                             sizes="(max-width: 768px) 100vw, 400px"
+                                             alt="@place.Name"
+                                             class="map-card-image" />
                                         @if (imageCount > 1)
                                         {
                                             <div class="map-card-dots">
