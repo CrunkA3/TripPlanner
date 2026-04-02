@@ -538,6 +538,7 @@
     {
         _selectedPlaceId = placeId;
         await InvokeAsync(StateHasChanged);
+        await JSRuntime.InvokeVoidAsync("mapInterop.selectMarker", placeId);
         await JSRuntime.InvokeVoidAsync("mapInterop.scrollToPlaceCard", placeId);
     }
 
