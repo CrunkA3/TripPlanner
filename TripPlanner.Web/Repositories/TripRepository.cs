@@ -4,20 +4,20 @@ using TripPlanner.Web.Models;
 
 namespace TripPlanner.Web.Repositories;
 
-public class TripRepository(ApplicationDbContext context) : ITripRepository
+public class TripRepository(IDbContextFactory<ApplicationDbContext> contextFactory) : ITripRepository
 {
-    private readonly ApplicationDbContext _context = context;
-
     public async Task<List<Trip>> GetAllAsync()
     {
-        return await WithStandardIncludes(_context.Trips.AsNoTracking())
+        await using var context = contextFactory.CreateDbContext();
+        return await WithStandardIncludes(context.Trips.AsNoTracking())
             .Include(t => t.SharedWith)
             .ToListAsync();
     }
 
     public async Task<Trip?> GetByIdAsync(string id)
     {
-        return await WithStandardIncludes(_context.Trips.AsNoTracking())
+        await using var context = contextFactory.CreateDbContext();
+        return await WithStandardIncludes(context.Trips.AsNoTracking())
             .Include(t => t.SharedWith)
                 .ThenInclude(st => st.User)
             .FirstOrDefaultAsync(t => t.Id == id);
@@ -25,34 +25,33 @@ public class TripRepository(ApplicationDbContext context) : ITripRepository
 
     public async Task<Trip> AddAsync(Trip trip)
     {
-        _context.Trips.Add(trip);
-        await _context.SaveChangesAsync();
+        await using var context = contextFactory.CreateDbContext();
+        context.Trips.Add(trip);
+        await context.SaveChangesAsync();
         return trip;
     }
     public async Task<TripPlace> AddTripPlaceAsync(TripPlace tripPlace)
     {
-        _context.Entry(tripPlace).State = EntityState.Added;
-        await _context.SaveChangesAsync();
+        await using var context = contextFactory.CreateDbContext();
+        context.Entry(tripPlace).State = EntityState.Added;
+        await context.SaveChangesAsync();
         return tripPlace;
     }
 
 
     public async Task<Trip> UpdateAsync(Trip trip)
     {
+        await using var context = contextFactory.CreateDbContext();
         trip.UpdatedAt = DateTimeOffset.UtcNow;
-        var tripPlaces = trip.Days.SelectMany(d => d.Places).ToList();
-
-        var states = tripPlaces.Select(tp => _context.Entry(tp).State);
-        var entry = _context.Entry(trip);
-
-        _context.Entry(trip).State = EntityState.Modified;
-        await _context.SaveChangesAsync();
+        context.Entry(trip).State = EntityState.Modified;
+        await context.SaveChangesAsync();
         return trip;
     }
 
     public async Task<int> UpdateTipPlaceDateTimeAsync(TripPlace tripPlace, DateTimeOffset? scheduledTime, string userId)
     {
-        var tripFound = await _context.Trips
+        await using var context = contextFactory.CreateDbContext();
+        var tripFound = await context.Trips
             .Include(t => t.Days)
             .ThenInclude(d => d.Places)
             .Where(t => t.OwnerId == userId && t.Days.Any(d => d.Places.Any(p => p.Id == tripPlace.Id)))
@@ -60,7 +59,7 @@ public class TripRepository(ApplicationDbContext context) : ITripRepository
 
         if (!tripFound) throw new KeyNotFoundException($"TripPlace with id {tripPlace.Id} not found for user {userId}");
 
-        return await _context.TripPlaces
+        return await context.TripPlaces
             .Where(tp => tp.Id == tripPlace.Id)
             .ExecuteUpdateAsync(tp => tp.SetProperty(p => p.ScheduledTime, scheduledTime));
     }
@@ -68,17 +67,19 @@ public class TripRepository(ApplicationDbContext context) : ITripRepository
 
     public async Task DeleteAsync(string id, string userId)
     {
-        var trip = await _context.Trips.FirstOrDefaultAsync(t => t.Id == id && t.OwnerId == userId);
+        await using var context = contextFactory.CreateDbContext();
+        var trip = await context.Trips.FirstOrDefaultAsync(t => t.Id == id && t.OwnerId == userId);
         if (trip != null)
         {
-            _context.Trips.Remove(trip);
-            await _context.SaveChangesAsync();
+            context.Trips.Remove(trip);
+            await context.SaveChangesAsync();
         }
     }
 
     public async Task DeleteTripPlaceAsync(string id, string userId)
     {
-        var tripFound = await _context.Trips
+        await using var context = contextFactory.CreateDbContext();
+        var tripFound = await context.Trips
             .Include(t => t.Days)
             .ThenInclude(d => d.Places)
             .Where(t => t.OwnerId == userId && t.Days.Any(d => d.Places.Any(p => p.Id == id)))
@@ -86,7 +87,7 @@ public class TripRepository(ApplicationDbContext context) : ITripRepository
 
         if (!tripFound) throw new KeyNotFoundException($"Trip with id {id} not found for user {userId}");
 
-        await _context.TripPlaces
+        await context.TripPlaces
             .Where(tp => tp.Id == id)
             .ExecuteDeleteAsync();
     }
@@ -94,14 +95,16 @@ public class TripRepository(ApplicationDbContext context) : ITripRepository
 
     public async Task<List<Trip>> GetByOwnerAsync(string userId)
     {
-        return await WithStandardIncludes(_context.Trips.AsNoTracking())
+        await using var context = contextFactory.CreateDbContext();
+        return await WithStandardIncludes(context.Trips.AsNoTracking())
             .Where(t => t.OwnerId == userId)
             .ToListAsync();
     }
 
     public async Task<List<Trip>> GetSharedWithUserAsync(string userId)
     {
-        return await _context.SharedTrips
+        await using var context = contextFactory.CreateDbContext();
+        return await context.SharedTrips
             .AsNoTracking()
             .Where(st => st.UserId == userId)
             .Include(st => st.Trip)
@@ -117,61 +120,67 @@ public class TripRepository(ApplicationDbContext context) : ITripRepository
 
     public async Task ShareWithUserAsync(string tripId, string userId)
     {
-        var existing = await _context.SharedTrips
+        await using var context = contextFactory.CreateDbContext();
+        var existing = await context.SharedTrips
             .FirstOrDefaultAsync(st => st.TripId == tripId && st.UserId == userId);
 
         if (existing == null)
         {
-            _context.SharedTrips.Add(new SharedTrip
+            context.SharedTrips.Add(new SharedTrip
             {
                 TripId = tripId,
                 UserId = userId
             });
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
     }
 
     public async Task UnshareWithUserAsync(string tripId, string userId)
     {
-        var sharedTrip = await _context.SharedTrips
+        await using var context = contextFactory.CreateDbContext();
+        var sharedTrip = await context.SharedTrips
             .FirstOrDefaultAsync(st => st.TripId == tripId && st.UserId == userId);
 
         if (sharedTrip != null)
         {
-            _context.SharedTrips.Remove(sharedTrip);
-            await _context.SaveChangesAsync();
+            context.SharedTrips.Remove(sharedTrip);
+            await context.SaveChangesAsync();
         }
     }
 
     public async Task<bool> CanUserAccessAsync(string tripId, string userId)
     {
-        return await _context.Trips
+        await using var context = contextFactory.CreateDbContext();
+        return await context.Trips
             .AnyAsync(t => t.Id == tripId && (t.OwnerId == userId
                 || t.SharedWith.Any(st => st.UserId == userId)));
     }
 
     public async Task<Accommodation> AddAccommodationAsync(Accommodation accommodation)
     {
-        _context.Accommodations.Add(accommodation);
-        await _context.SaveChangesAsync();
+        await using var context = contextFactory.CreateDbContext();
+        context.Accommodations.Add(accommodation);
+        await context.SaveChangesAsync();
         return accommodation;
     }
 
     public async Task<Accommodation> UpdateAccommodationAsync(Accommodation accommodation)
     {
+        await using var context = contextFactory.CreateDbContext();
         accommodation.UpdatedAt = DateTimeOffset.UtcNow;
-        _context.Accommodations.Update(accommodation);
-        await _context.SaveChangesAsync();
+        context.Accommodations.Update(accommodation);
+        await context.SaveChangesAsync();
         return accommodation;
     }
 
     public async Task DeleteAccommodationAsync(string accommodationId)
     {
-        var accommodation = await _context.Accommodations.FindAsync(accommodationId);
+        await using var context = contextFactory.CreateDbContext();
+        var accommodation = await context.Accommodations.FindAsync(accommodationId);
         if (accommodation != null)
         {
-            _context.Accommodations.Remove(accommodation);
-            await _context.SaveChangesAsync();
+            context.Accommodations.Remove(accommodation);
+            await context.SaveChangesAsync();
         }
     }
 
