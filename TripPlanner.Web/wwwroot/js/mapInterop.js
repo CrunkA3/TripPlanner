@@ -7,6 +7,8 @@ window.mapInterop = {
     mapClickHandler: null,
     boundsChangeHandler: null,
     dotNetRef: null,
+    _selectedMarkerId: null,
+    _hoveredMarkerId: null,
 
     setDotNetRef: function (dotNetRef) {
         this.dotNetRef = dotNetRef;
@@ -120,8 +122,60 @@ window.mapInterop = {
         return div.innerHTML;
     },
 
+    _markerDefaultStyle: function (el) {
+        el.style.width = '16px';
+        el.style.height = '16px';
+        el.style.border = '2px solid white';
+        el.style.boxShadow = '0 0 4px rgba(0,0,0,0.4)';
+        el.style.transition = 'width 0.15s, height 0.15s, box-shadow 0.15s';
+    },
+
+    _markerHighlightStyle: function (el) {
+        el.style.width = '22px';
+        el.style.height = '22px';
+        el.style.border = '3px solid white';
+        el.style.boxShadow = '0 0 10px rgba(0,0,0,0.7)';
+        el.style.transition = 'width 0.15s, height 0.15s, box-shadow 0.15s';
+    },
+
+    _updateMarkerStyle: function (id) {
+        var m = this.markers.find(function (m) { return m.id === id; });
+        if (!m || !m.el) return;
+        if (this._selectedMarkerId === id || this._hoveredMarkerId === id) {
+            this._markerHighlightStyle(m.el);
+        } else {
+            this._markerDefaultStyle(m.el);
+        }
+    },
+
+    selectMarker: function (id) {
+        var prev = this._selectedMarkerId;
+        this._selectedMarkerId = id;
+        if (prev && prev !== id) this._updateMarkerStyle(prev);
+        if (id) this._updateMarkerStyle(id);
+    },
+
+    hoverMarker: function (id) {
+        var prev = this._hoveredMarkerId;
+        this._hoveredMarkerId = id;
+        if (prev && prev !== id) this._updateMarkerStyle(prev);
+        if (id) this._updateMarkerStyle(id);
+    },
+
+    unhoverMarker: function () {
+        var prev = this._hoveredMarkerId;
+        this._hoveredMarkerId = null;
+        if (prev) this._updateMarkerStyle(prev);
+    },
+
+    scrollToPlaceCard: function (id) {
+        var el = document.getElementById('place-' + id);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    },
+
     addMarker: function (id, lat, lng, name, category, color, weatherInfo) {
         if (!this.map) return;
+        var self = this;
 
         var wrapper = document.createElement('div');
         wrapper.style.display = 'flex';
@@ -151,37 +205,34 @@ window.mapInterop = {
         el.style.backgroundColor = color;
         el.style.border = '2px solid white';
         el.style.boxShadow = '0 0 4px rgba(0,0,0,0.4)';
+        el.style.transition = 'width 0.15s, height 0.15s, box-shadow 0.15s';
         wrapper.appendChild(el);
 
-        var safeId = this.escapeHtml(id);
-        var safeName = this.escapeHtml(name);
-        var safeCategory = this.escapeHtml(category);
-        var weatherHtml = weatherInfo
-            ? '<br><span style="font-size:0.9em">' + this.escapeHtml(weatherInfo) + '</span>'
-            : '';
-        var popupHtml =
-            '<div style="min-width:120px">' +
-            '<b>' + safeName + '</b><br><span style="font-size:0.85em">' + safeCategory + '</span>' +
-            weatherHtml +
-            '<br><button onclick="window.mapInterop.onViewPlace(\'' + safeId + '\')" ' +
-            'style="margin-top:6px;padding:2px 10px;font-size:0.8em;cursor:pointer;border:1px solid #888;border-radius:3px;background:#fff;">' +
-            '&#128269; Details</button>' +
-            '</div>';
-
-        var popup = new maplibregl.Popup({ offset: 20 })
-            .setHTML(popupHtml);
+        wrapper.addEventListener('click', function () {
+            self.selectMarker(id);
+            if (self.dotNetRef) self.dotNetRef.invokeMethodAsync('OnMarkerClicked', id);
+        });
+        wrapper.addEventListener('mouseenter', function () {
+            self.hoverMarker(id);
+            if (self.dotNetRef) self.dotNetRef.invokeMethodAsync('OnMarkerHovered', id);
+        });
+        wrapper.addEventListener('mouseleave', function () {
+            self.unhoverMarker(id);
+            if (self.dotNetRef) self.dotNetRef.invokeMethodAsync('OnMarkerUnhovered');
+        });
 
         var marker = new maplibregl.Marker({ element: wrapper, anchor: 'bottom' })
             .setLngLat([lng, lat])
-            .setPopup(popup)
             .addTo(this.map);
 
-        this.markers.push({ id: id, marker: marker, lngLat: [lng, lat] });
+        this.markers.push({ id: id, marker: marker, lngLat: [lng, lat], el: el });
     },
 
     clearMarkers: function () {
         this.markers.forEach(function (m) { m.marker.remove(); });
         this.markers = [];
+        this._selectedMarkerId = null;
+        this._hoveredMarkerId = null;
     },
 
     addRoute: function (coordinates, color, weight) {

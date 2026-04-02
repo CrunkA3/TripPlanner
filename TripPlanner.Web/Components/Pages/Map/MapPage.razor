@@ -60,28 +60,20 @@
 
         @if (ShowWishlist)
         {
-            
             @if (isLandscape)
             {
                 <FluentStack Orientation="Orientation.Vertical" Style="max-height:100%;">
                     @foreach (var place in VisibleWishlistPlaces)
                     {
-                        var weather = WeatherByPlaceId.GetValueOrDefault(place.Id);
-                        <FluentCard>
-                            <FluentStack Orientation="Orientation.Vertical">
-                                <FluentLabel Weight="FontWeight.Bold">@place.Name</FluentLabel>
-                                <FluentBadge BackgroundColor="var(--neutral-layer-3)">@place.Category</FluentBadge>
-                                <FluentLabel Style="font-size: 0.875em;">
-                                    @place.Latitude.ToString("F4"), @place.Longitude.ToString("F4")
-                                </FluentLabel>
-                                @if (ShowWeather && weather != null)
-                                {
-                                    <FluentLabel Style="font-size: 0.875em;" title="@weather.GetDescription()">
-                                        @weather.GetSummary()
-                                    </FluentLabel>
-                                }
-                            </FluentStack>
-                        </FluentCard>
+                        <MapPlaceCard Place="@place"
+                                      IsHighlighted="@(_selectedPlaceId == place.Id || _hoveredPlaceId == place.Id)"
+                                      ShowWeather="@ShowWeather"
+                                      Weather="@WeatherByPlaceId.GetValueOrDefault(place.Id)"
+                                      CurrentImageIndex="@_currentImageIndex.GetValueOrDefault(place.Id, 0)"
+                                      OnCardClicked="@(() => OnCardClicked(place.Id))"
+                                      OnCardHovered="@(() => OnCardHovered(place.Id))"
+                                      OnCardUnhovered="@(() => OnCardUnhovered(place.Id))"
+                                      OnSetImageIndex="@((idx) => SetImageIndex(place.Id, idx))" />
                     }
                 </FluentStack>
             }
@@ -90,55 +82,37 @@
                 <FluentHorizontalScroll Speed="600" Easing=ScrollEasing.EaseInOut>
                     @foreach (var place in VisibleWishlistPlaces)
                     {
-                        var weather = WeatherByPlaceId.GetValueOrDefault(place.Id);
-                        <FluentCard Style="height:150px;width: 150px;">
-                            <FluentStack Orientation="Orientation.Vertical">
-                                <FluentLabel Weight="FontWeight.Bold">@place.Name</FluentLabel>
-                                <FluentBadge BackgroundColor="var(--neutral-layer-3)">@place.Category</FluentBadge>
-                                <FluentLabel Style="font-size: 0.875em;">
-                                    @place.Latitude.ToString("F4"), @place.Longitude.ToString("F4")
-                                </FluentLabel>
-                                @if (ShowWeather && weather != null)
-                                {
-                                    <FluentLabel Style="font-size: 0.875em;" title="@weather.GetDescription()">
-                                        @weather.GetSummary()
-                                    </FluentLabel>
-                                }
-                            </FluentStack>
-                        </FluentCard>
+                        <MapPlaceCard Place="@place"
+                                      IsHighlighted="@(_selectedPlaceId == place.Id || _hoveredPlaceId == place.Id)"
+                                      ShowWeather="@ShowWeather"
+                                      Weather="@WeatherByPlaceId.GetValueOrDefault(place.Id)"
+                                      CurrentImageIndex="@_currentImageIndex.GetValueOrDefault(place.Id, 0)"
+                                      Compact="true"
+                                      OnCardClicked="@(() => OnCardClicked(place.Id))"
+                                      OnCardHovered="@(() => OnCardHovered(place.Id))"
+                                      OnCardUnhovered="@(() => OnCardUnhovered(place.Id))"
+                                      OnSetImageIndex="@((idx) => SetImageIndex(place.Id, idx))" />
                     }
                 </FluentHorizontalScroll>
             }
         }
 
-     
         <FluentStack Orientation="Orientation.Vertical">
             @foreach (var tripPlace in VisibleTripPlaces)
             {
                 @if (tripPlace.Place != null)
                 {
-                    var weather = WeatherByPlaceId.GetValueOrDefault(tripPlace.Place.Id);
-                    <FluentCard>
-                        <FluentStack Orientation="Orientation.Vertical">
-                            <FluentLabel Weight="FontWeight.Bold">@tripPlace.Place.Name</FluentLabel>
-                            @if (tripPlace.ScheduledTime.HasValue)
-                            {
-                                <FluentLabel Style="font-size: 0.875em;">
-                                    <FluentIcon Icon="Icons.Regular.Size12.Clock" />
-                                    @tripPlace.ScheduledTime.Value.ToString("HH:mm")
-                                </FluentLabel>
-                            }
-                            <FluentLabel Style="font-size: 0.875em;">
-                                @tripPlace.Place.Latitude.ToString("F4"), @tripPlace.Place.Longitude.ToString("F4")
-                            </FluentLabel>
-                            @if (ShowWeather && weather != null)
-                            {
-                                <FluentLabel Style="font-size: 0.875em;" title="@weather.GetDescription()">
-                                    @weather.GetSummary()
-                                </FluentLabel>
-                            }
-                        </FluentStack>
-                    </FluentCard>
+                    <MapPlaceCard Place="@tripPlace.Place"
+                                  IsHighlighted="@(_selectedPlaceId == tripPlace.Place.Id || _hoveredPlaceId == tripPlace.Place.Id)"
+                                  ShowWeather="@ShowWeather"
+                                  Weather="@WeatherByPlaceId.GetValueOrDefault(tripPlace.Place.Id)"
+                                  ScheduledTime="@tripPlace.ScheduledTime"
+                                  ShowCategory="false"
+                                  CurrentImageIndex="@_currentImageIndex.GetValueOrDefault(tripPlace.Place.Id, 0)"
+                                  OnCardClicked="@(() => OnCardClicked(tripPlace.Place.Id))"
+                                  OnCardHovered="@(() => OnCardHovered(tripPlace.Place.Id))"
+                                  OnCardUnhovered="@(() => OnCardUnhovered(tripPlace.Place.Id))"
+                                  OnSetImageIndex="@((idx) => SetImageIndex(tripPlace.Place.Id, idx))" />
                 }
             }
         </FluentStack>
@@ -175,6 +149,14 @@
 
     private List<Place>? _visibleWishlistPlaces;
     private List<TripPlace>? _visibleTripPlaces;
+
+    private string? _selectedPlaceId;
+    private string? _hoveredPlaceId;
+
+    private Dictionary<string, int> _currentImageIndex = new();
+    private System.Timers.Timer? _carouselTimer;
+    private int _carouselTickRunning = 0;
+    private const int CarouselIntervalMs = 4000;
 
     private List<Place> VisibleWishlistPlaces => _visibleWishlistPlaces ??= ComputeVisiblePlaces();
     private List<TripPlace> VisibleTripPlaces => _visibleTripPlaces ??= ComputeVisibleTripPlaces();
@@ -291,6 +273,7 @@
         
         IsLoading = false;
         InvalidateVisiblePlaces();
+        UpdateCarouselTimer();
 
         if (MapInitialized)
         {
@@ -429,6 +412,12 @@
 
             // Fit map to show all content
             await JSRuntime.InvokeVoidAsync("mapInterop.fitBounds");
+
+            // Re-apply selected marker highlight after markers are re-created
+            if (_selectedPlaceId != null)
+            {
+                await JSRuntime.InvokeVoidAsync("mapInterop.selectMarker", _selectedPlaceId);
+            }
         }
         catch (Exception ex)
         {
@@ -436,6 +425,113 @@
         }
     }
 
+    // ── Marker → Panel interaction ──────────────────────────────────────────
+
+    [JSInvokable]
+    public async Task OnMarkerClicked(string placeId)
+    {
+        _selectedPlaceId = placeId;
+        await InvokeAsync(StateHasChanged);
+        await JSRuntime.InvokeVoidAsync("mapInterop.selectMarker", placeId);
+        await JSRuntime.InvokeVoidAsync("mapInterop.scrollToPlaceCard", placeId);
+    }
+
+    [JSInvokable]
+    public async Task OnMarkerHovered(string placeId)
+    {
+        _hoveredPlaceId = placeId;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
+    public async Task OnMarkerUnhovered()
+    {
+        _hoveredPlaceId = null;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    // ── Panel → Marker interaction ──────────────────────────────────────────
+
+    private async Task OnCardClicked(string placeId)
+    {
+        _selectedPlaceId = placeId;
+        await JSRuntime.InvokeVoidAsync("mapInterop.selectMarker", placeId);
+    }
+
+    private async Task OnCardHovered(string placeId)
+    {
+        _hoveredPlaceId = placeId;
+        await InvokeAsync(StateHasChanged);
+        await JSRuntime.InvokeVoidAsync("mapInterop.hoverMarker", placeId);
+    }
+
+    private async Task OnCardUnhovered(string placeId)
+    {
+        _hoveredPlaceId = null;
+        await InvokeAsync(StateHasChanged);
+        await JSRuntime.InvokeVoidAsync("mapInterop.unhoverMarker");
+        // Keep selected marker highlighted after hover ends
+        if (_selectedPlaceId != null)
+        {
+            await JSRuntime.InvokeVoidAsync("mapInterop.selectMarker", _selectedPlaceId);
+        }
+    }
+
+    // ── Image Carousel ──────────────────────────────────────────────────────
+
+    private void UpdateCarouselTimer()
+    {
+        var needsTimer =
+            (ShowWishlist && VisibleWishlistPlaces.Any(p => p.ImageIds.Count > 1))
+            || VisibleTripPlaces.Any(tp => tp.Place?.ImageIds.Count > 1);
+
+        if (needsTimer && _carouselTimer == null)
+        {
+            _carouselTimer = new System.Timers.Timer(CarouselIntervalMs);
+            _carouselTimer.Elapsed += OnCarouselTick;
+            _carouselTimer.AutoReset = true;
+            _carouselTimer.Start();
+        }
+        else if (!needsTimer && _carouselTimer != null)
+        {
+            _carouselTimer.Stop();
+            _carouselTimer.Dispose();
+            _carouselTimer = null;
+        }
+    }
+
+    private async void OnCarouselTick(object? sender, System.Timers.ElapsedEventArgs e)
+    {
+        if (Interlocked.CompareExchange(ref _carouselTickRunning, 1, 0) != 0)
+            return;
+        try
+        {
+            await InvokeAsync(() =>
+            {
+                if (ShowWishlist)
+                {
+                    foreach (var place in VisibleWishlistPlaces.Where(p => p.ImageIds.Count > 1))
+                        _currentImageIndex[place.Id] = (_currentImageIndex.GetValueOrDefault(place.Id) + 1) % place.ImageIds.Count;
+                }
+                foreach (var tp in VisibleTripPlaces.Where(tp => tp.Place?.ImageIds.Count > 1))
+                    _currentImageIndex[tp.Place!.Id] = (_currentImageIndex.GetValueOrDefault(tp.Place.Id) + 1) % tp.Place.ImageIds.Count;
+                StateHasChanged();
+            });
+        }
+        catch (ObjectDisposedException) { }
+        catch (TaskCanceledException) { }
+        finally
+        {
+            Interlocked.Exchange(ref _carouselTickRunning, 0);
+        }
+    }
+
+    private void SetImageIndex(string placeId, int index)
+    {
+        _currentImageIndex[placeId] = index;
+    }
+
+    // ── Bounds / Orientation ────────────────────────────────────────────────
 
     [JSInvokable]
     public async Task OnBoundsChanged(double north, double south, double east, double west)
@@ -475,6 +571,13 @@
     {
         _weatherCts?.Cancel();
         _weatherCts?.Dispose();
+        if (_carouselTimer != null)
+        {
+            _carouselTimer.Elapsed -= OnCarouselTick;
+            _carouselTimer.Stop();
+            _carouselTimer.Dispose();
+            _carouselTimer = null;
+        }
         _dotNetRef?.Dispose();
         if (MapInitialized)
         {
