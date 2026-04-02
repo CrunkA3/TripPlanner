@@ -105,7 +105,7 @@ public partial class WishlistImportExportService(
     IPlaceRepository placeRepository,
     IGpxRepository gpxRepository,
     ILogger<WishlistImportExportService> logger,
-    ApplicationDbContext dbContext)
+    IDbContextFactory<ApplicationDbContext> contextFactory)
 {
     private static readonly ISerializer YamlSerializer = new SerializerBuilder()
         .WithNamingConvention(UnderscoredNamingConvention.Instance)
@@ -132,7 +132,8 @@ public partial class WishlistImportExportService(
 
         // Load all images and GPX tracks for the wishlist in bulk to avoid N+1 queries
         var placeIds = places.Select(p => p.Id).ToList();
-        var allImages = await dbContext.PlaceImages
+        await using var context = contextFactory.CreateDbContext();
+        var allImages = await context.PlaceImages
             .AsNoTracking()
             .Where(img => placeIds.Contains(img.PlaceId))
             .OrderBy(img => img.SortOrder)
@@ -147,7 +148,7 @@ public partial class WishlistImportExportService(
             .Distinct()
             .ToList();
         var gpxTracks = gpxTrackIds.Count > 0
-            ? await dbContext.GpxTracks
+            ? await context.GpxTracks
                 .AsNoTracking()
                 .Include(t => t.Points.OrderBy(p => p.Order))
                 .Where(t => gpxTrackIds.Contains(t.Id))

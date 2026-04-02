@@ -6,39 +6,41 @@ namespace TripPlanner.Web.Repositories;
 
 public class GpxRepository : IGpxRepository
 {
-    private readonly ApplicationDbContext _context;
+    private readonly IDbContextFactory<ApplicationDbContext> _contextFactory;
 
-    public GpxRepository(ApplicationDbContext context)
+    public GpxRepository(IDbContextFactory<ApplicationDbContext> contextFactory)
     {
-        _context = context;
+        _contextFactory = contextFactory;
     }
 
     public async Task<List<GpxTrack>> GetAllAsync()
     {
-        return await _context.GpxTracks.AsNoTracking().Include(t => t.Points.OrderBy(x => x.Order)).ToListAsync();
+        await using var context = _contextFactory.CreateDbContext();
+        return await context.GpxTracks.AsNoTracking().Include(t => t.Points.OrderBy(x => x.Order)).ToListAsync();
     }
 
     public async Task<List<GpxTrack>> GetAllByUserAsync(string userId)
     {
-        var userWishlistIds = _context.UserWishlists
+        await using var context = _contextFactory.CreateDbContext();
+        var userWishlistIds = context.UserWishlists
             .Where(w => w.UserId == userId)
             .Select(w => w.WishlistId);
 
-        var userTripIds = _context.Trips
+        var userTripIds = context.Trips
             .Where(t => t.OwnerId == userId)
             .Select(t => t.Id)
-            .Union(_context.SharedTrips
+            .Union(context.SharedTrips
                 .Where(st => st.UserId == userId)
                 .Select(st => st.TripId));
 
-        var accessibleTrackIds = _context.Places
+        var accessibleTrackIds = context.Places
             .Where(p => p.GpxTrackId != null && (
                 (p.WishlistId != null && userWishlistIds.Contains(p.WishlistId)) ||
                 (p.TripId != null && userTripIds.Contains(p.TripId))))
             .Select(p => p.GpxTrackId!)
             .Distinct();
 
-        return await _context.GpxTracks
+        return await context.GpxTracks
             .AsNoTracking()
             .Where(t => accessibleTrackIds.Contains(t.Id))
             .Include(t => t.Points.OrderBy(x => x.Order))
@@ -48,12 +50,13 @@ public class GpxRepository : IGpxRepository
 
     public async Task<List<GpxTrack>> GetByTripIdAsync(string tripId)
     {
-        var trackIds = _context.Trips.AsNoTracking().Where(t => t.Id == tripId)
+        await using var context = _contextFactory.CreateDbContext();
+        var trackIds = context.Trips.AsNoTracking().Where(t => t.Id == tripId)
             .SelectMany(t => t.Days.SelectMany(d => d.Places.Select(p => p.Place)))
             .Where(p => p != null && p.GpxTrackId != null)
             .Select(p => p!.GpxTrackId!);
 
-        return await _context.GpxTracks
+        return await context.GpxTracks
             .AsNoTracking()
             .Where(x => trackIds.Contains(x.Id))
             .Include(t => t.Points.OrderBy(x => x.Order))
@@ -62,39 +65,42 @@ public class GpxRepository : IGpxRepository
 
     public async Task<GpxTrack?> GetByIdAsync(string id)
     {
-        return await _context.GpxTracks.FindAsync(id);
+        await using var context = _contextFactory.CreateDbContext();
+        return await context.GpxTracks.FindAsync(id);
     }
 
     public async Task<GpxTrack> AddAsync(GpxTrack track)
     {
-        _context.GpxTracks.Add(track);
-        await _context.SaveChangesAsync();
+        await using var context = _contextFactory.CreateDbContext();
+        context.GpxTracks.Add(track);
+        await context.SaveChangesAsync();
         return track;
     }
 
     public async Task DeleteAsync(string id, string userId)
     {
+        await using var context = _contextFactory.CreateDbContext();
         // Verify the user has owner-level access to the GPX track via its associated place
-        var userWishlistIds = _context.UserWishlists
+        var userWishlistIds = context.UserWishlists
             .Where(w => w.UserId == userId && w.Level == ShareLevel.Owner)
             .Select(w => w.WishlistId);
 
-        var userOwnedTripIds = _context.Trips
+        var userOwnedTripIds = context.Trips
             .Where(t => t.OwnerId == userId)
             .Select(t => t.Id);
 
-        var hasAccess = await _context.Places
+        var hasAccess = await context.Places
             .AnyAsync(p => p.GpxTrackId == id && (
                 (p.WishlistId != null && userWishlistIds.Contains(p.WishlistId)) ||
                 (p.TripId != null && userOwnedTripIds.Contains(p.TripId))));
 
         if (!hasAccess) return;
 
-        var track = await _context.GpxTracks.FindAsync(id);
+        var track = await context.GpxTracks.FindAsync(id);
         if (track != null)
         {
-            _context.GpxTracks.Remove(track);
-            await _context.SaveChangesAsync();
+            context.GpxTracks.Remove(track);
+            await context.SaveChangesAsync();
         }
     }
 }

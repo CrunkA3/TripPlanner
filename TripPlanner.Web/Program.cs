@@ -39,8 +39,13 @@ authBuilder.AddIdentityCookies();
 authBuilder.AddScheme<AuthenticationSchemeOptions, McpApiKeyAuthHandler>(McpApiKeyAuthHandler.SchemeName, _ => { });
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
+builder.Services.AddPooledDbContextFactory<ApplicationDbContext>(options =>
     options.UseSqlServer(connectionString));
+// Provide a scoped ApplicationDbContext for ASP.NET Core Identity and any code that resolves
+// it directly from DI (e.g. background service startup helpers).  Each scope gets a fresh
+// instance from the pool which is returned to the pool when the scope is disposed.
+builder.Services.AddScoped<ApplicationDbContext>(p =>
+    p.GetRequiredService<IDbContextFactory<ApplicationDbContext>>().CreateDbContext());
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddDataProtection()

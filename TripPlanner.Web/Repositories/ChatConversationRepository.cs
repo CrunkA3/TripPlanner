@@ -4,22 +4,29 @@ using TripPlanner.Web.Models;
 
 namespace TripPlanner.Web.Repositories;
 
-public class ChatConversationRepository(ApplicationDbContext context) : IChatConversationRepository
+public class ChatConversationRepository(IDbContextFactory<ApplicationDbContext> contextFactory) : IChatConversationRepository
 {
-    public Task<List<ChatConversation>> GetByUserAsync(string userId) =>
-        context.ChatConversations
+    public async Task<List<ChatConversation>> GetByUserAsync(string userId)
+    {
+        await using var context = contextFactory.CreateDbContext();
+        return await context.ChatConversations
             .Where(c => c.UserId == userId)
             .OrderByDescending(c => c.UpdatedAt ?? c.CreatedAt)
             .ToListAsync();
+    }
 
-    public Task<ChatConversation?> GetByIdAsync(string id, string userId) =>
-        context.ChatConversations
+    public async Task<ChatConversation?> GetByIdAsync(string id, string userId)
+    {
+        await using var context = contextFactory.CreateDbContext();
+        return await context.ChatConversations
             .AsNoTracking()
             .Include(c => c.Messages)
             .FirstOrDefaultAsync(c => c.Id == id && c.UserId == userId);
+    }
 
     public async Task<ChatConversation> CreateAsync(string userId, string title)
     {
+        await using var context = contextFactory.CreateDbContext();
         var conversation = new ChatConversation
         {
             UserId = userId,
@@ -33,6 +40,7 @@ public class ChatConversationRepository(ApplicationDbContext context) : IChatCon
 
     public async Task UpdateTitleAsync(string id, string title, string userId)
     {
+        await using var context = contextFactory.CreateDbContext();
         await context.ChatConversations
             .Where(c => c.Id == id && c.UserId == userId)
             .ExecuteUpdateAsync(s => s.SetProperty(c => c.Title, title));
@@ -40,6 +48,7 @@ public class ChatConversationRepository(ApplicationDbContext context) : IChatCon
 
     public async Task AddMessageAsync(string conversationId, string role, string content, string userId, string? toolCallsJson = null, string? toolCallId = null)
     {
+        await using var context = contextFactory.CreateDbContext();
         await using var transaction = await context.Database.BeginTransactionAsync();
 
         var now = DateTimeOffset.UtcNow;
@@ -68,6 +77,7 @@ public class ChatConversationRepository(ApplicationDbContext context) : IChatCon
 
     public async Task DeleteAsync(string id, string userId)
     {
+        await using var context = contextFactory.CreateDbContext();
         await context.ChatConversations
             .Where(c => c.Id == id && c.UserId == userId)
             .ExecuteDeleteAsync();
@@ -75,6 +85,7 @@ public class ChatConversationRepository(ApplicationDbContext context) : IChatCon
 
     public async Task TouchAsync(string id, string userId)
     {
+        await using var context = contextFactory.CreateDbContext();
         await context.ChatConversations
             .Where(c => c.Id == id && c.UserId == userId)
             .ExecuteUpdateAsync(s => s.SetProperty(c => c.UpdatedAt, DateTimeOffset.UtcNow));

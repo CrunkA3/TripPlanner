@@ -4,10 +4,11 @@ using TripPlanner.Web.Models;
 
 namespace TripPlanner.Web.Repositories;
 
-public class ChatJobRepository(ApplicationDbContext context) : IChatJobRepository
+public class ChatJobRepository(IDbContextFactory<ApplicationDbContext> contextFactory) : IChatJobRepository
 {
     public async Task<ChatJob> CreateAsync(string conversationId, string userId, string userMessage, string languageTag = "en")
     {
+        await using var context = contextFactory.CreateDbContext();
         var job = new ChatJob
         {
             ConversationId = conversationId,
@@ -20,25 +21,35 @@ public class ChatJobRepository(ApplicationDbContext context) : IChatJobRepositor
         return job;
     }
 
-    public Task<ChatJob?> GetByIdAsync(string id, string userId) =>
-        context.ChatJobs.AsNoTracking().FirstOrDefaultAsync(j => j.Id == id && j.UserId == userId);
+    public async Task<ChatJob?> GetByIdAsync(string id, string userId)
+    {
+        await using var context = contextFactory.CreateDbContext();
+        return await context.ChatJobs.AsNoTracking().FirstOrDefaultAsync(j => j.Id == id && j.UserId == userId);
+    }
 
-    public Task<ChatJob?> GetActiveJobForConversationAsync(string conversationId, string userId) =>
-        context.ChatJobs
+    public async Task<ChatJob?> GetActiveJobForConversationAsync(string conversationId, string userId)
+    {
+        await using var context = contextFactory.CreateDbContext();
+        return await context.ChatJobs
             .Where(j => j.ConversationId == conversationId && j.UserId == userId
                         && (j.Status == ChatJobStatus.Pending || j.Status == ChatJobStatus.Processing))
             .OrderByDescending(j => j.CreatedAt)
             .FirstOrDefaultAsync();
+    }
 
-    public Task<List<ChatJob>> GetPendingJobsAsync(int maxCount = 5) =>
-        context.ChatJobs
+    public async Task<List<ChatJob>> GetPendingJobsAsync(int maxCount = 5)
+    {
+        await using var context = contextFactory.CreateDbContext();
+        return await context.ChatJobs
             .Where(j => j.Status == ChatJobStatus.Pending)
             .OrderBy(j => j.CreatedAt)
             .Take(maxCount)
             .ToListAsync();
+    }
 
     public async Task UpdateAsync(ChatJob job)
     {
+        await using var context = contextFactory.CreateDbContext();
         context.ChatJobs.Update(job);
         await context.SaveChangesAsync();
     }
