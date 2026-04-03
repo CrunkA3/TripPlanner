@@ -105,6 +105,12 @@
                         @Weather.GetSummary()
                     </FluentLabel>
                 }
+                @if (OnAddToCollection.HasDelegate)
+                {
+                    <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size16.Collections())" OnClick="@AddToCollectionClicked" title="Add to collection" Style="min-width: 0; padding: 2px 6px; font-size: 0.8em; align-self: flex-start;">
+                        Add to List
+                    </FluentButton>
+                }
             </FluentStack>
         </FluentCard>
     }
@@ -126,6 +132,8 @@
     [Parameter] public EventCallback<int> OnImageClick { get; set; }
     [Parameter] public EventCallback<int> OnSetImageIndex { get; set; }
 
+    [Parameter] public EventCallback<Place> OnAddToCollection { get; set; }
+
     private string _googleMapsUrl =>
         $"https://www.google.com/maps?q={Place.Latitude.ToString("F6", CultureInfo.InvariantCulture)},{Place.Longitude.ToString("F6", CultureInfo.InvariantCulture)}";
 
@@ -133,4 +141,9 @@
 
     private string? CurrentImage =>
         _imageCount > 0 ? Place.ImageIds[Math.Clamp(CurrentImageIndex, 0, _imageCount - 1)] : null;
+
+    private async Task AddToCollectionClicked()
+    {
+        await OnAddToCollection.InvokeAsync(Place);
+    }
 }

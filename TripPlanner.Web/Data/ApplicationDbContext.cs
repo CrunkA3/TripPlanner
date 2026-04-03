@@ -23,6 +23,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<ChatConversation> ChatConversations { get; set; }
     public DbSet<ChatMessage> ChatMessages { get; set; }
     public DbSet<ChatJob> ChatJobs { get; set; }
+    public DbSet<PlaceCollection> PlaceCollections { get; set; }
+    public DbSet<PlaceCollectionItem> PlaceCollectionItems { get; set; }
 
 
 
@@ -161,5 +163,33 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .HasForeignKey(p => p.GpxTrackId)
             .IsRequired(false)
             .OnDelete(DeleteBehavior.SetNull);
+
+        // Configure PlaceCollection
+        modelBuilder.Entity<PlaceCollection>()
+            .HasOne(c => c.Owner)
+            .WithMany(u => u.OwnedCollections)
+            .HasForeignKey(c => c.OwnerId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<PlaceCollection>()
+            .HasIndex(c => c.PublicShareToken)
+            .IsUnique()
+            .HasFilter("[PublicShareToken] IS NOT NULL");
+
+        // Configure PlaceCollectionItem (composite PK)
+        modelBuilder.Entity<PlaceCollectionItem>()
+            .HasKey(i => new { i.CollectionId, i.PlaceId });
+
+        modelBuilder.Entity<PlaceCollectionItem>()
+            .HasOne(i => i.Collection)
+            .WithMany(c => c.Items)
+            .HasForeignKey(i => i.CollectionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<PlaceCollectionItem>()
+            .HasOne(i => i.Place)
+            .WithMany()
+            .HasForeignKey(i => i.PlaceId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

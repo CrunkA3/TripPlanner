@@ -1,0 +1,118 @@
+@implements IDialogContentComponent<AddToCollectionDialogContent>
+
+@using TripPlanner.Web.Models
+@using TripPlanner.Web.Repositories
+@using TripPlanner.Web.Services
+
+@inject IPlaceCollectionRepository CollectionRepository
+@inject UserService UserService
+@inject IDialogService DialogService
+
+<FluentDialogHeader>
+    <FluentLabel Typo="Typography.PaneHeader">Add "@Content.PlaceName" to Collection</FluentLabel>
+</FluentDialogHeader>
+
+<FluentDialogBody>
+    <FluentStack Orientation="Orientation.Vertical">
+        @if (_collections == null)
+        {
+            <FluentProgressRing>Loading collections...</FluentProgressRing>
+        }
+        else if (!_collections.Any())
+        {
+            <FluentLabel>You have no collections yet. Create one below.</FluentLabel>
+        }
+        else
+        {
+            @foreach (var collection in _collections)
+            {
+                <FluentCheckbox @bind-Value="_selected[collection.Id]" Label="@collection.Name" />
+            }
+        }
+
+        @if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <FluentLabel Color="Color.Error" Style="font-size: 0.875em;">@_errorMessage</FluentLabel>
+        }
+
+        <FluentDivider />
+        <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size20.Add())" OnClick="@CreateNewCollectionAsync">
+            Create New Collection
+        </FluentButton>
+    </FluentStack>
+</FluentDialogBody>
+
+<FluentDialogFooter>
+    <FluentButton Appearance="Appearance.Accent" OnClick="@SubmitAsync">Add to Selected</FluentButton>
+    <FluentButton Appearance="Appearance.Neutral" OnClick="@CancelAsync">Cancel</FluentButton>
+</FluentDialogFooter>
+
+@code {
+    [Parameter]
+    public AddToCollectionDialogContent Content { get; set; } = default!;
+
+    [CascadingParameter]
+    public FluentDialog Dialog { get; set; } = default!;
+
+    private List<PlaceCollection>? _collections;
+    private Dictionary<string, bool> _selected = new();
+    private string? _errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var userId = await UserService.GetCurrentUserIdAsync();
+        if (userId != null)
+        {
+            _collections = await CollectionRepository.GetAllByOwnerAsync(userId);
+            _selected = _collections.ToDictionary(c => c.Id, _ => false);
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        var userId = await UserService.GetCurrentUserIdAsync();
+        if (userId == null) return;
+
+        var selected = _selected.Where(kv => kv.Value).Select(kv => kv.Key).ToList();
+        if (!selected.Any())
+        {
+            _errorMessage = "Please select at least one collection.";
+            return;
+        }
+
+        foreach (var collectionId in selected)
+        {
+            await CollectionRepository.AddPlaceAsync(collectionId, Content.PlaceId, userId);
+        }
+
+        await Dialog.CloseAsync(Content);
+    }
+
+    private async Task CreateNewCollectionAsync()
+    {
+        var newCollection = new PlaceCollection();
+        var dialog = await DialogService.ShowDialogAsync<CreateCollectionDialog>(
+            new CreateCollectionDialogContent(newCollection),
+            new DialogParameters { Modal = true, PreventDismissOnOverlayClick = true });
+
+        var result = await dialog.Result;
+        if (!result.Cancelled)
+        {
+            // Reload collections list and pre-select the newly created collection
+            var userId = await UserService.GetCurrentUserIdAsync();
+            if (userId != null)
+            {
+                _collections = await CollectionRepository.GetAllByOwnerAsync(userId);
+                // Carry over existing selections and add the new collection if found
+                var newSelected = _collections.ToDictionary(c => c.Id, c => _selected.GetValueOrDefault(c.Id));
+                if (!string.IsNullOrEmpty(newCollection.Id) && newSelected.ContainsKey(newCollection.Id))
+                {
+                    newSelected[newCollection.Id] = true;
+                }
+                _selected = newSelected;
+            }
+        }
+    }
+
+    private async Task CancelAsync() => await Dialog.CancelAsync();
+}

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TripPlanner.Web.Data;
 
@@ -11,9 +12,11 @@ using TripPlanner.Web.Data;
 namespace TripPlanner.Web.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260403174437_AddPlaceCollections")]
+    partial class AddPlaceCollections
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -996,11 +999,6 @@ namespace TripPlanner.Web.Migrations
 
             modelBuilder.Entity("TripPlanner.Web.Models.Place", b =>
                 {
-                    b.HasOne("TripPlanner.Web.Models.GpxTrack", "GpxTrack")
-                        .WithMany()
-                        .HasForeignKey("GpxTrackId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.HasOne("TripPlanner.Web.Models.Trip", "Trip")
                         .WithMany()
                         .HasForeignKey("TripId");
@@ -1009,8 +1007,6 @@ namespace TripPlanner.Web.Migrations
                         .WithMany("Places")
                         .HasForeignKey("WishlistId")
                         .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("GpxTrack");
 
                     b.Navigation("Trip");
 

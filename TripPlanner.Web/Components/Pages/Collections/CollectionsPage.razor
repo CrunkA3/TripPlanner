@@ -1,0 +1,216 @@
+@page "/collections"
+@rendermode InteractiveServer
+
+@using Microsoft.AspNetCore.Authorization
+@using TripPlanner.Web.Models
+@using TripPlanner.Web.Repositories
+@using TripPlanner.Web.Services
+
+@attribute [Authorize]
+
+@inject IPlaceCollectionRepository CollectionRepository
+@inject UserService UserService
+@inject NavigationManager NavigationManager
+@inject IDialogService DialogService
+@inject IJSRuntime JS
+
+<PageTitle>My Collections</PageTitle>
+<FluentDialogProvider />
+
+<h1>My Collections</h1>
+
+<FluentStack Orientation="Orientation.Horizontal" Style="margin-bottom: 20px;">
+    <FluentButton Appearance="Appearance.Accent" IconStart="@(new Icons.Regular.Size20.Add())" OnClick="@ShowCreateDialog" data-testid="open-new-collection-button">
+        Create Collection
+    </FluentButton>
+</FluentStack>
+
+@if (_collections == null)
+{
+    <FluentProgressRing>Loading...</FluentProgressRing>
+}
+else if (!_collections.Any())
+{
+    <FluentCard>
+        <FluentStack HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center" Style="padding: 2rem;">
+            <FluentIcon Value="@(new Icons.Regular.Size48.BookmarkMultiple())" Color="Color.Neutral" />
+            <FluentLabel Typo="Typography.Body">You haven't created any collections yet. Click "Create Collection" to get started!</FluentLabel>
+        </FluentStack>
+    </FluentCard>
+}
+else
+{
+    <FluentGrid Spacing="3" Justify="JustifyContent.FlexStart">
+        @foreach (var collection in _collections)
+        {
+            <FluentGridItem xs="12" sm="6" md="4" lg="3">
+                <FluentCard>
+                    <FluentStack Orientation="Orientation.Vertical" Style="height: 100%;">
+                        <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                            <FluentIcon Value="@(new Icons.Regular.Size24.Collections())" Color="Color.Accent" />
+                            <FluentLabel Typo="Typography.Subject" Weight="FontWeight.Bold" Style="margin-left: 0.5rem; flex: 1;">@collection.Name</FluentLabel>
+                        </FluentStack>
+                        <FluentDivider Style="width: 100%;" Role="DividerRole.Presentation" />
+                        @if (!string.IsNullOrEmpty(collection.Description))
+                        {
+                            <FluentLabel Typo="Typography.Body" Style="flex: 1;">@collection.Description</FluentLabel>
+                        }
+                        else
+                        {
+                            <FluentLabel Typo="Typography.Body" Style="flex: 1; color: var(--neutral-foreground-hint); font-style: italic;">No description</FluentLabel>
+                        }
+                        <FluentSpacer />
+                        <FluentStack Orientation="Orientation.Horizontal" Wrap="true" Style="gap: 0.4rem;">
+                            <FluentBadge BackgroundColor="var(--accent-fill-rest)" Color="white">
+                                <FluentIcon Value="@(new Icons.Regular.Size12.Location())" /> @collection.Items.Count places
+                            </FluentBadge>
+                            @if (collection.PublicShareToken != null)
+                            {
+                                <FluentBadge BackgroundColor="var(--success-fill-rest, #0e700e)" Color="white" title="Public sharing enabled">
+                                    🔗 Public
+                                </FluentBadge>
+                            }
+                        </FluentStack>
+                        <FluentLabel Style="font-size: 0.8em; color: var(--neutral-foreground-hint);">
+                            Created: @collection.CreatedAt.ToString("yyyy-MM-dd")
+                        </FluentLabel>
+                        <FluentDivider Style="width: 100%;" Role="DividerRole.Presentation" />
+                        <FluentStack Orientation="Orientation.Horizontal" Wrap="true" Style="gap: 0.3rem;">
+                            <FluentButton Appearance="Appearance.Accent" IconStart="@(new Icons.Regular.Size16.Eye())" OnClick="@(() => NavigationManager.NavigateTo($"/collections/{collection.Id}"))">
+                                View
+                            </FluentButton>
+                            @if (collection.PublicShareToken != null)
+                            {
+                                <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size16.Copy())" OnClick="@(() => CopyPublicLink(collection))" title="Copy public link">
+                                    Copy Link
+                                </FluentButton>
+                                <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size16.LinkDismiss())" OnClick="@(() => RevokePublicLink(collection))" title="Revoke public link">
+                                    Revoke
+                                </FluentButton>
+                            }
+                            else
+                            {
+                                <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size16.Share())" OnClick="@(() => GeneratePublicLink(collection))" title="Generate public link">
+                                    Share
+                                </FluentButton>
+                            }
+                            <FluentSpacer />
+                            <FluentButton Appearance="Appearance.Lightweight"
+                                          IconStart="@(new Icons.Regular.Size16.Delete().WithColor(Color.Error))"
+                                         OnClick="@(() => DeleteCollection(collection.Id))"
+                                         title="Delete collection"
+                                         aria-label="@($"Delete collection {collection.Name}")">
+                            </FluentButton>
+                        </FluentStack>
+                    </FluentStack>
+                </FluentCard>
+            </FluentGridItem>
+        }
+    </FluentGrid>
+}
+
+@if (!string.IsNullOrEmpty(_statusMessage))
+{
+    <FluentMessageBar Intent="@_statusIntent" OnDismiss="@(() => _statusMessage = null)" Style="margin-top: 8px;">
+        @_statusMessage
+    </FluentMessageBar>
+}
+
+@code {
+    private List<PlaceCollection>? _collections;
+    private string? _currentUserId;
+    private string? _statusMessage;
+    private MessageIntent _statusIntent = MessageIntent.Info;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _currentUserId = await UserService.GetCurrentUserIdAsync();
+        if (_currentUserId != null)
+        {
+            await LoadCollections();
+        }
+    }
+
+    private async Task LoadCollections()
+    {
+        if (_currentUserId == null) return;
+        _collections = await CollectionRepository.GetAllByOwnerAsync(_currentUserId);
+    }
+
+    private async Task ShowCreateDialog()
+    {
+        var newCollection = new PlaceCollection();
+        var dialog = await DialogService.ShowDialogAsync<CreateCollectionDialog>(
+            new CreateCollectionDialogContent(newCollection),
+            new DialogParameters { Modal = true, PreventDismissOnOverlayClick = true });
+
+        var result = await dialog.Result;
+        if (!result.Cancelled)
+        {
+            await LoadCollections();
+        }
+    }
+
+    private async Task GeneratePublicLink(PlaceCollection collection)
+    {
+        if (_currentUserId == null) return;
+        var token = await CollectionRepository.GeneratePublicLinkAsync(collection.Id, _currentUserId);
+        if (token != null)
+        {
+            collection.PublicShareToken = token;
+            var url = NavigationManager.ToAbsoluteUri($"/share/collection/{token}").ToString();
+            try
+            {
+                await JS.InvokeVoidAsync("navigator.clipboard.writeText", url);
+                _statusMessage = "Public link generated and copied to clipboard!";
+                _statusIntent = MessageIntent.Success;
+            }
+            catch
+            {
+                _statusMessage = $"Public link generated. Copy it manually: {url}";
+                _statusIntent = MessageIntent.Warning;
+            }
+        }
+    }
+
+    private async Task CopyPublicLink(PlaceCollection collection)
+    {
+        if (collection.PublicShareToken == null) return;
+        var url = NavigationManager.ToAbsoluteUri($"/share/collection/{collection.PublicShareToken}").ToString();
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", url);
+            _statusMessage = "Link copied to clipboard!";
+            _statusIntent = MessageIntent.Success;
+        }
+        catch
+        {
+            _statusMessage = $"Could not copy to clipboard. Copy manually: {url}";
+            _statusIntent = MessageIntent.Warning;
+        }
+    }
+
+    private async Task RevokePublicLink(PlaceCollection collection)
+    {
+        if (_currentUserId == null) return;
+        await CollectionRepository.RevokePublicLinkAsync(collection.Id, _currentUserId);
+        collection.PublicShareToken = null;
+        _statusMessage = "Public link revoked. The link no longer works.";
+        _statusIntent = MessageIntent.Info;
+    }
+
+    private async Task DeleteCollection(string id)
+    {
+        if (_currentUserId == null) return;
+        var collection = _collections?.FirstOrDefault(c => c.Id == id);
+        var name = collection?.Name ?? "this collection";
+        var dialog = await DialogService.ShowDialogAsync<ConfirmDialog>(
+            new ConfirmDialogContent($"Are you sure you want to delete \"{name}\"?"),
+            new DialogParameters { Title = "Confirm Delete", PreventDismissOnOverlayClick = true });
+        var result = await dialog.Result;
+        if (result.Cancelled) return;
+
+        await CollectionRepository.DeleteAsync(id, _currentUserId);
+        await LoadCollections();
+    }
+}

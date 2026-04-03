@@ -1,0 +1,59 @@
+@implements IDialogContentComponent<CreateCollectionDialogContent>
+
+@using TripPlanner.Web.Models
+@using TripPlanner.Web.Repositories
+@using TripPlanner.Web.Services
+
+@inject IPlaceCollectionRepository CollectionRepository
+@inject UserService UserService
+
+<FluentDialogHeader>
+    <FluentLabel Typo="Typography.PaneHeader">Create New Collection</FluentLabel>
+</FluentDialogHeader>
+
+<FluentDialogBody>
+    <EditForm EditContext="@_editContext">
+        <DataAnnotationsValidator />
+        <FluentStack Orientation="Orientation.Vertical">
+            <FluentTextField @bind-Value="Content.Collection.Name" Label="Name" Required="true" Style="width: 100%;" data-testid="collection-name" />
+            <FluentValidationSummary />
+            <FluentTextArea @bind-Value="Content.Collection.Description" Label="Description" Style="width: 100%;" data-testid="collection-description" />
+        </FluentStack>
+    </EditForm>
+</FluentDialogBody>
+
+<FluentDialogFooter>
+    <FluentButton Appearance="Appearance.Accent" OnClick="@SubmitAsync" data-testid="submit-new-collection-button">Create</FluentButton>
+    <FluentButton Appearance="Appearance.Neutral" OnClick="@CancelAsync">Cancel</FluentButton>
+</FluentDialogFooter>
+
+@code {
+    [Parameter]
+    public CreateCollectionDialogContent Content { get; set; } = default!;
+
+    [CascadingParameter]
+    public FluentDialog Dialog { get; set; } = default!;
+
+    private EditContext _editContext = default!;
+
+    protected override void OnInitialized()
+    {
+        _editContext = new EditContext(Content.Collection);
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (!_editContext.Validate())
+            return;
+
+        var currentUserId = await UserService.GetCurrentUserIdAsync();
+        if (currentUserId != null)
+        {
+            Content.Collection.OwnerId = currentUserId;
+            await CollectionRepository.AddAsync(Content.Collection);
+            await Dialog.CloseAsync(Content);
+        }
+    }
+
+    private async Task CancelAsync() => await Dialog.CancelAsync();
+}

@@ -7,6 +7,7 @@
 @using TripPlanner.Web.Services
 @using Microsoft.JSInterop
 @using TripPlanner.Web.Components.Shared
+@using TripPlanner.Web.Components.Pages.Collections
 
 @inject IPlaceRepository PlaceRepository
 @inject ITripRepository TripRepository
@@ -72,7 +73,8 @@
                                           OnCardHovered="@(() => OnCardHovered(place.Id))"
                                           OnCardUnhovered="@(() => OnCardUnhovered(place.Id))"
                                           OnSetImageIndex="@((idx) => SetImageIndex(place.Id, idx))"
-                                          OnImageClick="@((idx) => OpenImageLightbox(place, idx))" />
+                                          OnImageClick="@((idx) => OpenImageLightbox(place, idx))"
+                                          OnAddToCollection="@ShowAddToCollectionDialog" />
                         }
                     </FluentStack>
                 }
@@ -596,6 +598,13 @@
             Title = place.Name,
             Width = "600px"
         });
+    }
+
+    private async Task ShowAddToCollectionDialog(Place place)
+    {
+        await DialogService.ShowDialogAsync<AddToCollectionDialog>(
+            new AddToCollectionDialogContent(place.Id, place.Name),
+            new DialogParameters { Modal = true, PreventDismissOnOverlayClick = true });
     }
 
     public async ValueTask DisposeAsync()
