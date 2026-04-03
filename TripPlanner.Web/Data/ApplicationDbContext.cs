@@ -160,6 +160,6 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .WithMany()
             .HasForeignKey(p => p.GpxTrackId)
             .IsRequired(false)
-            .OnDelete(DeleteBehavior.ClientSetNull);
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }
