@@ -109,7 +109,7 @@ public class GpxService
             if (p.Elevation.HasValue)
                 trkpt.Add(new XElement(ns + "ele", p.Elevation.Value.ToString("F1", CultureInfo.InvariantCulture)));
             if (p.Time.HasValue)
-                trkpt.Add(new XElement(ns + "time", p.Time.Value.UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ssZ")));
+                trkpt.Add(new XElement(ns + "time", p.Time.Value.UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture)));
             return trkpt;
         });
 
