@@ -17,3 +17,7 @@
     height: 100%;
     object-fit: cover;
 }
+
+.map-card-image-clickable {
+    cursor: zoom-in;
+}

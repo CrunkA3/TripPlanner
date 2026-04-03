@@ -49,7 +49,9 @@
                          srcset="@PlaceImageHelper.BuildSrcSet(CurrentImage)"
                          sizes="(max-width: 768px) 100vw, 400px"
                          alt="@Place.Name"
-                         class="map-card-image" />
+                         class="map-card-image map-card-image-clickable"
+                         @onclick:stopPropagation="true"
+                         @onclick="@(() => OnImageClick.InvokeAsync(CurrentImageIndex))" />
                     @if (_imageCount > 1)
                     {
                         <div class="map-card-dots">
@@ -106,6 +108,7 @@
     [Parameter] public EventCallback OnCardClicked { get; set; }
     [Parameter] public EventCallback OnCardHovered { get; set; }
     [Parameter] public EventCallback OnCardUnhovered { get; set; }
+    [Parameter] public EventCallback<int> OnImageClick { get; set; }
     [Parameter] public EventCallback<int> OnSetImageIndex { get; set; }
 
     private string _googleMapsUrl =>

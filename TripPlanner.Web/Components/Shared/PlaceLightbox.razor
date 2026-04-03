@@ -1,0 +1,118 @@
+@using TripPlanner.Web.Models
+@inject IJSRuntime JS
+@inject ILogger<PlaceLightbox> Logger
+
+@if (IsOpen && _images.Count > 0)
+{
+    <div class="lightbox-overlay" role="dialog" aria-modal="true" aria-label="Image preview"
+         @ref="_overlayRef" tabindex="-1"
+         @onclick="CloseAsync" @onkeydown="HandleKeyDown">
+        <button type="button" class="lightbox-close" @onclick:stopPropagation="true" @onclick="CloseAsync" aria-label="Close">&#10005;</button>
+        @if (_images.Count > 1)
+        {
+            <button type="button" class="lightbox-nav lightbox-prev" @onclick:stopPropagation="true" @onclick="@(() => Navigate(-1))" aria-label="Previous">&#8249;</button>
+        }
+        <img class="lightbox-image"
+             src="@_images[_currentIndex].Src"
+             srcset="@_images[_currentIndex].Srcset"
+             sizes="90vw"
+             alt="Place image" @onclick:stopPropagation="true" />
+        @if (_images.Count > 1)
+        {
+            <button type="button" class="lightbox-nav lightbox-next" @onclick:stopPropagation="true" @onclick="@(() => Navigate(1))" aria-label="Next">&#8250;</button>
+            <div class="lightbox-counter" @onclick:stopPropagation="true">@(_currentIndex + 1) / @_images.Count</div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public Place Place { get; set; } = null!;
+
+    /// <summary>Index of the image to show when the lightbox is opened.</summary>
+    [Parameter] public int InitialIndex { get; set; }
+
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+
+    private record ImageEntry(string Src, string? Srcset);
+
+    private List<ImageEntry> _images = [];
+    private int _currentIndex;
+    private ElementReference _overlayRef;
+    private bool _shouldFocus;
+    private bool _wasOpen;
+
+    protected override void OnParametersSet()
+    {
+        _images = BuildImageList();
+
+        if (IsOpen && !_wasOpen)
+        {
+            _currentIndex = _images.Count > 0
+                ? Math.Clamp(InitialIndex, 0, _images.Count - 1)
+                : 0;
+            _shouldFocus = true;
+            _wasOpen = true;
+        }
+        else if (!IsOpen)
+        {
+            _wasOpen = false;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_shouldFocus)
+        {
+            _shouldFocus = false;
+            try { await JS.InvokeVoidAsync("focusElement", _overlayRef); }
+            catch (Exception ex) { Logger.LogWarning(ex, "Failed to focus lightbox overlay."); }
+        }
+    }
+
+    private List<ImageEntry> BuildImageList()
+    {
+        if (Place is null) return [];
+
+        // Prefer PlaceImage objects (supports data: URLs for unsaved images)
+        if (Place.Images is { Count: > 0 })
+        {
+            return [.. Place.Images
+                .OrderBy(i => i.SortOrder)
+                .Select(img => new ImageEntry(
+                    img.ImageData.Length > 0
+                        ? $"data:{img.ImageContentType};base64,{Convert.ToBase64String(img.ImageData)}"
+                        : $"/api/placeImages/{img.Id}?width=1200",
+                    PlaceImageHelper.GetSrcSet(img)))];
+        }
+
+        // Fall back to ImageIds (API-only, e.g. when loading places without blobs)
+        if (Place.ImageIds is { Count: > 0 })
+        {
+            return [.. Place.ImageIds
+                .Select(id => new ImageEntry(
+                    $"/api/placeImages/{id}?width=1200",
+                    PlaceImageHelper.BuildSrcSet(id)))];
+        }
+
+        return [];
+    }
+
+    private void Navigate(int direction)
+    {
+        if (_images.Count == 0) return;
+        _currentIndex = (_currentIndex + direction + _images.Count) % _images.Count;
+    }
+
+    private async Task CloseAsync()
+    {
+        await IsOpenChanged.InvokeAsync(false);
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") await CloseAsync();
+        else if (e.Key == "ArrowRight") Navigate(1);
+        else if (e.Key == "ArrowLeft") Navigate(-1);
+    }
+}

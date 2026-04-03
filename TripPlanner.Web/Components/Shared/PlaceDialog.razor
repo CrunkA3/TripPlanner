@@ -240,29 +240,10 @@
     <FluentButton Appearance="Appearance.Neutral" OnClick="@CancelAsync">Cancel</FluentButton>
 </FluentDialogFooter>
 
-@if (_lightboxIndex >= 0 && _lightboxImages is not null && _lightboxImages.Count > 0)
-{
-    var lightboxImg = _lightboxImages[_lightboxIndex];
-    <div class="lightbox-overlay" role="dialog" aria-modal="true" aria-label="Image preview"
-         @ref="_lightboxRef" tabindex="-1"
-         @onclick="CloseLightbox" @onkeydown="HandleLightboxKey">
-        <button type="button" class="lightbox-close" @onclick:stopPropagation="true" @onclick="CloseLightbox" aria-label="Close">&#10005;</button>
-        @if (_lightboxImages.Count > 1)
-        {
-            <button type="button" class="lightbox-nav lightbox-prev" @onclick:stopPropagation="true" @onclick="@(() => NavigateLightbox(-1))" aria-label="Previous">&#8249;</button>
-        }
-        <img class="lightbox-image"
-             src="@GetImageSrc(lightboxImg)"
-             srcset="@PlaceImageHelper.GetSrcSet(lightboxImg)"
-             sizes="90vw"
-             alt="Place image" @onclick:stopPropagation="true" />
-        @if (_lightboxImages.Count > 1)
-        {
-            <button type="button" class="lightbox-nav lightbox-next" @onclick:stopPropagation="true" @onclick="@(() => NavigateLightbox(1))" aria-label="Next">&#8250;</button>
-            <div class="lightbox-counter" @onclick:stopPropagation="true">@(_lightboxIndex + 1) / @_lightboxImages.Count</div>
-        }
-    </div>
-}
+<PlaceLightbox Place="Content"
+               InitialIndex="@_lightboxIndex"
+               IsOpen="@(_lightboxIndex >= 0)"
+               IsOpenChanged="@OnLightboxIsOpenChanged" />
 
 @code {
     [Parameter]
@@ -288,9 +269,6 @@
     private const int MaxImageCount = 10;
 
     private int _lightboxIndex = -1;
-    private List<PlaceImage>? _lightboxImages;
-    private ElementReference _lightboxRef;
-    private bool _focusLightbox;
 
     private bool _isAnalyzing = false;
     private string? _analyzeError;
@@ -482,39 +460,14 @@
 
     private void OpenLightbox(int index)
     {
-        _lightboxImages = Content.Images.OrderBy(i => i.SortOrder).ToList();
         _lightboxIndex = index;
-        _focusLightbox = true;
     }
 
-    private void CloseLightbox()
+    private void OnLightboxIsOpenChanged(bool isOpen)
     {
-        _lightboxIndex = -1;
-        _lightboxImages = null;
+        if (!isOpen) _lightboxIndex = -1;
     }
 
-    private void NavigateLightbox(int direction)
-    {
-        if (_lightboxImages is null || _lightboxImages.Count == 0) return;
-        _lightboxIndex = (_lightboxIndex + direction + _lightboxImages.Count) % _lightboxImages.Count;
-    }
-
-    private void HandleLightboxKey(KeyboardEventArgs e)
-    {
-        if (e.Key == "Escape") CloseLightbox();
-        else if (e.Key == "ArrowRight") NavigateLightbox(1);
-        else if (e.Key == "ArrowLeft") NavigateLightbox(-1);
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (_focusLightbox)
-        {
-            _focusLightbox = false;
-            try { await JS.InvokeVoidAsync("focusElement", _lightboxRef); }
-            catch (Exception ex) { Logger.LogWarning(ex, "Failed to focus lightbox overlay."); }
-        }
-    }
     private async Task SavePlace()
     {
         if (CurrentUser is null)
