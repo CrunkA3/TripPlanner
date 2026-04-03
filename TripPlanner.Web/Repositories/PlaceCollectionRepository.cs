@@ -16,12 +16,27 @@ public class PlaceCollectionRepository : IPlaceCollectionRepository
     public async Task<List<PlaceCollection>> GetAllByOwnerAsync(string userId)
     {
         await using var context = _contextFactory.CreateDbContext();
-        return await context.PlaceCollections
+        var collectionsWithCounts = await context.PlaceCollections
             .AsNoTracking()
             .Where(c => c.OwnerId == userId)
-            .Include(c => c.Items)
             .OrderByDescending(c => c.CreatedAt)
+            .Select(c => new
+            {
+                Collection = c,
+                ItemCount = c.Items.Count()
+            })
             .ToListAsync();
+
+        foreach (var entry in collectionsWithCounts)
+        {
+            entry.Collection.Items = Enumerable.Range(0, entry.ItemCount)
+                .Select(_ => new PlaceCollectionItem())
+                .ToList();
+        }
+
+        return collectionsWithCounts
+            .Select(entry => entry.Collection)
+            .ToList();
     }
 
     public async Task<PlaceCollection?> GetByIdAsync(string id)
