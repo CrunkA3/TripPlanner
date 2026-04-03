@@ -38,7 +38,7 @@ internal static class GpxDownloadApi
         if (userId is null)
             return Results.Unauthorized();
 
-        var track = await gpxRepository.GetByIdWithPointsAsync(trackId, userId);
+        var track = await gpxRepository.GetByIdWithPointsAsync(trackId, userId, cancellationToken);
         if (track is null)
             return Results.NotFound();
 

@@ -114,7 +114,7 @@ public class PlaceRepository : IPlaceRepository
                 Place = p,
                 ImageIds = p.Images.OrderBy(i => i.SortOrder).Select(i => i.Id),
                 GpxTrack = p.GpxTrack
-            }); ;
+            }); 
 
         var queryResult = await query.ToListAsync();
 
