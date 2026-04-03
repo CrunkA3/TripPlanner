@@ -43,16 +43,16 @@
 
     private async Task SubmitAsync()
     {
+        var currentUserId = await UserService.GetCurrentUserIdAsync();
+        if (currentUserId == null) return;
+
+        Content.Collection.OwnerId = currentUserId;
+
         if (!_editContext.Validate())
             return;
 
-        var currentUserId = await UserService.GetCurrentUserIdAsync();
-        if (currentUserId != null)
-        {
-            Content.Collection.OwnerId = currentUserId;
-            await CollectionRepository.AddAsync(Content.Collection);
-            await Dialog.CloseAsync(Content);
-        }
+        await CollectionRepository.AddAsync(Content.Collection);
+        await Dialog.CloseAsync(Content);
     }
 
     private async Task CancelAsync() => await Dialog.CancelAsync();
