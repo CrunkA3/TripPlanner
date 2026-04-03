@@ -96,6 +96,40 @@ public class GpxService
         return R * c;
     }
 
+    public string SerializeToGpx(GpxTrack track)
+    {
+        var ns = XNamespace.Get("http://www.topografix.com/GPX/1/1");
+        var xsi = XNamespace.Get("http://www.w3.org/2001/XMLSchema-instance");
+
+        var trkpts = track.Points.OrderBy(p => p.Order).Select(p =>
+        {
+            var trkpt = new XElement(ns + "trkpt",
+                new XAttribute("lat", p.Latitude.ToString("F6", CultureInfo.InvariantCulture)),
+                new XAttribute("lon", p.Longitude.ToString("F6", CultureInfo.InvariantCulture)));
+            if (p.Elevation.HasValue)
+                trkpt.Add(new XElement(ns + "ele", p.Elevation.Value.ToString("F1", CultureInfo.InvariantCulture)));
+            if (p.Time.HasValue)
+                trkpt.Add(new XElement(ns + "time", p.Time.Value.UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ssZ")));
+            return trkpt;
+        });
+
+        var trk = new XElement(ns + "trk",
+            new XElement(ns + "name", track.Name),
+            track.Description != null ? new XElement(ns + "desc", track.Description) : null,
+            new XElement(ns + "trkseg", trkpts));
+
+        var gpx = new XElement(ns + "gpx",
+            new XAttribute("version", "1.1"),
+            new XAttribute("creator", "TripPlanner"),
+            new XAttribute(XNamespace.Xmlns + "xsi", xsi.NamespaceName),
+            new XAttribute(xsi + "schemaLocation",
+                "http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd"),
+            trk);
+
+        var doc = new XDocument(new XDeclaration("1.0", "UTF-8", null), gpx);
+        return doc.ToString();
+    }
+
     private double ToRadians(double degrees)
     {
         return degrees * Math.PI / 180;

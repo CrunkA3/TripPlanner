@@ -69,6 +69,35 @@ public class GpxRepository : IGpxRepository
         return await context.GpxTracks.FindAsync(id);
     }
 
+    public async Task<GpxTrack?> GetByIdWithPointsAsync(string id, string userId)
+    {
+        await using var context = _contextFactory.CreateDbContext();
+
+        var userWishlistIds = context.UserWishlists
+            .Where(w => w.UserId == userId)
+            .Select(w => w.WishlistId);
+
+        var userTripIds = context.Trips
+            .Where(t => t.OwnerId == userId)
+            .Select(t => t.Id)
+            .Union(context.SharedTrips
+                .Where(st => st.UserId == userId)
+                .Select(st => st.TripId));
+
+        var hasAccess = await context.Places
+            .AnyAsync(p => p.GpxTrackId == id && (
+                (p.WishlistId != null && userWishlistIds.Contains(p.WishlistId)) ||
+                (p.TripId != null && userTripIds.Contains(p.TripId))));
+
+        if (!hasAccess)
+            return null;
+
+        return await context.GpxTracks
+            .AsNoTracking()
+            .Include(t => t.Points.OrderBy(x => x.Order))
+            .FirstOrDefaultAsync(t => t.Id == id);
+    }
+
     public async Task<GpxTrack> AddAsync(GpxTrack track)
     {
         await using var context = _contextFactory.CreateDbContext();

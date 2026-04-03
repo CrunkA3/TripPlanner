@@ -113,6 +113,12 @@
                         {
                             <FluentBadge BackgroundColor="var(--neutral-layer-3)">@place.Wishlist.Name</FluentBadge>
                         }
+                        @if (place.HasGpxTrack)
+                        {
+                            <a href="/api/gpx/@place.GpxTrackId" download title="GPX-Track herunterladen" class="place-card-gpx-download">
+                                <FluentBadge BackgroundColor="var(--neutral-layer-3)"><FluentIcon Value="@(new Icons.Regular.Size16.ArrowDownload())" Width="12px" /> GPX</FluentBadge>
+                            </a>
+                        }
                     </div>
 
                     @if (place.Tags.Any())

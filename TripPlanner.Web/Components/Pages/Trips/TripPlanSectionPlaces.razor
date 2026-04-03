@@ -51,6 +51,7 @@ else
                             {
                                 <FluentLabel Style="font-size: 0.875em;">
                                     🏔 @($"{place.GpxTrack.TotalDistance:F1} km ↑{place.GpxTrack.ElevationGain:F0} m")
+                                    &nbsp;<a href="/api/gpx/@place.GpxTrackId" download title="GPX herunterladen" style="font-size: 0.85em;">⬇ GPX</a>
                                 </FluentLabel>
                             }
                         </FluentStack>

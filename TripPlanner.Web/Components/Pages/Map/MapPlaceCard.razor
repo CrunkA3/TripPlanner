@@ -96,6 +96,7 @@
                 {
                     <FluentLabel Style="font-size: 0.875em;">
                         🏔 @($"{Place.GpxTrack.TotalDistance:F1} km ↑{Place.GpxTrack.ElevationGain:F0} m")
+                        &nbsp;<a href="/api/gpx/@Place.GpxTrackId" download @onclick:stopPropagation="true" title="GPX herunterladen" style="font-size: 0.85em;">⬇ GPX</a>
                     </FluentLabel>
                 }
                 @if (ShowWeather && Weather != null)

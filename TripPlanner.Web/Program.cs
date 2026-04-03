@@ -171,6 +171,7 @@ app.MapMcp("/mcp")
 
 // Map API endpoints
 app.MapPlaceImageApi();
+app.MapGpxDownloadApi();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
