@@ -84,10 +84,17 @@ public class GpxRepository : IGpxRepository
                 .Where(st => st.UserId == userId)
                 .Select(st => st.TripId));
 
+        // Also allow access if the place is referenced from a trip day itinerary owned by the user
+        // (mirrors PlaceRepository.GetOwnedTripPlaceIds / GetAllByUserAsync logic)
+        var tripItineraryPlaceIds = context.Trips
+            .Where(t => t.OwnerId == userId)
+            .SelectMany(t => t.Days.SelectMany(d => d.Places.Select(tp => tp.PlaceId)));
+
         var hasAccess = await context.Places
             .AnyAsync(p => p.GpxTrackId == id && (
                 (p.WishlistId != null && userWishlistIds.Contains(p.WishlistId)) ||
-                (p.TripId != null && userTripIds.Contains(p.TripId))), cancellationToken);
+                (p.TripId != null && userTripIds.Contains(p.TripId)) ||
+                tripItineraryPlaceIds.Contains(p.Id)), cancellationToken);
 
         if (!hasAccess)
             return null;
