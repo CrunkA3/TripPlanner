@@ -70,8 +70,14 @@
 
     private async Task SubmitAsync()
     {
+        _errorMessage = null;
+
         var userId = await UserService.GetCurrentUserIdAsync();
-        if (userId == null) return;
+        if (userId == null)
+        {
+            _errorMessage = "You must be signed in to add a place to a collection.";
+            return;
+        }
 
         var selected = _selected.Where(kv => kv.Value).Select(kv => kv.Key).ToList();
         if (!selected.Any())
@@ -80,12 +86,19 @@
             return;
         }
 
-        foreach (var collectionId in selected)
+        try
         {
-            await CollectionRepository.AddPlaceAsync(collectionId, Content.PlaceId, userId);
-        }
+            foreach (var collectionId in selected)
+            {
+                await CollectionRepository.AddPlaceAsync(collectionId, Content.PlaceId, userId);
+            }
 
-        await Dialog.CloseAsync(Content);
+            await Dialog.CloseAsync(Content);
+        }
+        catch (Exception)
+        {
+            _errorMessage = "An error occurred while adding the place to the collection. Please try again.";
+        }
     }
 
     private async Task CreateNewCollectionAsync()
@@ -110,6 +123,7 @@
                     newSelected[newCollection.Id] = true;
                 }
                 _selected = newSelected;
+                StateHasChanged();
             }
         }
     }
