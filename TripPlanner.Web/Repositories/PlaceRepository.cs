@@ -58,7 +58,8 @@ public class PlaceRepository : IPlaceRepository
             .Select(p => new
             {
                 Place = p,
-                ImageIds = p.Images.OrderBy(i => i.SortOrder).Select(i => i.Id)
+                ImageIds = p.Images.OrderBy(i => i.SortOrder).Select(i => i.Id),
+                GpxTrack = p.GpxTrack
             });
 
         var queryResult = await query.ToListAsync();
@@ -66,6 +67,7 @@ public class PlaceRepository : IPlaceRepository
         return [.. queryResult.Select(q =>
         {
             q.Place.ImageIds = [.. q.ImageIds];
+            q.Place.GpxTrack = q.GpxTrack;
             return q.Place;
         })];
     }
@@ -85,7 +87,8 @@ public class PlaceRepository : IPlaceRepository
             .Select(p => new
             {
                 Place = p,
-                ImageIds = p.Images.OrderBy(i => i.SortOrder).Select(i => i.Id)
+                ImageIds = p.Images.OrderBy(i => i.SortOrder).Select(i => i.Id),
+                GpxTrack = p.GpxTrack
             });
 
         var queryResult = await query.ToListAsync();
@@ -93,6 +96,7 @@ public class PlaceRepository : IPlaceRepository
         return [.. queryResult.Select(q =>
         {
             q.Place.ImageIds = [.. q.ImageIds];
+            q.Place.GpxTrack = q.GpxTrack;
             return q.Place;
         })];
     }
@@ -108,14 +112,16 @@ public class PlaceRepository : IPlaceRepository
             .Select(p => new
             {
                 Place = p,
-                ImageIds = p.Images.OrderBy(i => i.SortOrder).Select(i => i.Id)
-            }); ;
+                ImageIds = p.Images.OrderBy(i => i.SortOrder).Select(i => i.Id),
+                GpxTrack = p.GpxTrack
+            }); 
 
         var queryResult = await query.ToListAsync();
 
         return [.. queryResult.Select(q =>
         {
             q.Place.ImageIds = [.. q.ImageIds];
+            q.Place.GpxTrack = q.GpxTrack;
             return q.Place;
         })];
     }
@@ -270,7 +276,8 @@ public class PlaceRepository : IPlaceRepository
             .Select(p => new
             {
                 Place = p,
-                ImageIds = p.Images.OrderBy(i => i.SortOrder).Select(i => i.Id)
+                ImageIds = p.Images.OrderBy(i => i.SortOrder).Select(i => i.Id),
+                GpxTrack = p.GpxTrack
             });
 
         var queryResult = await queryWithImageIds.ToListAsync();
@@ -278,6 +285,7 @@ public class PlaceRepository : IPlaceRepository
         return [.. queryResult.Select(q =>
         {
             q.Place.ImageIds = [.. q.ImageIds];
+            q.Place.GpxTrack = q.GpxTrack;
             return q.Place;
         })];
     }
@@ -299,7 +307,8 @@ public class PlaceRepository : IPlaceRepository
             .Select(p => new
             {
                 Place = p,
-                ImageIds = p.Images.OrderBy(i => i.SortOrder).Select(i => i.Id)
+                ImageIds = p.Images.OrderBy(i => i.SortOrder).Select(i => i.Id),
+                GpxTrack = p.GpxTrack
             });
 
         var queryResult = await query.ToListAsync();
@@ -307,6 +316,7 @@ public class PlaceRepository : IPlaceRepository
         return [.. queryResult.Select(q =>
         {
             q.Place.ImageIds = [.. q.ImageIds];
+            q.Place.GpxTrack = q.GpxTrack;
             return q.Place;
         })];
     }

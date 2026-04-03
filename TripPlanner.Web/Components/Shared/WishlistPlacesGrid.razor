@@ -53,7 +53,16 @@
                     @if (place.HasGpxTrack)
                     {
                         <span class="place-card-gpx-badge">
-                            <FluentBadge Appearance="Appearance.Accent">GPX</FluentBadge>
+                            <FluentBadge Appearance="Appearance.Accent">
+                                @if (place.GpxTrack != null)
+                                {
+                                    @($"{place.GpxTrack.TotalDistance:F1} km ↑{place.GpxTrack.ElevationGain:F0} m")
+                                }
+                                else
+                                {
+                                    @("GPX")
+                                }
+                            </FluentBadge>
                         </span>
                     }
                     @if (!string.IsNullOrWhiteSpace(place.Notes))
@@ -103,6 +112,12 @@
                         @if (place.Wishlist is not null)
                         {
                             <FluentBadge BackgroundColor="var(--neutral-layer-3)">@place.Wishlist.Name</FluentBadge>
+                        }
+                        @if (place.HasGpxTrack)
+                        {
+                            <a href="/api/gpx/@place.GpxTrackId" download title="GPX-Track herunterladen" class="place-card-gpx-download">
+                                <FluentBadge BackgroundColor="var(--neutral-layer-3)"><FluentIcon Value="@(new Icons.Regular.Size16.ArrowDownload())" Width="12px" /> GPX</FluentBadge>
+                            </a>
                         }
                     </div>
 
