@@ -95,7 +95,11 @@ else
                                 </FluentButton>
                             }
                             <FluentSpacer />
-                            <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size16.Delete().WithColor(Color.Error))" OnClick="@(() => DeleteCollection(collection.Id))">
+                            <FluentButton Appearance="Appearance.Lightweight"
+                                          IconStart="@(new Icons.Regular.Size16.Delete().WithColor(Color.Error))"
+                                         OnClick="@(() => DeleteCollection(collection.Id))"
+                                         title="Delete collection"
+                                         aria-label="@($"Delete collection {collection.Name}")">
                             </FluentButton>
                         </FluentStack>
                     </FluentStack>
