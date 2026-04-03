@@ -154,5 +154,12 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
         modelBuilder.Entity<Place>()
             .HasIndex(p => p.GpxTrackId);
+
+        modelBuilder.Entity<Place>()
+            .HasOne(p => p.GpxTrack)
+            .WithMany()
+            .HasForeignKey(p => p.GpxTrackId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

@@ -92,6 +92,13 @@
                 <FluentLabel Style="font-size: 0.875em;">
                     <a href="@_googleMapsUrl" target="_blank" rel="noopener noreferrer" @onclick:stopPropagation="true">📍 Google Maps</a>
                 </FluentLabel>
+                @if (Place.GpxTrack != null)
+                {
+                    <FluentLabel Style="font-size: 0.875em;">
+                        🏔 @($"{Place.GpxTrack.TotalDistance:F1} km ↑{Place.GpxTrack.ElevationGain:F0} m")
+                        &nbsp;<a href="/api/gpx/@Place.GpxTrackId" download @onclick:stopPropagation="true" title="GPX herunterladen" style="font-size: 0.85em;">⬇ GPX</a>
+                    </FluentLabel>
+                }
                 @if (ShowWeather && Weather != null)
                 {
                     <FluentLabel Style="font-size: 0.875em;" title="@Weather.GetDescription()">

@@ -47,6 +47,13 @@ else
                                 <FluentSpacer />
                                 <FluentButton Appearance="Appearance.Lightweight" IconEnd="@(new Icons.Regular.Size16.Pen())" OnClick="@(async () => await OnEditPlaceClick.InvokeAsync(place))"></FluentButton>
                             </FluentStack>
+                            @if (place.GpxTrack != null)
+                            {
+                                <FluentLabel Style="font-size: 0.875em;">
+                                    🏔 @($"{place.GpxTrack.TotalDistance:F1} km ↑{place.GpxTrack.ElevationGain:F0} m")
+                                    &nbsp;<a href="/api/gpx/@place.GpxTrackId" download title="GPX herunterladen" style="font-size: 0.85em;">⬇ GPX</a>
+                                </FluentLabel>
+                            }
                         </FluentStack>
                     </FluentCard>
                 }

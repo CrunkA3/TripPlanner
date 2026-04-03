@@ -13,6 +13,7 @@ public class Place
     public List<string> Tags { get; set; } = [];
     [System.ComponentModel.DataAnnotations.MaxLength(450)]
     public string? GpxTrackId { get; set; }
+    public GpxTrack? GpxTrack { get; set; }
 
     // Images (multiple)
     public List<PlaceImage> Images { get; set; } = [];
