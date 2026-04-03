@@ -42,24 +42,28 @@
     private bool _shouldFocus;
     private bool _wasOpen;
 
+    private Place? _lastPlace;
+
     protected override void OnParametersSet()
     {
-        _images = BuildImageList();
+        bool justOpening = IsOpen && !_wasOpen;
+        bool placeChanged = !ReferenceEquals(Place, _lastPlace);
 
-        if (IsOpen && !_wasOpen)
+        if (justOpening || (IsOpen && placeChanged))
         {
+            _images = BuildImageList();
             _currentIndex = _images.Count > 0
                 ? Math.Clamp(InitialIndex, 0, _images.Count - 1)
                 : 0;
-            _shouldFocus = true;
-            _wasOpen = true;
-        }
-        else if (!IsOpen)
-        {
-            _wasOpen = false;
         }
 
-        // Clamp current index in case the image list changed while the lightbox is open
+        if (justOpening)
+            _shouldFocus = true;
+
+        _wasOpen = IsOpen;
+        _lastPlace = Place;
+
+        // Clamp current index in case the image list shrank while the lightbox is open
         if (_images.Count > 0)
             _currentIndex = Math.Clamp(_currentIndex, 0, _images.Count - 1);
         else

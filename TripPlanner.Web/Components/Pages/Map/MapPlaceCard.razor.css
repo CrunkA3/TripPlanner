@@ -16,8 +16,15 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+    display: block;
 }
 
-.map-card-image-clickable {
+.map-card-image-btn {
+    display: block;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: none;
+    background: none;
     cursor: zoom-in;
 }

@@ -14,10 +14,15 @@
             @if (CurrentImage is not null)
             {
                 <div class="map-card-image-container" style="height:70px;">
-                    <img @key="@CurrentImage"
-                         src="/api/placeImages/@CurrentImage?width=400"
-                         alt="@Place.Name"
-                         class="map-card-image" />
+                    <button type="button" class="map-card-image-btn"
+                            @onclick:stopPropagation="true"
+                            @onclick="@(() => OnImageClick.InvokeAsync(CurrentImageIndex))"
+                            aria-label="@($"View images of {Place.Name}")">
+                        <img @key="@CurrentImage"
+                             src="/api/placeImages/@CurrentImage?width=400"
+                             alt="@Place.Name"
+                             class="map-card-image" />
+                    </button>
                 </div>
             }
             <FluentStack Orientation="Orientation.Vertical">
@@ -44,14 +49,17 @@
             @if (CurrentImage is not null)
             {
                 <div class="map-card-image-container">
-                    <img @key="@CurrentImage"
-                         src="/api/placeImages/@CurrentImage?width=400"
-                         srcset="@PlaceImageHelper.BuildSrcSet(CurrentImage)"
-                         sizes="(max-width: 768px) 100vw, 400px"
-                         alt="@Place.Name"
-                         class="map-card-image map-card-image-clickable"
-                         @onclick:stopPropagation="true"
-                         @onclick="@(() => OnImageClick.InvokeAsync(CurrentImageIndex))" />
+                    <button type="button" class="map-card-image-btn"
+                            @onclick:stopPropagation="true"
+                            @onclick="@(() => OnImageClick.InvokeAsync(CurrentImageIndex))"
+                            aria-label="@($"View images of {Place.Name}")">
+                        <img @key="@CurrentImage"
+                             src="/api/placeImages/@CurrentImage?width=400"
+                             srcset="@PlaceImageHelper.BuildSrcSet(CurrentImage)"
+                             sizes="(max-width: 768px) 100vw, 400px"
+                             alt="@Place.Name"
+                             class="map-card-image" />
+                    </button>
                     @if (_imageCount > 1)
                     {
                         <div class="map-card-dots">
