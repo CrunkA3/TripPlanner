@@ -53,7 +53,16 @@
                     @if (place.HasGpxTrack)
                     {
                         <span class="place-card-gpx-badge">
-                            <FluentBadge Appearance="Appearance.Accent">GPX</FluentBadge>
+                            <FluentBadge Appearance="Appearance.Accent">
+                                @if (place.GpxTrack != null)
+                                {
+                                    @($"{place.GpxTrack.TotalDistance:F1} km ↑{place.GpxTrack.ElevationGain:F0} m")
+                                }
+                                else
+                                {
+                                    @("GPX")
+                                }
+                            </FluentBadge>
                         </span>
                     }
                     @if (!string.IsNullOrWhiteSpace(place.Notes))
