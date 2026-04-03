@@ -159,9 +159,17 @@ else
         {
             collection.PublicShareToken = token;
             var url = NavigationManager.ToAbsoluteUri($"/share/collection/{token}").ToString();
-            await JS.InvokeVoidAsync("navigator.clipboard.writeText", url);
-            _statusMessage = "Public link generated and copied to clipboard!";
-            _statusIntent = MessageIntent.Success;
+            try
+            {
+                await JS.InvokeVoidAsync("navigator.clipboard.writeText", url);
+                _statusMessage = "Public link generated and copied to clipboard!";
+                _statusIntent = MessageIntent.Success;
+            }
+            catch
+            {
+                _statusMessage = $"Public link generated. Copy it manually: {url}";
+                _statusIntent = MessageIntent.Warning;
+            }
         }
     }
 
@@ -169,9 +177,17 @@ else
     {
         if (collection.PublicShareToken == null) return;
         var url = NavigationManager.ToAbsoluteUri($"/share/collection/{collection.PublicShareToken}").ToString();
-        await JS.InvokeVoidAsync("navigator.clipboard.writeText", url);
-        _statusMessage = "Link copied to clipboard!";
-        _statusIntent = MessageIntent.Success;
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", url);
+            _statusMessage = "Link copied to clipboard!";
+            _statusIntent = MessageIntent.Success;
+        }
+        catch
+        {
+            _statusMessage = $"Could not copy to clipboard. Copy manually: {url}";
+            _statusIntent = MessageIntent.Warning;
+        }
     }
 
     private async Task RevokePublicLink(PlaceCollection collection)

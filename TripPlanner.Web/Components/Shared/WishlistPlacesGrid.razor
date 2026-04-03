@@ -150,7 +150,7 @@
                 {
                     <hr class="place-card-divider" />
                     <div class="place-card-footer">
-                        @if (OnNotesPlace.HasDelegate)
+                        @if (CanUserEditPlace(place) && OnNotesPlace.HasDelegate)
                         {
                             <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size20.NoteEdit())" OnClick="@(() => OnNotesPlace.InvokeAsync(place))">
                                 Notes
@@ -162,14 +162,14 @@
                                 Add to List
                             </FluentButton>
                         }
-                        @if (OnEditPlace.HasDelegate)
+                        @if (CanUserEditPlace(place) && OnEditPlace.HasDelegate)
                         {
                             <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size16.Edit())" OnClick="@(() => OnEditPlace.InvokeAsync(place))">
                                 Edit
                             </FluentButton>
                         }
                         <FluentSpacer />
-                        @if (OnDeletePlace.HasDelegate)
+                        @if (CanEdit && OnDeletePlace.HasDelegate)
                         {
                             <FluentButton Appearance="Appearance.Lightweight" Color="var(--error)" IconStart="@(new Icons.Regular.Size16.Delete().WithColor(Color.Error))" OnClick="@(() => OnDeletePlace.InvokeAsync(place.Id))">
                                 Delete
