@@ -141,6 +141,12 @@
                                 Notes
                             </FluentButton>
                         }
+                        @if (OnAddToCollection.HasDelegate)
+                        {
+                            <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size20.Collections())" OnClick="@(() => OnAddToCollection.InvokeAsync(place))" title="Add to collection">
+                                Add to List
+                            </FluentButton>
+                        }
                         @if (OnEditPlace.HasDelegate)
                         {
                             <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size16.Edit())" OnClick="@(() => OnEditPlace.InvokeAsync(place))">
@@ -180,6 +186,9 @@
 
     [Parameter]
     public EventCallback<string> OnRemoveReview { get; set; }
+
+    [Parameter]
+    public EventCallback<Place> OnAddToCollection { get; set; }
 
     private Dictionary<string, int> _currentImageIndex = new();
     private System.Timers.Timer? _carouselTimer;
@@ -269,8 +278,9 @@
         place.Wishlist.SharedWith.Any(sw => sw.Level <= ShareLevel.Editor && sw.UserId == currentUserId);
 
     private bool CanShowPlaceActions(Place place) =>
-        CanUserEditPlace(place) &&
-        (OnEditPlace.HasDelegate || OnDeletePlace.HasDelegate || OnNotesPlace.HasDelegate || OnRemoveReview.HasDelegate);
+        OnAddToCollection.HasDelegate ||
+        (CanEdit && OnDeletePlace.HasDelegate) ||
+        (CanUserEditPlace(place) && (OnEditPlace.HasDelegate || OnNotesPlace.HasDelegate || OnRemoveReview.HasDelegate));
 
     public void Dispose()
     {

@@ -97,6 +97,7 @@ builder.Services.AddScoped<IWishlistRepository, WishlistRepository>();
 builder.Services.AddScoped<IUrlImportJobRepository, UrlImportJobRepository>();
 builder.Services.AddScoped<IChatConversationRepository, ChatConversationRepository>();
 builder.Services.AddScoped<IChatJobRepository, ChatJobRepository>();
+builder.Services.AddScoped<IPlaceCollectionRepository, PlaceCollectionRepository>();
 
 // Register services
 builder.Services.AddScoped<GpxService>();

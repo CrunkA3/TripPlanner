@@ -25,4 +25,5 @@ public class ApplicationUser : IdentityUser
     public List<Trip> OwnedTrips { get; set; } = new();
     public List<SharedTrip> SharedTrips { get; set; } = new();
     public List<ChatConversation> ChatConversations { get; set; } = new();
+    public List<PlaceCollection> OwnedCollections { get; set; } = new();
 }

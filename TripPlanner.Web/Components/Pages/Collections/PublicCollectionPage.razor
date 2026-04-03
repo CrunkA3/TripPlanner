@@ -1,0 +1,77 @@
+@page "/share/collection/{Token}"
+@rendermode InteractiveServer
+
+@using TripPlanner.Web.Components.Shared
+@using TripPlanner.Web.Models
+@using TripPlanner.Web.Repositories
+
+@inject IPlaceCollectionRepository CollectionRepository
+@inject NavigationManager NavigationManager
+
+<PageTitle>@(_collection?.Name ?? "Shared Collection")</PageTitle>
+
+@if (_loading)
+{
+    <FluentProgressRing>Loading collection...</FluentProgressRing>
+}
+else if (_collection == null)
+{
+    <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center" Style="padding: 3rem;">
+        <FluentIcon Value="@(new Icons.Regular.Size48.Link())" Color="Color.Neutral" />
+        <FluentLabel Typo="Typography.H3">Collection not found</FluentLabel>
+        <FluentLabel>This link may have expired or been revoked.</FluentLabel>
+        <FluentButton Appearance="Appearance.Accent" OnClick="@(() => NavigationManager.NavigateTo("/"))">
+            Go to Homepage
+        </FluentButton>
+    </FluentStack>
+}
+else
+{
+    <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Stretch" Width="100%">
+        <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" Style="margin-bottom: 1rem;">
+            <FluentIcon Value="@(new Icons.Regular.Size24.Collections())" Color="Color.Accent" Style="margin-right: 0.75rem;" />
+            <FluentStack Orientation="Orientation.Vertical">
+                <FluentLabel Typo="Typography.H2">@_collection.Name</FluentLabel>
+                @if (!string.IsNullOrEmpty(_collection.Description))
+                {
+                    <FluentLabel Typo="Typography.Body">@_collection.Description</FluentLabel>
+                }
+            </FluentStack>
+        </FluentStack>
+
+        <FluentMessageBar Intent="MessageIntent.Info" Style="margin-bottom: 1rem;">
+            <FluentIcon Value="@(new Icons.Regular.Size16.Info())" Style="margin-right: 4px;" />
+            This is a shared collection. <a href="/Account/Register">Sign in or create an account</a> to build your own collections.
+        </FluentMessageBar>
+
+        @if (_places == null || !_places.Any())
+        {
+            <FluentCard>
+                <FluentLabel>This collection has no places yet.</FluentLabel>
+            </FluentCard>
+        }
+        else
+        {
+            <WishlistPlacesGrid Places="_places" CanEdit="false" />
+        }
+    </FluentStack>
+}
+
+@code {
+    [Parameter]
+    public string Token { get; set; } = string.Empty;
+
+    private PlaceCollection? _collection;
+    private List<Place>? _places;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _collection = await CollectionRepository.GetByPublicTokenAsync(Token);
+        if (_collection != null)
+        {
+            _places = await CollectionRepository.GetPlacesByPublicTokenAsync(Token);
+        }
+        _loading = false;
+    }
+}

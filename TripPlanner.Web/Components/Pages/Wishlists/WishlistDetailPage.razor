@@ -6,6 +6,7 @@
 @using TripPlanner.Web.Models
 @using TripPlanner.Web.Repositories
 @using TripPlanner.Web.Services
+@using TripPlanner.Web.Components.Pages.Collections
 
 @attribute [Authorize]
 @implements IDisposable
@@ -19,7 +20,6 @@
 @inject ISemanticSearchService SemanticSearchService
 @inject WishlistImportExportService ImportExportService
 @inject IJSRuntime JS
-
 <PageTitle>@(wishlist?.Name ?? "Wishlist")</PageTitle>
 <FluentDialogProvider />
 
@@ -148,7 +148,7 @@ else
         }
         else
         {
-            <WishlistPlacesGrid Places="FilteredPlaces" CanEdit="canEdit" OnEditPlace="EditPlace" OnDeletePlace="DeletePlace" OnNotesPlace="OpenNotes" OnRemoveReview="RemoveReview" />
+            <WishlistPlacesGrid Places="FilteredPlaces" CanEdit="canEdit" OnEditPlace="EditPlace" OnDeletePlace="DeletePlace" OnNotesPlace="OpenNotes" OnRemoveReview="RemoveReview" OnAddToCollection="ShowAddToCollectionDialog" />
         }
     </FluentStack>
 }
@@ -365,6 +365,13 @@ else
 
         await PlaceRepository.MarkAsReviewedAsync(placeId, currentUserId);
         await LoadPlaces();
+    }
+
+    private async Task ShowAddToCollectionDialog(Place place)
+    {
+        await DialogService.ShowDialogAsync<AddToCollectionDialog>(
+            new AddToCollectionDialogContent(place.Id, place.Name),
+            new DialogParameters { Modal = true, PreventDismissOnOverlayClick = true });
     }
 
     private async Task ExportYaml()

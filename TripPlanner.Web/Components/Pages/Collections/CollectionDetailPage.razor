@@ -1,0 +1,180 @@
+@page "/collections/{CollectionId}"
+@rendermode InteractiveServer
+
+@using Microsoft.AspNetCore.Authorization
+@using TripPlanner.Web.Components.Shared
+@using TripPlanner.Web.Models
+@using TripPlanner.Web.Repositories
+@using TripPlanner.Web.Services
+
+@attribute [Authorize]
+
+@inject IPlaceCollectionRepository CollectionRepository
+@inject UserService UserService
+@inject IDialogService DialogService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+
+<PageTitle>@(_collection?.Name ?? "Collection")</PageTitle>
+<FluentDialogProvider />
+
+@if (_collection == null && !_notFound)
+{
+    <FluentProgressRing>Loading collection...</FluentProgressRing>
+}
+else if (_notFound)
+{
+    <FluentMessageBar Intent="MessageIntent.Error">Collection not found or you do not have access.</FluentMessageBar>
+}
+else if (_collection != null)
+{
+    <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Stretch" Width="100%">
+        <FluentToolbar>
+            <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size20.ArrowLeft())" OnClick="@(() => NavigationManager.NavigateTo("/collections"))">
+                Back to Collections
+            </FluentButton>
+            <FluentSpacer />
+            <FluentLabel Typo="Typography.H3">
+                <FluentIcon Icon="Icons.Regular.Size24.Collections" Color="Color.Accent" />
+                @_collection.Name
+            </FluentLabel>
+            <FluentSpacer />
+            @if (_collection.PublicShareToken != null)
+            {
+                <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size20.Copy())" OnClick="@CopyPublicLink" title="Copy public link">
+                    Copy Link
+                </FluentButton>
+                <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size20.LinkDismiss())" OnClick="@RevokePublicLink" title="Revoke public link">
+                    Revoke Link
+                </FluentButton>
+            }
+            else
+            {
+                <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size20.Share())" OnClick="@GeneratePublicLink">
+                    Share
+                </FluentButton>
+            }
+        </FluentToolbar>
+
+        @if (!string.IsNullOrEmpty(_statusMessage))
+        {
+            <FluentMessageBar Intent="@_statusIntent" OnDismiss="@(() => _statusMessage = null)" Style="margin-top: 4px;">
+                @_statusMessage
+            </FluentMessageBar>
+        }
+
+        @if (!string.IsNullOrEmpty(_collection.Description))
+        {
+            <FluentCard>
+                <FluentLabel>@_collection.Description</FluentLabel>
+            </FluentCard>
+        }
+
+        @if (_places == null)
+        {
+            <FluentProgressRing>Loading places...</FluentProgressRing>
+        }
+        else if (!_places.Any())
+        {
+            <FluentCard>
+                <FluentStack HorizontalAlignment="HorizontalAlignment.Center" Style="padding: 1rem;">
+                    <FluentIcon Value="@(new Icons.Regular.Size48.LocationOff())" Color="Color.Neutral" />
+                    <FluentLabel>This collection has no places yet. Add places from the Map, Wishlists, or Places pages.</FluentLabel>
+                </FluentStack>
+            </FluentCard>
+        }
+        else
+        {
+            <WishlistPlacesGrid Places="_places"
+                                CanEdit="true"
+                                OnDeletePlace="RemovePlaceFromCollection" />
+        }
+    </FluentStack>
+}
+
+@code {
+    [Parameter]
+    public string CollectionId { get; set; } = string.Empty;
+
+    private PlaceCollection? _collection;
+    private List<Place>? _places;
+    private bool _notFound;
+    private string? _currentUserId;
+    private string? _statusMessage;
+    private MessageIntent _statusIntent = MessageIntent.Info;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _currentUserId = await UserService.GetCurrentUserIdAsync();
+        if (_currentUserId != null)
+        {
+            await LoadCollection();
+        }
+    }
+
+    private async Task LoadCollection()
+    {
+        if (_currentUserId == null) return;
+        _collection = await CollectionRepository.GetByIdAsync(CollectionId);
+        if (_collection == null || _collection.OwnerId != _currentUserId)
+        {
+            _notFound = true;
+            _collection = null;
+            return;
+        }
+        await LoadPlaces();
+    }
+
+    private async Task LoadPlaces()
+    {
+        if (_currentUserId == null) return;
+        _places = await CollectionRepository.GetPlacesAsync(CollectionId, _currentUserId);
+    }
+
+    private async Task RemovePlaceFromCollection(string placeId)
+    {
+        if (_currentUserId == null) return;
+        var place = _places?.FirstOrDefault(p => p.Id == placeId);
+        var name = place?.Name ?? "this place";
+        var dialog = await DialogService.ShowDialogAsync<ConfirmDialog>(
+            new ConfirmDialogContent($"Remove \"{name}\" from this collection?"),
+            new DialogParameters { Title = "Confirm Remove", PreventDismissOnOverlayClick = true });
+        var result = await dialog.Result;
+        if (result.Cancelled) return;
+
+        await CollectionRepository.RemovePlaceAsync(CollectionId, placeId, _currentUserId);
+        await LoadPlaces();
+    }
+
+    private async Task GeneratePublicLink()
+    {
+        if (_currentUserId == null || _collection == null) return;
+        var token = await CollectionRepository.GeneratePublicLinkAsync(CollectionId, _currentUserId);
+        if (token != null)
+        {
+            _collection.PublicShareToken = token;
+            var url = NavigationManager.ToAbsoluteUri($"/share/collection/{token}").ToString();
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", url);
+            _statusMessage = "Public link generated and copied to clipboard!";
+            _statusIntent = MessageIntent.Success;
+        }
+    }
+
+    private async Task CopyPublicLink()
+    {
+        if (_collection?.PublicShareToken == null) return;
+        var url = NavigationManager.ToAbsoluteUri($"/share/collection/{_collection.PublicShareToken}").ToString();
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", url);
+        _statusMessage = "Link copied to clipboard!";
+        _statusIntent = MessageIntent.Success;
+    }
+
+    private async Task RevokePublicLink()
+    {
+        if (_currentUserId == null || _collection == null) return;
+        await CollectionRepository.RevokePublicLinkAsync(CollectionId, _currentUserId);
+        _collection.PublicShareToken = null;
+        _statusMessage = "Public link revoked. The link no longer works.";
+        _statusIntent = MessageIntent.Info;
+    }
+}

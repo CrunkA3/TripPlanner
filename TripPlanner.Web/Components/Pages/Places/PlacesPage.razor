@@ -6,6 +6,7 @@
 @using TripPlanner.Web.Repositories
 @using TripPlanner.Web.Services
 @using TripPlanner.Web.Components.Shared
+@using TripPlanner.Web.Components.Pages.Collections
 @using static TripPlanner.Web.Components.Shared.GpxFileUpload
 
 @attribute [Authorize]
@@ -110,7 +111,7 @@
     }
     else
     {
-        <WishlistPlacesGrid CanEdit="true" Places="DisplayedPlaces" OnEditPlace="EditPlace" OnDeletePlace="DeletePlace" OnNotesPlace="OpenNotes" OnRemoveReview="RemoveReview" />
+        <WishlistPlacesGrid CanEdit="true" Places="DisplayedPlaces" OnEditPlace="EditPlace" OnDeletePlace="DeletePlace" OnNotesPlace="OpenNotes" OnRemoveReview="RemoveReview" OnAddToCollection="ShowAddToCollectionDialog" />
     }
 </FluentStack>
 
@@ -448,6 +449,13 @@
 
         await PlaceRepository.MarkAsReviewedAsync(placeId, CurrentUser.Id);
         await LoadPlaces();
+    }
+
+    private async Task ShowAddToCollectionDialog(Place place)
+    {
+        await DialogService.ShowDialogAsync<AddToCollectionDialog>(
+            new AddToCollectionDialogContent(place.Id, place.Name),
+            new DialogParameters { Modal = true, PreventDismissOnOverlayClick = true });
     }
 
     private async Task SavePlace()
