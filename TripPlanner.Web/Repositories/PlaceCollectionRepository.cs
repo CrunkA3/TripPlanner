@@ -179,14 +179,15 @@ public class PlaceCollectionRepository : IPlaceCollectionRepository
         var query = context.PlaceCollectionItems
             .AsNoTracking()
             .Where(i => i.CollectionId == collectionId)
-            .Include(i => i.Place)
-            .ThenInclude(p => p!.Images)
             .OrderBy(i => i.AddedAt)
             .Select(i => new
             {
                 Place = i.Place,
                 ImageIds = i.Place != null
-                    ? i.Place.Images.OrderBy(img => img.SortOrder).Select(img => img.Id)
+                    ? context.PlaceImages
+                        .Where(img => img.PlaceId == i.Place.Id)
+                        .OrderBy(img => img.SortOrder)
+                        .Select(img => img.Id)
                     : Enumerable.Empty<string>()
             });
 
