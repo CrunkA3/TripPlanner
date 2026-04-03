@@ -23,102 +23,100 @@
 <PageTitle>Map View</PageTitle>
 <FluentDialogProvider />
 
-    
-
 <!-- Map Container -->
 <div id="map-container" style="width: 100%; height: 100%;">
     <div id="map" style="height:100%; width:100%;"></div>
 
-    <FluentToolbar style="position: absolute; top: 6px; left: 6px; max-width: calc(100% - min(320px, 50%) - 18px); max-height: 25%;">
-        <FluentSelect TOption="string" @bind-Value="@SelectedTripId" Style="width:100%; min-width:50px;" AriaLabel="Select Trip">
-            <FluentOption TOption="string" Value="@string.Empty">All Trips</FluentOption>
-            @foreach (var trip in Trips)
-            {
-                <FluentOption TOption="string" Value="@trip.Id">@trip.Name</FluentOption>
-            }
-        </FluentSelect>
-        <FluentSelect TOption="string" Value="@SelectedWeatherDayStr" ValueChanged="@OnWeatherDayChanged" Disabled="@(!ShowWeather)" Style="width:100%; min-width:50px;" AriaLabel="Select Weather Day">
-            @for (int i = 0; i < 7; i++)
-            {
-                var day = i;
-                var date = DateTime.Today.AddDays(day);
-                var label = day == 0 ? "Today" : day == 1 ? "Tomorrow" : date.ToString("ddd, MMM d");
-                <FluentOption TOption="string" Value="@day.ToString()">@label</FluentOption>
-            }
-        </FluentSelect>
-
-        <FluentButton Appearance="Appearance.Outline" IconStart="@(new Icons.Regular.Size20.ArrowSync())" OnClick="@LoadMapData" aria-label="refresh map" />
-        <FluentButton Appearance="@(ShowWishlist ? Appearance.Accent : Appearance.Outline)" IconStart="@(new Icons.Regular.Size20.Heart())" OnClick="@(() => ShowWishlist = !ShowWishlist)" aria-label="toggle show wishlist" />
-        <FluentButton Appearance="@(ShowGpxTracks ? Appearance.Accent : Appearance.Outline)" IconStart="@(new Icons.Regular.Size20.MountainTrail())" OnClick="@(() => ShowGpxTracks = !ShowGpxTracks)" aria-label="toggle show gpx tracks" />
-        <FluentButton Appearance="@(ShowRoutes ? Appearance.Accent : Appearance.Outline)" IconStart="@(new Icons.Regular.Size20.Road())" OnClick="@(() => ShowRoutes = !ShowRoutes)" aria-label="toggle show routes" />
-        <FluentButton Appearance="@(ShowWeather ? Appearance.Accent : Appearance.Outline)" IconStart="@(new Icons.Regular.Size20.WeatherHailDay())" OnClick="@(() => ShowWeather = !ShowWeather)" aria-label="toggle show weather" />
-    </FluentToolbar>
-
-
-    <!-- Side Panel -->
-    <div style="position: absolute; top: 6px; right: 6px; width: min(320px, 50%); max-height: calc(100% - 12px - 40px); overflow: auto;">
-
-        @if (ShowWishlist)
-        {
-            @if (isLandscape)
-            {
-                <FluentStack Orientation="Orientation.Vertical" Style="max-height:100%;">
-                    @foreach (var place in VisibleWishlistPlaces)
-                    {
-                        <MapPlaceCard Place="@place"
-                                      IsHighlighted="@(_selectedPlaceId == place.Id || _hoveredPlaceId == place.Id)"
-                                      ShowWeather="@ShowWeather"
-                                      Weather="@WeatherByPlaceId.GetValueOrDefault(place.Id)"
-                                      CurrentImageIndex="@_currentImageIndex.GetValueOrDefault(place.Id, 0)"
-                                      OnCardClicked="@(() => OnCardClicked(place.Id))"
-                                      OnCardHovered="@(() => OnCardHovered(place.Id))"
-                                      OnCardUnhovered="@(() => OnCardUnhovered(place.Id))"
-                                      OnSetImageIndex="@((idx) => SetImageIndex(place.Id, idx))" />
-                    }
-                </FluentStack>
-            }
-            else
-            {
-                <FluentHorizontalScroll Speed="600" Easing=ScrollEasing.EaseInOut>
-                    @foreach (var place in VisibleWishlistPlaces)
-                    {
-                        <MapPlaceCard Place="@place"
-                                      IsHighlighted="@(_selectedPlaceId == place.Id || _hoveredPlaceId == place.Id)"
-                                      ShowWeather="@ShowWeather"
-                                      Weather="@WeatherByPlaceId.GetValueOrDefault(place.Id)"
-                                      CurrentImageIndex="@_currentImageIndex.GetValueOrDefault(place.Id, 0)"
-                                      Compact="true"
-                                      OnCardClicked="@(() => OnCardClicked(place.Id))"
-                                      OnCardHovered="@(() => OnCardHovered(place.Id))"
-                                      OnCardUnhovered="@(() => OnCardUnhovered(place.Id))"
-                                      OnSetImageIndex="@((idx) => SetImageIndex(place.Id, idx))" />
-                    }
-                </FluentHorizontalScroll>
-            }
-        }
-
-        <FluentStack Orientation="Orientation.Vertical">
-            @foreach (var tripPlace in VisibleTripPlaces)
-            {
-                @if (tripPlace.Place != null)
+        <FluentToolbar style="position: absolute; top: 6px; left: 6px; max-width: calc(100% - min(320px, 50%) - 18px); max-height: 25%;">
+            <FluentSelect TOption="string" @bind-Value="@SelectedTripId" Style="width:100%; min-width:50px;" AriaLabel="Select Trip">
+                <FluentOption TOption="string" Value="@string.Empty">All Trips</FluentOption>
+                @foreach (var trip in Trips)
                 {
-                    <MapPlaceCard Place="@tripPlace.Place"
-                                  IsHighlighted="@(_selectedPlaceId == tripPlace.Place.Id || _hoveredPlaceId == tripPlace.Place.Id)"
-                                  ShowWeather="@ShowWeather"
-                                  Weather="@WeatherByPlaceId.GetValueOrDefault(tripPlace.Place.Id)"
-                                  ScheduledTime="@tripPlace.ScheduledTime"
-                                  ShowCategory="false"
-                                  CurrentImageIndex="@_currentImageIndex.GetValueOrDefault(tripPlace.Place.Id, 0)"
-                                  OnCardClicked="@(() => OnCardClicked(tripPlace.Place.Id))"
-                                  OnCardHovered="@(() => OnCardHovered(tripPlace.Place.Id))"
-                                  OnCardUnhovered="@(() => OnCardUnhovered(tripPlace.Place.Id))"
-                                  OnSetImageIndex="@((idx) => SetImageIndex(tripPlace.Place.Id, idx))" />
+                    <FluentOption TOption="string" Value="@trip.Id">@trip.Name</FluentOption>
+                }
+            </FluentSelect>
+            <FluentSelect TOption="string" Value="@SelectedWeatherDayStr" ValueChanged="@OnWeatherDayChanged" Disabled="@(!ShowWeather)" Style="width:100%; min-width:50px;" AriaLabel="Select Weather Day">
+                @for (int i = 0; i < 7; i++)
+                {
+                    var day = i;
+                    var date = DateTime.Today.AddDays(day);
+                    var label = day == 0 ? "Today" : day == 1 ? "Tomorrow" : date.ToString("ddd, MMM d");
+                    <FluentOption TOption="string" Value="@day.ToString()">@label</FluentOption>
+                }
+            </FluentSelect>
+
+            <FluentButton Appearance="Appearance.Outline" IconStart="@(new Icons.Regular.Size20.ArrowSync())" OnClick="@LoadMapData" aria-label="refresh map" />
+            <FluentButton Appearance="@(ShowWishlist ? Appearance.Accent : Appearance.Outline)" IconStart="@(new Icons.Regular.Size20.Heart())" OnClick="@(() => ShowWishlist = !ShowWishlist)" aria-label="toggle show wishlist" />
+            <FluentButton Appearance="@(ShowGpxTracks ? Appearance.Accent : Appearance.Outline)" IconStart="@(new Icons.Regular.Size20.MountainTrail())" OnClick="@(() => ShowGpxTracks = !ShowGpxTracks)" aria-label="toggle show gpx tracks" />
+            <FluentButton Appearance="@(ShowRoutes ? Appearance.Accent : Appearance.Outline)" IconStart="@(new Icons.Regular.Size20.Road())" OnClick="@(() => ShowRoutes = !ShowRoutes)" aria-label="toggle show routes" />
+            <FluentButton Appearance="@(ShowWeather ? Appearance.Accent : Appearance.Outline)" IconStart="@(new Icons.Regular.Size20.WeatherHailDay())" OnClick="@(() => ShowWeather = !ShowWeather)" aria-label="toggle show weather" />
+        </FluentToolbar>
+
+
+        <!-- Side Panel -->
+        <div style="@SidePanelStyle">
+
+            @if (ShowWishlist)
+            {
+                @if (isLandscape)
+                {
+                    <FluentStack Orientation="Orientation.Vertical" Style="max-height:100%;">
+                        @foreach (var place in VisibleWishlistPlaces)
+                        {
+                            <MapPlaceCard Place="@place"
+                                          IsHighlighted="@(_selectedPlaceId == place.Id || _hoveredPlaceId == place.Id)"
+                                          ShowWeather="@ShowWeather"
+                                          Weather="@WeatherByPlaceId.GetValueOrDefault(place.Id)"
+                                          CurrentImageIndex="@_currentImageIndex.GetValueOrDefault(place.Id, 0)"
+                                          OnCardClicked="@(() => OnCardClicked(place.Id))"
+                                          OnCardHovered="@(() => OnCardHovered(place.Id))"
+                                          OnCardUnhovered="@(() => OnCardUnhovered(place.Id))"
+                                          OnSetImageIndex="@((idx) => SetImageIndex(place.Id, idx))" />
+                        }
+                    </FluentStack>
+                }
+                else
+                {
+                    <FluentHorizontalScroll Speed="600" Easing=ScrollEasing.EaseInOut>
+                        @foreach (var place in VisibleWishlistPlaces)
+                        {
+                            <MapPlaceCard Place="@place"
+                                          IsHighlighted="@(_selectedPlaceId == place.Id || _hoveredPlaceId == place.Id)"
+                                          ShowWeather="@ShowWeather"
+                                          Weather="@WeatherByPlaceId.GetValueOrDefault(place.Id)"
+                                          CurrentImageIndex="@_currentImageIndex.GetValueOrDefault(place.Id, 0)"
+                                          Compact="true"
+                                          OnCardClicked="@(() => OnCardClicked(place.Id))"
+                                          OnCardHovered="@(() => OnCardHovered(place.Id))"
+                                          OnCardUnhovered="@(() => OnCardUnhovered(place.Id))"
+                                          OnSetImageIndex="@((idx) => SetImageIndex(place.Id, idx))" />
+                        }
+                    </FluentHorizontalScroll>
                 }
             }
-        </FluentStack>
-    </div>
 
-</div>
+            <FluentStack Orientation="Orientation.Vertical">
+                @foreach (var tripPlace in VisibleTripPlaces)
+                {
+                    @if (tripPlace.Place != null)
+                    {
+                        <MapPlaceCard Place="@tripPlace.Place"
+                                      IsHighlighted="@(_selectedPlaceId == tripPlace.Place.Id || _hoveredPlaceId == tripPlace.Place.Id)"
+                                      ShowWeather="@ShowWeather"
+                                      Weather="@WeatherByPlaceId.GetValueOrDefault(tripPlace.Place.Id)"
+                                      ScheduledTime="@tripPlace.ScheduledTime"
+                                      ShowCategory="false"
+                                      CurrentImageIndex="@_currentImageIndex.GetValueOrDefault(tripPlace.Place.Id, 0)"
+                                      OnCardClicked="@(() => OnCardClicked(tripPlace.Place.Id))"
+                                      OnCardHovered="@(() => OnCardHovered(tripPlace.Place.Id))"
+                                      OnCardUnhovered="@(() => OnCardUnhovered(tripPlace.Place.Id))"
+                                      OnSetImageIndex="@((idx) => SetImageIndex(tripPlace.Place.Id, idx))" />
+                    }
+                }
+            </FluentStack>
+        </div>
+
+    </div>
 
 @code {
     private List<Place> Places { get; set; } = new();
@@ -138,6 +136,11 @@
     private Dictionary<string, DailyWeather> WeatherByPlaceId { get; set; } = new();
     private CancellationTokenSource? _weatherCts;
     private bool ShowWeather { get; set; } = true;
+
+    private string SidePanelStyle => "position: absolute;" + (
+        isLandscape ?
+        "top: 6px; right: 6px; width: min(320px, 50%); max-height: calc(100% - 12px - 40px); overflow: auto;" :
+        "bottom: 6px; left: 6px; width: calc(100% - 12px) ; height: min(320px, 30%);");
 
     private bool isLandscape = true;
 

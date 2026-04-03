@@ -31,6 +31,10 @@ body {
     width: 100%;
 }
 
+.content-fullscreen {
+    padding: 0 !important;
+}
+
 .manage {
     width: 100dvw;
 }

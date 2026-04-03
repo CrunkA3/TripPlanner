@@ -40,7 +40,7 @@
     }
     else
     {
-        <FluentCard Style="@(IsHighlighted ? "border: 2px solid var(--accent-fill-rest); box-shadow: 0 0 10px rgba(0,0,0,0.25); padding: 8px;" : "padding: 8px;")">
+        <FluentCard Style="@("width:100%;  padding: 8px;" + (IsHighlighted ? "border: 2px solid var(--accent-fill-rest); box-shadow: 0 0 10px rgba(0,0,0,0.25);" : ""))">
             @if (CurrentImage is not null)
             {
                 <div class="map-card-image-container">

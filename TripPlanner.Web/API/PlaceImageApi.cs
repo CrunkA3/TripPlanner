@@ -75,9 +75,16 @@ internal static class PlaceImageApi
 
         var imageData = placeImage.ImageData;
         var outputContentType = safeContentType;
-        if (width is not null)
+        if (imageData is not null && width is not null)
         {
-            (imageData, outputContentType) = await ResizeImageAsync(imageData, safeContentType, width.Value, cancellationToken);
+            (imageData, outputContentType) = await ResizeImageAsync(imageData!, safeContentType, width.Value, cancellationToken);
+        }
+
+        if (imageData is null || outputContentType is null)
+        {
+            // If resizing failed, fall back to the original data and content type.
+            imageData = placeImage.ImageData;
+            outputContentType = safeContentType;
         }
 
         return new SafeImageResult(imageData, outputContentType, etag);
@@ -98,7 +105,7 @@ internal static class PlaceImageApi
     /// Returns the original data and content type only if the image already has the requested width,
     /// or if resizing fails for any reason.
     /// </summary>
-    private static async Task<(byte[] Data, string ContentType)> ResizeImageAsync(byte[] data, string contentType, int targetWidth, CancellationToken cancellationToken)
+    private static async Task<(byte[]? Data, string? ContentType)> ResizeImageAsync(byte[] data, string contentType, int targetWidth, CancellationToken cancellationToken)
     {
         try
         {
@@ -116,6 +123,11 @@ internal static class PlaceImageApi
             using var ms = new MemoryStream();
             await image.SaveAsJpegAsync(ms, cancellationToken);
             return (ms.ToArray(), "image/jpeg");
+        }
+        catch (TaskCanceledException)
+        {
+            // If the image format is unrecognized, we cannot process it; fall back to original data.
+            return (null, null);
         }
         catch (OperationCanceledException)
         {
@@ -153,10 +165,10 @@ internal static class PlaceImageApi
         return normalized switch
         {
             "image/jpeg" => "image/jpeg",
-            "image/png"  => "image/png",
-            "image/gif"  => "image/gif",
+            "image/png" => "image/png",
+            "image/gif" => "image/gif",
             "image/webp" => "image/webp",
-            _            => null
+            _ => null
         };
     }
 
