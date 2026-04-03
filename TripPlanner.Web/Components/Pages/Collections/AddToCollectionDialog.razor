@@ -18,7 +18,7 @@
         {
             <FluentProgressRing>Loading collections...</FluentProgressRing>
         }
-        else if (!_collections.Any())
+        else if (!_collections.Any() && string.IsNullOrEmpty(_errorMessage))
         {
             <FluentLabel>You have no collections yet. Create one below.</FluentLabel>
         }
@@ -60,11 +60,24 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var userId = await UserService.GetCurrentUserIdAsync();
-        if (userId != null)
+        try
         {
-            _collections = await CollectionRepository.GetAllByOwnerAsync(userId);
-            _selected = _collections.ToDictionary(c => c.Id, _ => false);
+            var userId = await UserService.GetCurrentUserIdAsync();
+            if (userId != null)
+            {
+                _collections = await CollectionRepository.GetAllByOwnerAsync(userId);
+                _selected = _collections.ToDictionary(c => c.Id, _ => false);
+            }
+            else
+            {
+                _collections = [];
+                _errorMessage = "You must be signed in to add a place to a collection.";
+            }
+        }
+        catch (Exception)
+        {
+            _collections = [];
+            _errorMessage = "Failed to load collections. Please close and try again.";
         }
     }
 
