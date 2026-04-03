@@ -71,7 +71,8 @@
                                           OnCardClicked="@(() => OnCardClicked(place.Id))"
                                           OnCardHovered="@(() => OnCardHovered(place.Id))"
                                           OnCardUnhovered="@(() => OnCardUnhovered(place.Id))"
-                                          OnSetImageIndex="@((idx) => SetImageIndex(place.Id, idx))" />
+                                          OnSetImageIndex="@((idx) => SetImageIndex(place.Id, idx))"
+                                          OnImageClick="@((idx) => OpenImageLightbox(place, idx))" />
                         }
                     </FluentStack>
                 }
@@ -89,7 +90,8 @@
                                           OnCardClicked="@(() => OnCardClicked(place.Id))"
                                           OnCardHovered="@(() => OnCardHovered(place.Id))"
                                           OnCardUnhovered="@(() => OnCardUnhovered(place.Id))"
-                                          OnSetImageIndex="@((idx) => SetImageIndex(place.Id, idx))" />
+                                          OnSetImageIndex="@((idx) => SetImageIndex(place.Id, idx))"
+                                          OnImageClick="@((idx) => OpenImageLightbox(place, idx))" />
                         }
                     </FluentHorizontalScroll>
                 }
@@ -110,11 +112,20 @@
                                       OnCardClicked="@(() => OnCardClicked(tripPlace.Place.Id))"
                                       OnCardHovered="@(() => OnCardHovered(tripPlace.Place.Id))"
                                       OnCardUnhovered="@(() => OnCardUnhovered(tripPlace.Place.Id))"
-                                      OnSetImageIndex="@((idx) => SetImageIndex(tripPlace.Place.Id, idx))" />
+                                      OnSetImageIndex="@((idx) => SetImageIndex(tripPlace.Place.Id, idx))"
+                                      OnImageClick="@((idx) => OpenImageLightbox(tripPlace.Place, idx))" />
                     }
                 }
             </FluentStack>
         </div>
+
+    @if (_lightboxPlace is not null)
+    {
+        <PlaceLightbox Place="@_lightboxPlace"
+                       InitialIndex="@_lightboxImageIndex"
+                       IsOpen="@_lightboxOpen"
+                       IsOpenChanged="@OnLightboxIsOpenChanged" />
+    }
 
     </div>
 
@@ -160,6 +171,10 @@
     private System.Timers.Timer? _carouselTimer;
     private int _carouselTickRunning = 0;
     private const int CarouselIntervalMs = 4000;
+
+    private Place? _lightboxPlace;
+    private int _lightboxImageIndex;
+    private bool _lightboxOpen;
 
     private List<Place> VisibleWishlistPlaces => _visibleWishlistPlaces ??= ComputeVisiblePlaces();
     private List<TripPlace> VisibleTripPlaces => _visibleTripPlaces ??= ComputeVisibleTripPlaces();
@@ -532,6 +547,19 @@
     private void SetImageIndex(string placeId, int index)
     {
         _currentImageIndex[placeId] = index;
+    }
+
+    private void OpenImageLightbox(Place place, int imageIndex)
+    {
+        _lightboxPlace = place;
+        _lightboxImageIndex = imageIndex;
+        _lightboxOpen = true;
+    }
+
+    private void OnLightboxIsOpenChanged(bool isOpen)
+    {
+        _lightboxOpen = isOpen;
+        if (!isOpen) _lightboxPlace = null;
     }
 
     // ── Bounds / Orientation ────────────────────────────────────────────────
