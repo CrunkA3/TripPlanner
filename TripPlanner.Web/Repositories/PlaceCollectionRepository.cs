@@ -53,10 +53,15 @@ public class PlaceCollectionRepository : IPlaceCollectionRepository
     public async Task<PlaceCollection> UpdateAsync(PlaceCollection collection)
     {
         await using var context = _contextFactory.CreateDbContext();
-        collection.UpdatedAt = DateTimeOffset.UtcNow;
-        context.PlaceCollections.Update(collection);
+        var existing = await context.PlaceCollections
+            .FirstOrDefaultAsync(c => c.Id == collection.Id && c.OwnerId == collection.OwnerId);
+        if (existing == null) return collection;
+
+        existing.Name = collection.Name;
+        existing.Description = collection.Description;
+        existing.UpdatedAt = DateTimeOffset.UtcNow;
         await context.SaveChangesAsync();
-        return collection;
+        return existing;
     }
 
     public async Task DeleteAsync(string id, string userId)
@@ -159,19 +164,25 @@ public class PlaceCollectionRepository : IPlaceCollectionRepository
         var query = context.PlaceCollectionItems
             .AsNoTracking()
             .Where(i => i.CollectionId == collectionId)
+            .Include(i => i.Place)
+            .ThenInclude(p => p!.Images)
             .OrderBy(i => i.AddedAt)
             .Select(i => new
             {
-                Place = i.Place!,
-                ImageIds = i.Place!.Images.OrderBy(img => img.SortOrder).Select(img => img.Id)
+                Place = i.Place,
+                ImageIds = i.Place != null
+                    ? i.Place.Images.OrderBy(img => img.SortOrder).Select(img => img.Id)
+                    : Enumerable.Empty<string>()
             });
 
         var results = await query.ToListAsync();
 
-        return [.. results.Select(r =>
-        {
-            r.Place.ImageIds = [.. r.ImageIds];
-            return r.Place;
-        })];
+        return [.. results
+            .Where(r => r.Place != null)
+            .Select(r =>
+            {
+                r.Place!.ImageIds = [.. r.ImageIds];
+                return r.Place;
+            })];
     }
 }

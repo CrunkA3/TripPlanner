@@ -98,12 +98,18 @@
         var result = await dialog.Result;
         if (!result.Cancelled)
         {
-            // Reload collections and add to selected
+            // Reload collections list and pre-select the newly created collection
             var userId = await UserService.GetCurrentUserIdAsync();
             if (userId != null)
             {
                 _collections = await CollectionRepository.GetAllByOwnerAsync(userId);
-                _selected = _collections.ToDictionary(c => c.Id, c => c.Id == newCollection.Id);
+                // Carry over existing selections and add the new collection if found
+                var newSelected = _collections.ToDictionary(c => c.Id, c => _selected.GetValueOrDefault(c.Id));
+                if (!string.IsNullOrEmpty(newCollection.Id) && newSelected.ContainsKey(newCollection.Id))
+                {
+                    newSelected[newCollection.Id] = true;
+                }
+                _selected = newSelected;
             }
         }
     }

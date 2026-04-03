@@ -41,7 +41,7 @@ else
 
         <FluentMessageBar Intent="MessageIntent.Info" Style="margin-bottom: 1rem;">
             <FluentIcon Value="@(new Icons.Regular.Size16.Info())" Style="margin-right: 4px;" />
-            This is a shared collection. <a href="/Account/Register">Sign in or create an account</a> to build your own collections.
+            This is a shared collection. <a href="/Account/Login">Sign in</a> or <a href="/Account/Register">create an account</a> to build your own collections.
         </FluentMessageBar>
 
         @if (_places == null || !_places.Any())
