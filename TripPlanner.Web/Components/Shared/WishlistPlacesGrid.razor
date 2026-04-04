@@ -24,10 +24,14 @@
                         var imgSrc = string.IsNullOrWhiteSpace(PublicShareToken)
                             ? $"/api/placeImages/{currentImg}"
                             : $"/api/placeImages/{currentImg}?token={Uri.EscapeDataString(PublicShareToken)}";
+
                         <img @key="@currentImg"
+                             @onclick="() => OpenImageLightbox(place, currentIdx)"
+                             @onclick:stopPropagation="true"
                              src="@imgSrc"
                              srcset="@PlaceImageHelper.BuildSrcSet(currentImg, PublicShareToken)"
                              sizes="(max-width: 600px) calc(100vw - 32px), (max-width: 960px) calc(50vw - 24px), (max-width: 1280px) calc(25vw - 24px), calc(16.67vw - 24px)"
+                             style="cursor: zoom-in;"
                              alt="@place.Name" />
                     }
                     else
@@ -189,6 +193,16 @@
 </FluentGrid>
 
 
+@if (_lightboxPlace is not null)
+{
+    <PlaceLightbox Place="@_lightboxPlace"
+                   InitialIndex="@_lightboxImageIndex"
+                   IsOpen="@_lightboxOpen"
+                   IsOpenChanged="@OnLightboxIsOpenChanged" />
+}
+
+
+
 @code {
     [Parameter, EditorRequired]
     public IEnumerable<Place> Places { get; set; } = default!;
@@ -221,6 +235,12 @@
     private const int CarouselIntervalMs = 4000;
 
     private string? currentUserId;
+
+
+    private Place? _lightboxPlace;
+    private int _lightboxImageIndex;
+    private bool _lightboxOpen;
+
 
 
 
@@ -305,6 +325,23 @@
         OnAddToCollection.HasDelegate ||
         (CanEdit && OnDeletePlace.HasDelegate) ||
         (CanUserEditPlace(place) && (OnEditPlace.HasDelegate || OnNotesPlace.HasDelegate || OnRemoveReview.HasDelegate));
+
+        
+    private void OpenImageLightbox(Place place, int imageIndex)
+    {
+        _lightboxPlace = place;
+        _lightboxImageIndex = imageIndex;
+        _lightboxOpen = true;
+    }
+
+    private void OnLightboxIsOpenChanged(bool isOpen)
+    {
+        _lightboxOpen = isOpen;
+        if (!isOpen) _lightboxPlace = null;
+    }
+
+
+
 
     public void Dispose()
     {
