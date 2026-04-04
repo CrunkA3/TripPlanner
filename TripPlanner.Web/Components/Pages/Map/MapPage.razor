@@ -303,11 +303,9 @@
         }
         else
         {
-            Places = (await CollectionRepository.GetByPublicTokenAsync(CollectionToken!))?.Items
-                .Where(ci => ci.Place is not null)
-                .Select(ci => ci.Place!)
+            Places = (await CollectionRepository.GetPlacesByPublicTokenAsync(CollectionToken!))
                 .Where(x => x.Latitude != 0 && x.Longitude != 0)
-                .ToList() ?? [];
+                .ToList();
 
         }
         
