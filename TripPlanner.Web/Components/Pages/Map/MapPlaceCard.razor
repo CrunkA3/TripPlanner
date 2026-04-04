@@ -19,7 +19,7 @@
                             @onclick="@(() => OnImageClick.InvokeAsync(CurrentImageIndex))"
                             aria-label="@($"View images of {Place.Name}")">
                         <img @key="@CurrentImage"
-                             src="/api/placeImages/@CurrentImage?width=400"
+                             src="@ImageSrc(CurrentImage)"
                              alt="@Place.Name"
                              class="map-card-image" />
                     </button>
@@ -54,8 +54,8 @@
                             @onclick="@(() => OnImageClick.InvokeAsync(CurrentImageIndex))"
                             aria-label="@($"View images of {Place.Name}")">
                         <img @key="@CurrentImage"
-                             src="/api/placeImages/@CurrentImage?width=400"
-                             srcset="@PlaceImageHelper.BuildSrcSet(CurrentImage)"
+                             src="@ImageSrc(CurrentImage)"
+                             srcset="@PlaceImageHelper.BuildSrcSet(CurrentImage, PublicToken)"
                              sizes="(max-width: 768px) 100vw, 400px"
                              alt="@Place.Name"
                              class="map-card-image" />
@@ -96,7 +96,7 @@
                 {
                     <FluentLabel Style="font-size: 0.875em;">
                         🏔 @($"{Place.GpxTrack.TotalDistance:F1} km ↑{Place.GpxTrack.ElevationGain:F0} m")
-                        &nbsp;<a href="/api/gpx/@Place.GpxTrackId" download @onclick:stopPropagation="true" title="GPX herunterladen" style="font-size: 0.85em;">⬇ GPX</a>
+                        &nbsp;<a href="@GpxDownloadUrl" download @onclick:stopPropagation="true" title="GPX herunterladen" style="font-size: 0.85em;">⬇ GPX</a>
                     </FluentLabel>
                 }
                 @if (ShowWeather && Weather != null)
@@ -134,6 +134,9 @@
 
     [Parameter] public EventCallback<Place> OnAddToCollection { get; set; }
 
+    /// <summary>Public share token for anonymous collection access. When set, appended to image and GPX URLs.</summary>
+    [Parameter] public string? PublicToken { get; set; }
+
     private string _googleMapsUrl =>
         $"https://www.google.com/maps?q={Place.Latitude.ToString("F6", CultureInfo.InvariantCulture)},{Place.Longitude.ToString("F6", CultureInfo.InvariantCulture)}";
 
@@ -141,6 +144,13 @@
 
     private string? CurrentImage =>
         _imageCount > 0 ? Place.ImageIds[Math.Clamp(CurrentImageIndex, 0, _imageCount - 1)] : null;
+
+    private string ImageSrc(string imageId) => PlaceImageHelper.BuildSrc(imageId, 400, PublicToken);
+
+    private string GpxDownloadUrl =>
+        string.IsNullOrWhiteSpace(PublicToken)
+            ? $"/api/gpx/{Place.GpxTrackId}"
+            : $"/api/gpx/{Place.GpxTrackId}?token={Uri.EscapeDataString(PublicToken)}";
 
     private async Task AddToCollectionClicked()
     {

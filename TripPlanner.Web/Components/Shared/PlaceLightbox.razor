@@ -28,6 +28,9 @@
 @code {
     [Parameter, EditorRequired] public Place Place { get; set; } = null!;
 
+    /// <summary>Public share token for anonymous collection access. When set, appended to image URLs.</summary>
+    [Parameter] public string? PublicToken { get; set; }
+
     /// <summary>Index of the image to show when the lightbox is opened.</summary>
     [Parameter] public int InitialIndex { get; set; }
 
@@ -90,11 +93,12 @@
             return [.. Place.Images
                 .OrderBy(i => i.SortOrder)
                 .Where(img => img.ImageData.Length > 0 || !string.IsNullOrEmpty(img.Id))
-                .Select(img => new ImageEntry(
-                    img.ImageData.Length > 0
-                        ? $"data:{img.ImageContentType};base64,{Convert.ToBase64String(img.ImageData)}"
-                        : $"/api/placeImages/{img.Id}?width=1200",
-                    PlaceImageHelper.GetSrcSet(img)))];
+                .Select(img =>
+                {
+                    if (img.ImageData.Length > 0)
+                        return new ImageEntry($"data:{img.ImageContentType};base64,{Convert.ToBase64String(img.ImageData)}", null);
+                    return new ImageEntry(PlaceImageHelper.BuildSrc(img.Id, 1200, PublicToken), PlaceImageHelper.GetSrcSet(img, PublicToken));
+                })];
         }
 
         // Fall back to ImageIds (API-only, e.g. when loading places without blobs)
@@ -102,8 +106,8 @@
         {
             return [.. Place.ImageIds
                 .Select(id => new ImageEntry(
-                    $"/api/placeImages/{id}?width=1200",
-                    PlaceImageHelper.BuildSrcSet(id)))];
+                    PlaceImageHelper.BuildSrc(id, 1200, PublicToken),
+                    PlaceImageHelper.BuildSrcSet(id, PublicToken)))];
         }
 
         return [];
