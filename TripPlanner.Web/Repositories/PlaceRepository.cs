@@ -360,16 +360,12 @@ public class PlaceRepository : IPlaceRepository
     {
         await using var context = _contextFactory.CreateDbContext();
 
-        var collectionPlaceIds = GetPublicCollectionPlaceIds(context, publicToken);
-
         return await context.PlaceImages
             .AsNoTracking()
-            .Where(pi => pi.Id == imageId && collectionPlaceIds.Contains(pi.PlaceId))
+            .Where(pi => pi.Id == imageId &&
+                context.PlaceCollectionItems.Any(i =>
+                    i.PlaceId == pi.PlaceId &&
+                    context.PlaceCollections.Any(c => c.Id == i.CollectionId && c.PublicShareToken == publicToken)))
             .FirstOrDefaultAsync(cancellationToken);
     }
-
-    private static IQueryable<string> GetPublicCollectionPlaceIds(ApplicationDbContext context, string publicToken) =>
-        context.PlaceCollectionItems
-            .Where(i => context.PlaceCollections.Any(c => c.Id == i.CollectionId && c.PublicShareToken == publicToken))
-            .Select(i => i.PlaceId);
 }
