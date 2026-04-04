@@ -109,10 +109,12 @@ public class GpxRepository : IGpxRepository
     {
         await using var context = _contextFactory.CreateDbContext();
 
-        var collectionPlaceIds = GetPublicCollectionPlaceIds(context, publicToken);
-
         var hasAccess = await context.Places
-            .AnyAsync(p => p.GpxTrackId == id && collectionPlaceIds.Contains(p.Id), cancellationToken);
+            .AnyAsync(p => p.GpxTrackId == id &&
+                context.PlaceCollectionItems.Any(i =>
+                    i.PlaceId == p.Id &&
+                    context.PlaceCollections.Any(c => c.Id == i.CollectionId && c.PublicShareToken == publicToken)),
+                cancellationToken);
 
         if (!hasAccess)
             return null;
@@ -122,11 +124,6 @@ public class GpxRepository : IGpxRepository
             .Include(t => t.Points.OrderBy(x => x.Order))
             .FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
     }
-
-    private static IQueryable<string> GetPublicCollectionPlaceIds(ApplicationDbContext context, string publicToken) =>
-        context.PlaceCollectionItems
-            .Where(i => context.PlaceCollections.Any(c => c.Id == i.CollectionId && c.PublicShareToken == publicToken))
-            .Select(i => i.PlaceId);
 
     public async Task<GpxTrack> AddAsync(GpxTrack track)
     {
