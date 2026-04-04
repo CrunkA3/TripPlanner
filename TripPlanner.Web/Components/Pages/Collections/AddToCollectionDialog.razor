@@ -109,6 +109,11 @@
 
             await Dialog.CloseAsync(Content);
         }
+        catch (OperationCanceledException)
+        {
+            // User cancelled the operation, no need to show an error
+            _errorMessage = "Canceled";
+        }
         catch (Exception)
         {
             _errorMessage = "An error occurred while adding the place to the collection. Please try again.";
