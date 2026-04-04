@@ -147,11 +147,16 @@
 
     private string ImageSrc(string imageId) => PlaceImageHelper.BuildSrc(imageId, 400, PublicToken);
 
-    private string GpxDownloadUrl =>
-        string.IsNullOrWhiteSpace(PublicToken)
-            ? $"/api/gpx/{Place.GpxTrackId}"
-            : $"/api/gpx/{Place.GpxTrackId}?token={Uri.EscapeDataString(PublicToken)}";
+    private string GpxDownloadUrl => BuildGpxDownloadUrl();
 
+    private string BuildGpxDownloadUrl()
+    {
+        var baseUrl = $"/api/gpx/{Place.GpxTrackId}";
+
+        return string.IsNullOrWhiteSpace(PublicToken)
+            ? baseUrl
+            : $"{baseUrl}?token={Uri.EscapeDataString(PublicToken)}";
+    }
     private async Task AddToCollectionClicked()
     {
         await OnAddToCollection.InvokeAsync(Place);
