@@ -105,6 +105,29 @@ public class GpxRepository : IGpxRepository
             .FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
     }
 
+    public async Task<GpxTrack?> GetByIdWithPointsByPublicTokenAsync(string id, string publicToken, CancellationToken cancellationToken = default)
+    {
+        await using var context = _contextFactory.CreateDbContext();
+
+        var collectionPlaceIds = GetPublicCollectionPlaceIds(context, publicToken);
+
+        var hasAccess = await context.Places
+            .AnyAsync(p => p.GpxTrackId == id && collectionPlaceIds.Contains(p.Id), cancellationToken);
+
+        if (!hasAccess)
+            return null;
+
+        return await context.GpxTracks
+            .AsNoTracking()
+            .Include(t => t.Points.OrderBy(x => x.Order))
+            .FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
+    }
+
+    private static IQueryable<string> GetPublicCollectionPlaceIds(ApplicationDbContext context, string publicToken) =>
+        context.PlaceCollectionItems
+            .Where(i => context.PlaceCollections.Any(c => c.Id == i.CollectionId && c.PublicShareToken == publicToken))
+            .Select(i => i.PlaceId);
+
     public async Task<GpxTrack> AddAsync(GpxTrack track)
     {
         await using var context = _contextFactory.CreateDbContext();
