@@ -4,14 +4,9 @@ using TripPlanner.Web.Models;
 
 namespace TripPlanner.Web.Repositories;
 
-public class PlaceCollectionRepository : IPlaceCollectionRepository
+public class PlaceCollectionRepository(IDbContextFactory<ApplicationDbContext> contextFactory) : IPlaceCollectionRepository
 {
-    private readonly IDbContextFactory<ApplicationDbContext> _contextFactory;
-
-    public PlaceCollectionRepository(IDbContextFactory<ApplicationDbContext> contextFactory)
-    {
-        _contextFactory = contextFactory;
-    }
+    private readonly IDbContextFactory<ApplicationDbContext> _contextFactory = contextFactory;
 
     public async Task<List<PlaceCollection>> GetAllByOwnerAsync(string userId)
     {
@@ -29,14 +24,10 @@ public class PlaceCollectionRepository : IPlaceCollectionRepository
 
         foreach (var entry in collectionsWithCounts)
         {
-            entry.Collection.Items = Enumerable.Range(0, entry.ItemCount)
-                .Select(_ => new PlaceCollectionItem())
-                .ToList();
+            entry.Collection.Items = [.. Enumerable.Range(0, entry.ItemCount).Select(_ => new PlaceCollectionItem())];
         }
 
-        return collectionsWithCounts
-            .Select(entry => entry.Collection)
-            .ToList();
+        return [.. collectionsWithCounts.Select(entry => entry.Collection)];
     }
 
     public async Task<PlaceCollection?> GetByIdAsync(string id)
@@ -45,6 +36,7 @@ public class PlaceCollectionRepository : IPlaceCollectionRepository
         return await context.PlaceCollections
             .AsNoTracking()
             .Include(c => c.Items)
+            .ThenInclude(i => i.Place)
             .FirstOrDefaultAsync(c => c.Id == id);
     }
 
@@ -54,6 +46,7 @@ public class PlaceCollectionRepository : IPlaceCollectionRepository
         return await context.PlaceCollections
             .AsNoTracking()
             .Include(c => c.Items)
+            .ThenInclude(i => i.Place)
             .FirstOrDefaultAsync(c => c.PublicShareToken == token);
     }
 
@@ -182,7 +175,7 @@ public class PlaceCollectionRepository : IPlaceCollectionRepository
             .OrderBy(i => i.AddedAt)
             .Select(i => new
             {
-                Place = i.Place,
+                i.Place,
                 GpxTrack = i.Place != null ? i.Place.GpxTrack : null,
                 ImageIds = i.Place != null
                     ? context.PlaceImages
