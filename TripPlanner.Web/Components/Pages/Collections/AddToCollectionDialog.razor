@@ -88,8 +88,6 @@
 
     private async Task SubmitAsync()
     {
-        _errorMessage = null;
-
         var userId = await UserService.GetCurrentUserIdAsync();
         if (userId == null)
         {
@@ -103,6 +101,8 @@
             _errorMessage = "Please select at least one collection.";
             return;
         }
+
+        _errorMessage = null;
 
         try
         {
