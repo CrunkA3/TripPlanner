@@ -18,7 +18,7 @@
         {
             <FluentProgressRing>Loading collections...</FluentProgressRing>
         }
-        else if (!_collections.Any())
+        else if (!_collections.Any() && string.IsNullOrEmpty(_errorMessage))
         {
             <FluentLabel>You have no collections yet. Create one below.</FluentLabel>
         }
@@ -26,7 +26,8 @@
         {
             @foreach (var collection in _collections)
             {
-                <FluentCheckbox @bind-Value="_selected[collection.Id]" Label="@collection.Name" />
+                bool isChecked = _selected[collection.Id];
+                <FluentCheckbox @bind-Value:get="isChecked" @bind-Value:set="c => _selected[collection.Id] = c" Label="@collection.Name" />
             }
         }
 
@@ -60,18 +61,39 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var userId = await UserService.GetCurrentUserIdAsync();
-        if (userId != null)
+        try
         {
-            _collections = await CollectionRepository.GetAllByOwnerAsync(userId);
-            _selected = _collections.ToDictionary(c => c.Id, _ => false);
+            var userId = await UserService.GetCurrentUserIdAsync();
+            if (userId != null)
+            {
+                _collections = await CollectionRepository.GetAllByOwnerAsync(userId);
+                _selected = _collections.ToDictionary(c => c.Id, _ => false);
+            }
+            else
+            {
+                _collections = [];
+                _errorMessage = "You must be signed in to add a place to a collection.";
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            throw; // Let cancellation propagate without showing an error message
+        }
+        catch (Exception)
+        {
+            _collections = [];
+            _errorMessage = "Failed to load collections. Please close and try again.";
         }
     }
 
     private async Task SubmitAsync()
     {
         var userId = await UserService.GetCurrentUserIdAsync();
-        if (userId == null) return;
+        if (userId == null)
+        {
+            _errorMessage = "You must be signed in to add a place to a collection.";
+            return;
+        }
 
         var selected = _selected.Where(kv => kv.Value).Select(kv => kv.Key).ToList();
         if (!selected.Any())
@@ -80,12 +102,25 @@
             return;
         }
 
-        foreach (var collectionId in selected)
-        {
-            await CollectionRepository.AddPlaceAsync(collectionId, Content.PlaceId, userId);
-        }
+        _errorMessage = null;
 
-        await Dialog.CloseAsync(Content);
+        try
+        {
+            foreach (var collectionId in selected)
+            {
+                await CollectionRepository.AddPlaceAsync(collectionId, Content.PlaceId, userId);
+            }
+
+            await Dialog.CloseAsync(Content);
+        }
+        catch (OperationCanceledException)
+        {
+            throw; // Let cancellation propagate without showing an error message
+        }
+        catch (Exception)
+        {
+            _errorMessage = "An error occurred while adding the place to the collection. Please try again.";
+        }
     }
 
     private async Task CreateNewCollectionAsync()
@@ -110,6 +145,7 @@
                     newSelected[newCollection.Id] = true;
                 }
                 _selected = newSelected;
+                StateHasChanged();
             }
         }
     }
