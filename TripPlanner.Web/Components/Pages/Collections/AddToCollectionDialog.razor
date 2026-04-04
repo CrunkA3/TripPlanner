@@ -75,6 +75,10 @@
                 _errorMessage = "You must be signed in to add a place to a collection.";
             }
         }
+        catch (OperationCanceledException)
+        {
+            throw; // Let cancellation propagate without showing an error message
+        }
         catch (Exception)
         {
             _collections = [];
@@ -111,8 +115,7 @@
         }
         catch (OperationCanceledException)
         {
-            // User cancelled the operation, no need to show an error
-            _errorMessage = "Canceled";
+            throw; // Let cancellation propagate without showing an error message
         }
         catch (Exception)
         {
