@@ -44,6 +44,9 @@ else if (_collection != null)
                 <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size20.Copy())" OnClick="@CopyPublicLink" title="Copy public link">
                     Copy Link
                 </FluentButton>
+                <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size20.Copy())" OnClick="@CopyPublicMapLink" title="Copy public map link">
+                    Copy Map Link
+                </FluentButton>
                 <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size20.LinkDismiss())" OnClick="@RevokePublicLink" title="Revoke public link">
                     Revoke Link
                 </FluentButton>
@@ -172,6 +175,23 @@ else if (_collection != null)
     {
         if (_collection?.PublicShareToken == null) return;
         var url = NavigationManager.ToAbsoluteUri($"/share/collection/{_collection.PublicShareToken}").ToString();
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", url);
+            _statusMessage = "Link copied to clipboard!";
+            _statusIntent = MessageIntent.Success;
+        }
+        catch
+        {
+            _statusMessage = $"Could not copy to clipboard. Copy manually: {url}";
+            _statusIntent = MessageIntent.Warning;
+        }
+    }
+
+    private async Task CopyPublicMapLink()
+    {
+        if (_collection?.PublicShareToken == null) return;
+        var url = NavigationManager.ToAbsoluteUri($"/map?CollectionToken={_collection.PublicShareToken}").ToString();
         try
         {
             await JS.InvokeVoidAsync("navigator.clipboard.writeText", url);

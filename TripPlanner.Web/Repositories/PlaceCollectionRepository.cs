@@ -45,6 +45,7 @@ public class PlaceCollectionRepository : IPlaceCollectionRepository
         return await context.PlaceCollections
             .AsNoTracking()
             .Include(c => c.Items)
+            .ThenInclude(i => i.Place)
             .FirstOrDefaultAsync(c => c.Id == id);
     }
 
@@ -54,6 +55,7 @@ public class PlaceCollectionRepository : IPlaceCollectionRepository
         return await context.PlaceCollections
             .AsNoTracking()
             .Include(c => c.Items)
+            .ThenInclude(i => i.Place)
             .FirstOrDefaultAsync(c => c.PublicShareToken == token);
     }
 
