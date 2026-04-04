@@ -26,7 +26,8 @@
         {
             @foreach (var collection in _collections)
             {
-                <FluentCheckbox @bind-Value="_selected[collection.Id]" Label="@collection.Name" />
+                bool isChecked = _selected[collection.Id];
+                <FluentCheckbox @bind-Value:get="isChecked" @bind-Value:set="c => _selected[collection.Id] = c" Label="@collection.Name" />
             }
         }
 
