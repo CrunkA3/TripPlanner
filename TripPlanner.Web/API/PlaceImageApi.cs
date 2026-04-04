@@ -2,6 +2,7 @@
 using System.Security.Cryptography;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
+using TripPlanner.Web.Models;
 using TripPlanner.Web.Repositories;
 
 namespace TripPlanner.Web.API;
@@ -18,14 +19,16 @@ internal static class PlaceImageApi
     internal static IEndpointConventionBuilder MapPlaceImageApi(this IEndpointRouteBuilder endpoints)
     {
         var groupPlaceImages = endpoints.MapGroup("/api/placeImages")
-            .WithDisplayName("Place Image API")
-            .RequireAuthorization();
+            .WithDisplayName("Place Image API");
 
         // Endpoint to retrieve a place image by its ID.
         // Optional 'width' query parameter resizes the image proportionally (allowed: 400, 800, 1200).
+        // Access is granted to authenticated users who own the image, or to anyone with a valid
+        // public collection share token that includes the image's place.
         groupPlaceImages.MapGet("/{imageId}", GetPlaceImageAsync)
             .WithName("GetPlaceImage")
             .WithDisplayName("Get Place Image")
+            .AllowAnonymous()
             .Produces(StatusCodes.Status200OK, contentType: "image/jpeg", additionalContentTypes: "image/png")
             .Produces(StatusCodes.Status304NotModified)
             .Produces(StatusCodes.Status400BadRequest)
@@ -37,17 +40,11 @@ internal static class PlaceImageApi
     }
 
 
-    private static async Task<IResult> GetPlaceImageAsync(string imageId, int? width, ClaimsPrincipal user, IPlaceRepository placeRepository, CancellationToken cancellationToken)
+    private static async Task<IResult> GetPlaceImageAsync(string imageId, int? width, string? token, ClaimsPrincipal user, IPlaceRepository placeRepository, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(imageId))
         {
             return Results.BadRequest("Image ID cannot be null or empty.");
-        }
-
-        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (userId is null)
-        {
-            return Results.Unauthorized();
         }
 
         if (width is not null && !AllowedWidths.Contains(width.Value))
@@ -55,8 +52,22 @@ internal static class PlaceImageApi
             return Results.BadRequest($"Invalid width. Allowed values: {string.Join(", ", AllowedWidths)}.");
         }
 
-        // Check if the image exists and belongs to the current user
-        var placeImage = await placeRepository.GetPlaceImageAsync(imageId, userId, cancellationToken);
+        PlaceImage? placeImage;
+        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId is not null)
+        {
+            // Authenticated: check ownership via user ID
+            placeImage = await placeRepository.GetPlaceImageAsync(imageId, userId, cancellationToken);
+        }
+        else if (!string.IsNullOrWhiteSpace(token))
+        {
+            // Anonymous with a public share token: check collection membership
+            placeImage = await placeRepository.GetPlaceImageByPublicTokenAsync(imageId, token, cancellationToken);
+        }
+        else
+        {
+            return Results.Unauthorized();
+        }
         if (placeImage is null)
         {
             return Results.NotFound();

@@ -9,6 +9,7 @@ public interface IGpxRepository
     Task<List<GpxTrack>> GetByTripIdAsync(string tripId);
     Task<GpxTrack?> GetByIdAsync(string id);
     Task<GpxTrack?> GetByIdWithPointsAsync(string id, string userId, CancellationToken cancellationToken = default);
+    Task<GpxTrack?> GetByIdWithPointsByPublicTokenAsync(string id, string publicToken, CancellationToken cancellationToken = default);
     Task<GpxTrack> AddAsync(GpxTrack track);
     Task DeleteAsync(string id, string userId);
 }

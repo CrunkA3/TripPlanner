@@ -355,4 +355,17 @@ public class PlaceRepository : IPlaceRepository
                 (pi.Place.TripId != null && userTripIds.Contains(pi.Place.TripId))));
         return await query.FirstOrDefaultAsync(cancellationToken);
     }
+
+    public async Task<PlaceImage?> GetPlaceImageByPublicTokenAsync(string imageId, string publicToken, CancellationToken cancellationToken = default)
+    {
+        await using var context = _contextFactory.CreateDbContext();
+
+        return await context.PlaceImages
+            .AsNoTracking()
+            .Where(pi => pi.Id == imageId &&
+                context.PlaceCollectionItems.Any(i =>
+                    i.PlaceId == pi.PlaceId &&
+                    context.PlaceCollections.Any(c => c.Id == i.CollectionId && c.PublicShareToken == publicToken)))
+            .FirstOrDefaultAsync(cancellationToken);
+    }
 }
