@@ -183,6 +183,7 @@ public class PlaceCollectionRepository : IPlaceCollectionRepository
             .Select(i => new
             {
                 Place = i.Place,
+                GpxTrack = i.Place != null ? i.Place.GpxTrack : null,
                 ImageIds = i.Place != null
                     ? context.PlaceImages
                         .Where(img => img.PlaceId == i.Place.Id)
@@ -198,6 +199,7 @@ public class PlaceCollectionRepository : IPlaceCollectionRepository
             .Select(r =>
             {
                 r.Place!.ImageIds = [.. r.ImageIds];
+                r.Place!.GpxTrack = r.GpxTrack;
                 return r.Place;
             })];
     }
