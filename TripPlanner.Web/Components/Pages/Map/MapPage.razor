@@ -75,7 +75,8 @@
                                       OnCardUnhovered="@(() => OnCardUnhovered(place.Id))"
                                       OnSetImageIndex="@((idx) => SetImageIndex(place.Id, idx))"
                                       OnImageClick="@((idx) => OpenImageLightbox(place, idx))"
-                                      OnAddToCollection="@ShowAddToCollectionDialog" />
+                                      OnAddToCollection="@ShowAddToCollectionDialog"
+                                      PublicToken="@CollectionToken" />
                     }
                 </FluentStack>
             }
@@ -94,7 +95,8 @@
                                       OnCardHovered="@(() => OnCardHovered(place.Id))"
                                       OnCardUnhovered="@(() => OnCardUnhovered(place.Id))"
                                       OnSetImageIndex="@((idx) => SetImageIndex(place.Id, idx))"
-                                      OnImageClick="@((idx) => OpenImageLightbox(place, idx))" />
+                                      OnImageClick="@((idx) => OpenImageLightbox(place, idx))"
+                                      PublicToken="@CollectionToken" />
                     }
                 </FluentHorizontalScroll>
             }
@@ -116,7 +118,8 @@
                                   OnCardHovered="@(() => OnCardHovered(tripPlace.Place.Id))"
                                   OnCardUnhovered="@(() => OnCardUnhovered(tripPlace.Place.Id))"
                                   OnSetImageIndex="@((idx) => SetImageIndex(tripPlace.Place.Id, idx))"
-                                  OnImageClick="@((idx) => OpenImageLightbox(tripPlace.Place, idx))" />
+                                  OnImageClick="@((idx) => OpenImageLightbox(tripPlace.Place, idx))"
+                                  PublicToken="@CollectionToken" />
                 }
             }
         </FluentStack>
@@ -127,7 +130,8 @@
         <PlaceLightbox Place="@_lightboxPlace"
                        InitialIndex="@_lightboxImageIndex"
                        IsOpen="@_lightboxOpen"
-                       IsOpenChanged="@OnLightboxIsOpenChanged" />
+                       IsOpenChanged="@OnLightboxIsOpenChanged"
+                       PublicToken="@CollectionToken" />
     }
 
 </div>
