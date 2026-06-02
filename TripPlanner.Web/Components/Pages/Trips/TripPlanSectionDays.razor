@@ -56,10 +56,10 @@
                                         <FluentLabel Weight="FontWeight.Bold" Style="flex: 1;overflow: hidden;text-overflow: ellipsis;" @ondblclick="@(async () => await OnEditPlaceClick.InvokeAsync(tripPlace.Place!))">@(tripPlace.Place?.Name ?? "Unknown")</FluentLabel>
                                         @if (tripPlace.Place != null && tripPlace.Place.Latitude != 0 && tripPlace.Place.Longitude != 0)
                                             <a href="https://www.google.com/maps?q=@(tripPlace.Place.Latitude.ToString("F6", System.Globalization.CultureInfo.InvariantCulture)),@(tripPlace.Place.Longitude.ToString("F6", System.Globalization.CultureInfo.InvariantCulture))"
+                                            <a href="https://www.google.com/maps?q=@(tripPlace.Place.Latitude.ToString("F6", System.Globalization.CultureInfo.InvariantCulture)),@(tripPlace.Place.Longitude.ToString("F6", System.Globalization.CultureInfo.InvariantCulture))"
                                                target="_blank" rel="noopener noreferrer"
-                                               title="In Google Maps öffnen"
+                                               title="Open in Google Maps" aria-label="Open in Google Maps"
                                                style="display: flex; align-items: center; color: var(--accent-fill-rest); text-decoration: none;">
-                                                <FluentIcon Value="@(new Icons.Regular.Size16.Map())" />
                                             </a>
                                         }
                                         <input type="time"
