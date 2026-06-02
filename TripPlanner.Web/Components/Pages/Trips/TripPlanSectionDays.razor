@@ -51,26 +51,38 @@
                                             @ondragstart="@(async (e) => await OnHandleDragStart.InvokeAsync((tripPlace.PlaceId, day.Id, tripPlace.Order)))"
                                             @ondragend="async (e) => await OnHandleDragEnd.InvokeAsync()"
                                             Style="cursor: move; padding: 8px;">
-                                    <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" HorizontalGap="3">
-                                        <FluentIcon Value="@(new Icons.Regular.Size16.Navigation())" />
-                                        <FluentLabel Weight="FontWeight.Bold" Style="flex: 1;overflow: hidden;text-overflow: ellipsis;" @ondblclick="@(async () => await OnEditPlaceClick.InvokeAsync(tripPlace.Place!))">@(tripPlace.Place?.Name ?? "Unknown")</FluentLabel>
-                                        @if (tripPlace.Place != null && tripPlace.Place.Latitude != 0 && tripPlace.Place.Longitude != 0)
-                                            <a href="https://www.google.com/maps?q=@(tripPlace.Place.Latitude.ToString("F6", System.Globalization.CultureInfo.InvariantCulture)),@(tripPlace.Place.Longitude.ToString("F6", System.Globalization.CultureInfo.InvariantCulture))"
-                                            <a href="https://www.google.com/maps?q=@(tripPlace.Place.Latitude.ToString("F6", System.Globalization.CultureInfo.InvariantCulture)),@(tripPlace.Place.Longitude.ToString("F6", System.Globalization.CultureInfo.InvariantCulture))"
-                                               target="_blank" rel="noopener noreferrer"
-                                               title="Open in Google Maps" aria-label="Open in Google Maps"
-                                               style="display: flex; align-items: center; color: var(--accent-fill-rest); text-decoration: none;">
-                                            </a>
-                                        }
-                                        <input type="time"
-                                               value="@(tripPlace.ScheduledTime.HasValue ? tripPlace.ScheduledTime.Value.ToString("HH:mm") : "")"
-                                               @onchange="@(async (e) => await UpdateScheduledTimeAsync(tripPlace, e.Value?.ToString(), day.Date))"
-                                               style="border: 1px solid var(--neutral-stroke-rest); border-radius: 4px; padding: 2px 4px; font-size: 0.875em; background: transparent;" />
-                                        <FluentButton Appearance="Appearance.Lightweight"
-                                                      OnClick="@(async () => await OnRemovePlaceFromDay.InvokeAsync((day.Id, tripPlace.PlaceId)))"
-                                                      Style="padding: 4px;">
-                                            <FluentIcon Value="@(new Icons.Regular.Size12.Dismiss())" />
-                                        </FluentButton>
+                                    <FluentStack Orientation="Orientation.Vertical" VerticalGap="3">
+                                        <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" HorizontalGap="3">
+                                            <FluentIcon Value="@(new Icons.Regular.Size16.Navigation())" />
+                                            <FluentLabel Weight="FontWeight.Bold" Style="flex: 1;overflow: hidden;text-overflow: ellipsis;" @ondblclick="@(async () => await OnEditPlaceClick.InvokeAsync(tripPlace.Place!))">@(tripPlace.Place?.Name ?? "Unknown")</FluentLabel>
+                                            <FluentButton Appearance="Appearance.Lightweight"
+                                                          OnClick="@(async () => await OnRemovePlaceFromDay.InvokeAsync((day.Id, tripPlace.PlaceId)))"
+                                                          Style="padding: 4px;">
+                                                <FluentIcon Value="@(new Icons.Regular.Size12.Dismiss())" />
+                                            </FluentButton>
+                                        </FluentStack>
+                                        <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" HorizontalGap="3">
+                                            <input type="time"
+                                                   value="@(tripPlace.ScheduledTime.HasValue ? tripPlace.ScheduledTime.Value.ToString("HH:mm") : "")"
+                                                   @onchange="@(async (e) => await UpdateScheduledTimeAsync(tripPlace, e.Value?.ToString(), day.Date))"
+                                                   style="border: 1px solid var(--neutral-stroke-rest); border-radius: 4px; padding: 2px 4px; font-size: 0.875em; background: transparent;" />
+                                        </FluentStack>
+                                        <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" HorizontalGap="3">
+                                            @if (tripPlace.Place != null && tripPlace.Place.Latitude != 0 && tripPlace.Place.Longitude != 0)
+                                            {
+                                                <FluentAnchor Href="@string.Format(System.Globalization.CultureInfo.InvariantCulture, "https://www.google.com/maps?q={0:F6},{1:F6}", tripPlace.Place?.Latitude, tripPlace.Place?.Longitude)"
+                                                              IconStart="@(new Icons.Regular.Size16.VehicleCarProfile())"
+                                                              Appearance="Appearance.Outline"
+                                                              aria-label="Open in Google Maps" title="Open in Google Maps" Target="_blank" Rel="noopener noreferrer"></FluentAnchor>
+                                            }
+                                            @if (tripPlace.Place?.GpxTrack is not null)
+                                            {
+                                                <FluentAnchor Href="@string.Format("/api/gpx/{0}", @tripPlace.Place.GpxTrackId)"
+                                                              IconStart="@(new Icons.Regular.Size16.ArrowDownload())"
+                                                              Appearance="Appearance.Outline"
+                                                              aria-label="GPX herunterladen" title="GPX herunterladen">@string.Format("{0:F1} km ↑ {1:F0} m", tripPlace.Place.GpxTrack.TotalDistance, tripPlace.Place.GpxTrack.ElevationGain)</FluentAnchor>
+                                            }
+                                        </FluentStack>
                                     </FluentStack>
                                 </FluentCard>
                             }

@@ -47,12 +47,20 @@ else
                                 <FluentSpacer />
                                 <FluentButton Appearance="Appearance.Lightweight" IconEnd="@(new Icons.Regular.Size16.Pen())" OnClick="@(async () => await OnEditPlaceClick.InvokeAsync(place))"></FluentButton>
                             </FluentStack>
-                            @if (place.GpxTrack != null)
+                            @if (place.Latitude != 0 && place.Longitude != 0)
                             {
-                                <FluentLabel Style="font-size: 0.875em;">
-                                    🏔 @($"{place.GpxTrack.TotalDistance:F1} km ↑{place.GpxTrack.ElevationGain:F0} m")
-                                    &nbsp;<a href="/api/gpx/@place.GpxTrackId" download title="GPX herunterladen" style="font-size: 0.85em;">⬇ GPX</a>
-                                </FluentLabel>
+                                <FluentAnchor Href="@string.Format(System.Globalization.CultureInfo.InvariantCulture, "https://www.google.com/maps?q={0:F6},{1:F6}", place?.Latitude, place?.Longitude)"
+                                              IconStart="@(new Icons.Regular.Size16.VehicleCarProfile())"
+                                              Appearance="Appearance.Outline"
+                                              aria-label="Open in Google Maps" title="Open in Google Maps" Target="_blank" Rel="noopener noreferrer"></FluentAnchor>
+                            }
+                            @if (place?.GpxTrack != null)
+                            {
+                                <FluentAnchor Href="@string.Format("/api/gpx/{0}", @place.GpxTrackId)"
+                                              IconStart="@(new Icons.Regular.Size16.ArrowDownload())"
+                                              Appearance="Appearance.Outline"
+                                              aria-label="GPX herunterladen" title="GPX herunterladen">@string.Format("{0:F1} km ↑ {1:F0} m", place.GpxTrack.TotalDistance, place.GpxTrack.ElevationGain)</FluentAnchor>
+
                             }
                         </FluentStack>
                     </FluentCard>
