@@ -1,7 +1,6 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using System.Security.Cryptography;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Processing;
+using SkiaSharp;
 using TripPlanner.Web.Models;
 using TripPlanner.Web.Repositories;
 
@@ -116,29 +115,44 @@ internal static class PlaceImageApi
     /// Returns the original data and content type only if the image already has the requested width,
     /// or if resizing fails for any reason.
     /// </summary>
-    private static async Task<(byte[]? Data, string? ContentType)> ResizeImageAsync(byte[] data, string contentType, int targetWidth, CancellationToken cancellationToken)
+    private static Task<(byte[]? Data, string? ContentType)> ResizeImageAsync(byte[] data, string contentType, int targetWidth, CancellationToken cancellationToken)
     {
         try
         {
-            using var image = Image.Load(data);
+            cancellationToken.ThrowIfCancellationRequested();
+            using var image = SKBitmap.Decode(data);
+            if (image is null)
+            {
+                return Task.FromResult<(byte[]?, string?)>((null, null));
+            }
 
             // If the image already has the requested width, return it unchanged to avoid unnecessary processing.
             if (image.Width == targetWidth)
             {
-                return (data, contentType);
+                return Task.FromResult<(byte[]?, string?)>((data, contentType));
             }
 
             // Resize to the exact requested width, preserving aspect ratio and allowing upscaling if needed.
-            image.Mutate(ctx => ctx.Resize(targetWidth, 0));
+            var targetHeight = Math.Max(1, (int)Math.Round((double)image.Height * targetWidth / image.Width));
+            using var resized = image.Resize(new SKImageInfo(targetWidth, targetHeight), SKSamplingOptions.Default);
+            if (resized is null)
+            {
+                return Task.FromResult<(byte[]?, string?)>((data, contentType));
+            }
 
-            using var ms = new MemoryStream();
-            await image.SaveAsJpegAsync(ms, cancellationToken);
-            return (ms.ToArray(), "image/jpeg");
+            using var outputImage = SKImage.FromBitmap(resized);
+            using var encoded = outputImage.Encode(SKEncodedImageFormat.Jpeg, quality: 90);
+            if (encoded is null)
+            {
+                return Task.FromResult<(byte[]?, string?)>((data, contentType));
+            }
+
+            return Task.FromResult<(byte[]?, string?)>((encoded.ToArray(), "image/jpeg"));
         }
         catch (TaskCanceledException)
         {
             // If the image format is unrecognized, we cannot process it; fall back to original data.
-            return (null, null);
+            return Task.FromResult<(byte[]?, string?)>((null, null));
         }
         catch (OperationCanceledException)
         {
@@ -148,7 +162,7 @@ internal static class PlaceImageApi
         catch (Exception)
         {
             // If resizing or encoding fails for any other reason, fall back to the original data.
-            return (data, contentType);
+            return Task.FromResult<(byte[]?, string?)>((data, contentType));
         }
     }
 
