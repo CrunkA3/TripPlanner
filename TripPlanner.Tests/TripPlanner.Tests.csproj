@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\TripPlanner.AppHost\TripPlanner.AppHost.csproj" />
+    <ProjectReference Include="..\TripPlanner.Web\TripPlanner.Web.csproj" />
   </ItemGroup>
 
   <ItemGroup>

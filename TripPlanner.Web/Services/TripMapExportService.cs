@@ -77,7 +77,7 @@ public sealed class TripMapExportService(IHttpClientFactory httpClientFactory, I
                     ParseColor(IPlaceRepository.GetCategoryColor(place.Category)),
                     tripPlace.ScheduledTime ?? day.Date ?? trip.StartDate ?? trip.CreatedAt,
                     tripPlace.Order,
-                    isAccommodation: false));
+                    IsAccommodation: false));
             }
         }
 
@@ -93,7 +93,7 @@ public sealed class TripMapExportService(IHttpClientFactory httpClientFactory, I
                 ParseColor(IPlaceRepository.GetCategoryColor(PlaceCategory.Accommodation)),
                 accommodation.PlannedCheckIn ?? accommodation.PlannedCheckOut ?? trip.EndDate ?? trip.CreatedAt,
                 10_000,
-                isAccommodation: true));
+                IsAccommodation: true));
         }
 
         return items

@@ -750,7 +750,7 @@
         var hasExportablePlaces = PlanningTrip.Days
             .SelectMany(day => day.Places)
             .Any(tp => tp.Place is not null && tp.Place.Latitude != 0 && tp.Place.Longitude != 0)
-            || PlanningTrip.Accommodations.Any(acc => acc.Latitude != 0 || acc.Longitude != 0);
+            || PlanningTrip.Accommodations.Any(acc => !(acc.Latitude == 0 && acc.Longitude == 0));
 
         if (!hasExportablePlaces)
         {
