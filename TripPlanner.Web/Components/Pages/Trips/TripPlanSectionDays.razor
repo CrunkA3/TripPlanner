@@ -44,7 +44,7 @@
                     else
                     {
                         <FluentStack Orientation="Orientation.Vertical" VerticalGap="8">
-                            @foreach (var tripPlace in day.Places.OrderBy(p => p.Order))
+                            @foreach (var tripPlace in day.Places.OrderBy(p => p.ScheduledTime.HasValue ? 0 : 1).ThenBy(p => p.ScheduledTime).ThenBy(p => p.Order))
                             {
                                 <FluentCard class="draggable"
                                             draggable="true"
@@ -54,6 +54,15 @@
                                     <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" HorizontalGap="3">
                                         <FluentIcon Value="@(new Icons.Regular.Size16.Navigation())" />
                                         <FluentLabel Weight="FontWeight.Bold" Style="flex: 1;overflow: hidden;text-overflow: ellipsis;" @ondblclick="@(async () => await OnEditPlaceClick.InvokeAsync(tripPlace.Place!))">@(tripPlace.Place?.Name ?? "Unknown")</FluentLabel>
+                                        @if (tripPlace.Place != null && (tripPlace.Place.Latitude != 0 || tripPlace.Place.Longitude != 0))
+                                        {
+                                            <a href="https://www.google.com/maps?q=@(tripPlace.Place.Latitude.ToString("F6", System.Globalization.CultureInfo.InvariantCulture)),@(tripPlace.Place.Longitude.ToString("F6", System.Globalization.CultureInfo.InvariantCulture))"
+                                               target="_blank" rel="noopener noreferrer"
+                                               title="In Google Maps öffnen"
+                                               style="display: flex; align-items: center; color: var(--accent-fill-rest); text-decoration: none;">
+                                                <FluentIcon Value="@(new Icons.Regular.Size16.Map())" />
+                                            </a>
+                                        }
                                         <input type="time"
                                                value="@(tripPlace.ScheduledTime.HasValue ? tripPlace.ScheduledTime.Value.ToString("HH:mm") : "")"
                                                @onchange="@(async (e) => await UpdateScheduledTimeAsync(tripPlace, e.Value?.ToString(), day.Date))"
