@@ -54,8 +54,7 @@
                                     <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" HorizontalGap="3">
                                         <FluentIcon Value="@(new Icons.Regular.Size16.Navigation())" />
                                         <FluentLabel Weight="FontWeight.Bold" Style="flex: 1;overflow: hidden;text-overflow: ellipsis;" @ondblclick="@(async () => await OnEditPlaceClick.InvokeAsync(tripPlace.Place!))">@(tripPlace.Place?.Name ?? "Unknown")</FluentLabel>
-                                        @if (tripPlace.Place != null && (tripPlace.Place.Latitude != 0 || tripPlace.Place.Longitude != 0))
-                                        {
+                                        @if (tripPlace.Place != null && tripPlace.Place.Latitude != 0 && tripPlace.Place.Longitude != 0)
                                             <a href="https://www.google.com/maps?q=@(tripPlace.Place.Latitude.ToString("F6", System.Globalization.CultureInfo.InvariantCulture)),@(tripPlace.Place.Longitude.ToString("F6", System.Globalization.CultureInfo.InvariantCulture))"
                                                target="_blank" rel="noopener noreferrer"
                                                title="In Google Maps öffnen"
