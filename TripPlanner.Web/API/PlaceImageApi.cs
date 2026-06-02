@@ -124,7 +124,7 @@ internal static class PlaceImageApi
             using var image = SKBitmap.Decode(data);
             if (image is null)
             {
-                return (null, null);
+                return (data, contentType);
             }
 
             // If the image already has the requested width, return it unchanged to avoid unnecessary processing.
