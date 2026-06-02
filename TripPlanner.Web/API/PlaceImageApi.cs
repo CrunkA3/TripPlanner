@@ -1,7 +1,6 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using System.Security.Cryptography;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Processing;
+using SkiaSharp;
 using TripPlanner.Web.Models;
 using TripPlanner.Web.Repositories;
 
@@ -80,15 +79,11 @@ internal static class PlaceImageApi
             return Results.BadRequest("Unsupported image content type.");
         }
 
-        // Compute an ETag from the raw stored data and the requested width so that
-        // each unique (image, width) combination gets a stable, deterministic tag.
-        var etag = ComputeETag(placeImage.ImageData, width);
-
         var imageData = placeImage.ImageData;
         var outputContentType = safeContentType;
         if (imageData is not null && width is not null)
         {
-            (imageData, outputContentType) = await ResizeImageAsync(imageData!, safeContentType, width.Value, cancellationToken);
+            (imageData, outputContentType) = ResizeImage(imageData!, safeContentType, width.Value, cancellationToken);
         }
 
         if (imageData is null || outputContentType is null)
@@ -98,17 +93,19 @@ internal static class PlaceImageApi
             outputContentType = safeContentType;
         }
 
+        var etag = ComputeETag(imageData);
+
         return new SafeImageResult(imageData, outputContentType, etag);
     }
 
     /// <summary>
-    /// Computes a short, stable ETag from the raw image bytes and the requested width.
+    /// Computes a short, stable ETag from the response image bytes.
     /// </summary>
-    private static string ComputeETag(byte[] data, int? width)
+    private static string ComputeETag(byte[] data)
     {
         var hash = SHA256.HashData(data);
         var hex = Convert.ToHexString(hash)[..16];
-        return width is null ? $"\"{hex}\"" : $"\"{hex}-{width}\"";
+        return $"\"{hex}\"";
     }
 
     /// <summary>
@@ -116,11 +113,17 @@ internal static class PlaceImageApi
     /// Returns the original data and content type only if the image already has the requested width,
     /// or if resizing fails for any reason.
     /// </summary>
-    private static async Task<(byte[]? Data, string? ContentType)> ResizeImageAsync(byte[] data, string contentType, int targetWidth, CancellationToken cancellationToken)
+    private static (byte[]? Data, string? ContentType) ResizeImage(byte[] data, string contentType, int targetWidth, CancellationToken cancellationToken)
     {
         try
         {
-            using var image = Image.Load(data);
+            // SkiaSharp resize APIs are synchronous; cancellation can only be honored before processing starts.
+            cancellationToken.ThrowIfCancellationRequested();
+            using var image = SKBitmap.Decode(data);
+            if (image is null)
+            {
+                return (data, contentType);
+            }
 
             // If the image already has the requested width, return it unchanged to avoid unnecessary processing.
             if (image.Width == targetWidth)
@@ -129,16 +132,21 @@ internal static class PlaceImageApi
             }
 
             // Resize to the exact requested width, preserving aspect ratio and allowing upscaling if needed.
-            image.Mutate(ctx => ctx.Resize(targetWidth, 0));
+            var targetHeight = Math.Max(1, (int)Math.Round((double)image.Height * targetWidth / image.Width));
+            using var resized = image.Resize(new SKImageInfo(targetWidth, targetHeight), SKFilterQuality.High);
+            if (resized is null)
+            {
+                return (data, contentType);
+            }
 
-            using var ms = new MemoryStream();
-            await image.SaveAsJpegAsync(ms, cancellationToken);
-            return (ms.ToArray(), "image/jpeg");
-        }
-        catch (TaskCanceledException)
-        {
-            // If the image format is unrecognized, we cannot process it; fall back to original data.
-            return (null, null);
+            using var outputImage = SKImage.FromBitmap(resized);
+            using var encoded = outputImage.Encode(SKEncodedImageFormat.Jpeg, quality: 90);
+            if (encoded is null)
+            {
+                return (data, contentType);
+            }
+
+            return (encoded.ToArray(), "image/jpeg");
         }
         catch (OperationCanceledException)
         {
