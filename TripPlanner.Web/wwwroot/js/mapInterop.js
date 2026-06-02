@@ -405,3 +405,25 @@ window.downloadTextFile = function (filename, contentType, content) {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 };
+
+window.downloadBinaryFile = async function (url, fallbackFilename) {
+    const response = await fetch(url, { credentials: 'same-origin' });
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || ('Download failed with status ' + response.status));
+    }
+
+    const blob = await response.blob();
+    const disposition = response.headers.get('content-disposition') || '';
+    const fileNameMatch = disposition.match(/filename\*?=(?:UTF-8''|")?([^";]+)/i);
+    const filename = fileNameMatch ? decodeURIComponent(fileNameMatch[1].replace(/"/g, '').trim()) : (fallbackFilename || 'download');
+
+    const objectUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(objectUrl);
+};
