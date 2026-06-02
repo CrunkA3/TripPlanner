@@ -65,7 +65,7 @@ public class TripMapExportServiceTests
             ]
         };
 
-        var bytes = await service.RenderTripAsync(trip);
+        var bytes = await service.RenderTripAsync(trip, TestContext.Current.CancellationToken);
 
         Assert.NotNull(bytes);
         Assert.True(bytes.Length > 8);
