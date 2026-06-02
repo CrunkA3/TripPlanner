@@ -7,12 +7,12 @@ public class WebTests
     private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(30);
 
     [Fact]
-    public async Task GetWebResourceRootReturnsOkStatusCode()
+    public async 
+    Task GetWebResourceRootReturnsOkStatusCode()
     {
         // Arrange
         var cancellationToken = TestContext.Current.CancellationToken;
-
-        var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.TripPlanner_AppHost>(cancellationToken);
+    var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.TripPlanner_AppHost>(cancellationToken);
         appHost.Services.AddLogging(logging =>
         {
             logging.SetMinimumLevel(LogLevel.Debug);
