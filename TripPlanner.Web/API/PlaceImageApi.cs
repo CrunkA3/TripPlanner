@@ -79,10 +79,6 @@ internal static class PlaceImageApi
             return Results.BadRequest("Unsupported image content type.");
         }
 
-        // Compute an ETag from the raw stored data and the requested width so that
-        // each unique (image, width) combination gets a stable, deterministic tag.
-        var etag = ComputeETag(placeImage.ImageData, width);
-
         var imageData = placeImage.ImageData;
         var outputContentType = safeContentType;
         if (imageData is not null && width is not null)
@@ -97,17 +93,19 @@ internal static class PlaceImageApi
             outputContentType = safeContentType;
         }
 
+        var etag = ComputeETag(imageData);
+
         return new SafeImageResult(imageData, outputContentType, etag);
     }
 
     /// <summary>
-    /// Computes a short, stable ETag from the raw image bytes and the requested width.
+    /// Computes a short, stable ETag from the response image bytes.
     /// </summary>
-    private static string ComputeETag(byte[] data, int? width)
+    private static string ComputeETag(byte[] data)
     {
         var hash = SHA256.HashData(data);
         var hex = Convert.ToHexString(hash)[..16];
-        return width is null ? $"\"{hex}\"" : $"\"{hex}-{width}\"";
+        return $"\"{hex}\"";
     }
 
     /// <summary>
