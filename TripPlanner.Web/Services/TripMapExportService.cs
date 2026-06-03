@@ -148,7 +148,7 @@ public sealed class TripMapExportService(IHttpClientFactory httpClientFactory, I
 
         try
         {
-            var client = httpClientFactory.CreateClient();
+            var client = httpClientFactory.CreateClient(nameof(TripMapExportService));
             if (client.DefaultRequestHeaders.UserAgent.Count == 0)
             {
                 client.DefaultRequestHeaders.UserAgent.ParseAdd("TripPlanner/1.0 (+https://github.com/CrunkA3/TripPlanner)");
