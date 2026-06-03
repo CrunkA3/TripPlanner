@@ -24,6 +24,15 @@
 <FluentDialogProvider />
 <FluentToastProvider MaxToastCount="10" />
 
+<FluentToolbar>
+    <FluentLabel Typo="Typography.H3">@(PlanningTrip?.Name ?? "Trip Plan")</FluentLabel>
+    <FluentSpacer />
+    <FluentButton Appearance="Appearance.Outline"
+                  IconStart="@(new Icons.Regular.Size20.ArrowDownload())"
+                  OnClick="@ExportTripImageAsync">
+        Export Image
+    </FluentButton>
+</FluentToolbar>
 
 <div class="hide-lg-up">
     <FluentStack Orientation="Orientation.Horizontal">
@@ -729,6 +738,43 @@
         PlanningTrip?.Accommodations.RemoveAll(a => a.Id == accommodationId);
         StateHasChanged();
         await UpdateMapContent();
+    }
+
+    private async Task ExportTripImageAsync()
+    {
+        if (PlanningTrip is null)
+        {
+            return;
+        }
+
+        var hasExportablePlaces = PlanningTrip.Days
+            .SelectMany(day => day.Places)
+            .Any(tp => tp.Place is not null
+                && tp.Place.Latitude is >= -85 and <= 85
+                && tp.Place.Longitude is >= -180 and <= 180
+                && !(tp.Place.Latitude == 0 && tp.Place.Longitude == 0))
+            || PlanningTrip.Accommodations.Any(acc =>
+                acc.Latitude is >= -85 and <= 85
+                && acc.Longitude is >= -180 and <= 180
+                && !(acc.Latitude == 0 && acc.Longitude == 0));
+
+        if (!hasExportablePlaces)
+        {
+            ToastService.ShowError("Add at least one place or accommodation with coordinates before exporting an image.");
+            return;
+        }
+
+        try
+        {
+            await JSRuntime.InvokeVoidAsync(
+                "downloadBinaryFile",
+                $"/api/trips/{Uri.EscapeDataString(TripId)}/export-image",
+                $"{PlanningTrip.Name}-map.png");
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Image export failed: {ex.Message}");
+        }
     }
 
     [JSInvokable]

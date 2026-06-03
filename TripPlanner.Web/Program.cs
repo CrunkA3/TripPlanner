@@ -108,6 +108,7 @@ builder.Services.AddScoped<TransitService>();
 builder.Services.AddScoped<BrowserTimeZoneService>();
 builder.Services.AddScoped<IGeocodingService, NominatimGeocodingService>();
 builder.Services.AddScoped<WishlistImportExportService>();
+builder.Services.AddScoped<TripMapExportService>();
 
 builder.AddLlmServices();
 
@@ -173,6 +174,7 @@ app.MapMcp("/mcp")
 // Map API endpoints
 app.MapPlaceImageApi();
 app.MapGpxDownloadApi();
+app.MapTripImageExportApi();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
