@@ -96,10 +96,9 @@ public sealed class TripMapExportService(IHttpClientFactory httpClientFactory, I
                 IsAccommodation: true));
         }
 
-        return items
+        return [.. items
             .OrderBy(i => i.SortKey)
-            .ThenBy(i => i.SecondarySort)
-            .ToList();
+            .ThenBy(i => i.SecondarySort)];
     }
 
     private async Task DrawBaseMapAsync(SKCanvas canvas, MapViewport viewport, CancellationToken cancellationToken)
