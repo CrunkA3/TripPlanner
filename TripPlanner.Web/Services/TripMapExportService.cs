@@ -310,8 +310,8 @@ public sealed class TripMapExportService(IHttpClientFactory httpClientFactory, I
     }
 
     private static LabelLayout MeasureLabel(
-        IReadOnlyList<string> nameLines,
-        IReadOnlyList<string> subtitleLines,
+        List<string> nameLines,
+        List<string> subtitleLines,
         SKPaint namePaint,
         SKPaint subtitlePaint)
     {
