@@ -749,8 +749,14 @@
 
         var hasExportablePlaces = PlanningTrip.Days
             .SelectMany(day => day.Places)
-            .Any(tp => tp.Place is not null && tp.Place.Latitude != 0 && tp.Place.Longitude != 0)
-            || PlanningTrip.Accommodations.Any(acc => !(acc.Latitude == 0 && acc.Longitude == 0));
+            .Any(tp => tp.Place is not null
+                && tp.Place.Latitude is >= -85 and <= 85
+                && tp.Place.Longitude is >= -180 and <= 180
+                && !(tp.Place.Latitude == 0 && tp.Place.Longitude == 0))
+            || PlanningTrip.Accommodations.Any(acc =>
+                acc.Latitude is >= -85 and <= 85
+                && acc.Longitude is >= -180 and <= 180
+                && !(acc.Latitude == 0 && acc.Longitude == 0));
 
         if (!hasExportablePlaces)
         {
