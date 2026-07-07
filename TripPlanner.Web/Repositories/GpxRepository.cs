@@ -93,7 +93,7 @@ public class GpxRepository : IGpxRepository
         // Also allow access if the place is referenced from a trip day itinerary owned by the user
         // (mirrors PlaceRepository.GetOwnedTripPlaceIds / GetAllByUserAsync logic)
         var tripItineraryPlaceIds = context.Trips
-            .Where(t => t.OwnerId == userId)
+            .Where(t => userTripIds.Contains(t.Id))
             .SelectMany(t => t.Days.SelectMany(d => d.Places.Select(tp => tp.PlaceId)));
 
         var hasAccess = await context.Places
@@ -141,9 +141,33 @@ public class GpxRepository : IGpxRepository
         return track;
     }
 
-    public async Task<GpxTrack?> UpdateAsync(GpxTrack track)
+    public async Task<GpxTrack?> UpdateAsync(GpxTrack track, string userId)
     {
         await using var context = _contextFactory.CreateDbContext();
+        var userWishlistIds = context.UserWishlists
+            .Where(w => w.UserId == userId)
+            .Select(w => w.WishlistId);
+
+        var userTripIds = context.Trips
+            .Where(t => t.OwnerId == userId)
+            .Select(t => t.Id)
+            .Union(context.SharedTrips
+                .Where(st => st.UserId == userId)
+                .Select(st => st.TripId));
+
+        var tripItineraryPlaceIds = context.Trips
+            .Where(t => userTripIds.Contains(t.Id))
+            .SelectMany(t => t.Days.SelectMany(d => d.Places.Select(tp => tp.PlaceId)));
+
+        var hasAccess = await context.Places
+            .AnyAsync(p => p.GpxTrackId == track.Id && (
+                (p.WishlistId != null && userWishlistIds.Contains(p.WishlistId)) ||
+                (p.TripId != null && userTripIds.Contains(p.TripId)) ||
+                tripItineraryPlaceIds.Contains(p.Id)));
+
+        if (!hasAccess)
+            return null;
+
         var existing = await context.GpxTracks
             .Include(t => t.Points)
             .Include(t => t.Waypoints)

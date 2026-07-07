@@ -834,11 +834,18 @@
         }
         else
         {
-            var updated = await GpxRepository.UpdateAsync(track);
+            var userId = await UserService.GetCurrentUserIdAsync();
+            if (string.IsNullOrEmpty(userId))
+            {
+                _routeEditorError = "You must be signed in to update this route.";
+                return;
+            }
+
+            var updated = await GpxRepository.UpdateAsync(track, userId);
             if (updated is null)
             {
-                await GpxRepository.AddAsync(track);
-                Content.GpxTrackId = track.Id;
+                _routeEditorError = "You don't have permission to update this route.";
+                return;
             }
         }
 
