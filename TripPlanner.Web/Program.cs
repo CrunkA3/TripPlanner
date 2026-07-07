@@ -130,10 +130,32 @@ var app = builder.Build();
 
 
 // Configure the HTTP request pipeline.
-using (var scope = app.Services.CreateScope())
+var applyMigrationsOnStartup = app.Configuration.GetValue("Database:ApplyMigrationsOnStartup", true);
+var startupMigrationTimeoutSeconds = app.Configuration.GetValue("Database:StartupMigrationTimeoutSeconds", 120);
+
+if (applyMigrationsOnStartup)
 {
+    app.Logger.LogInformation(
+        "Applying database migrations on startup with timeout {TimeoutSeconds}s.",
+        startupMigrationTimeoutSeconds);
+
+    using var migrationTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(startupMigrationTimeoutSeconds));
+    using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    await dbContext.Database.MigrateAsync();
+
+    try
+    {
+        await dbContext.Database.MigrateAsync(migrationTimeout.Token);
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogCritical(ex, "Failed to apply database migrations during startup.");
+        throw;
+    }
+}
+else
+{
+    app.Logger.LogInformation("Skipping database migrations on startup (Database:ApplyMigrationsOnStartup=false).");
 }
 
 if (!app.Environment.IsDevelopment())
