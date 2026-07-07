@@ -262,7 +262,7 @@ window.gpxRouteEditor = {
             midpointEl.style.border = '1px solid white';
             midpointEl.style.boxShadow = '0 0 2px rgba(0,0,0,0.35)';
             midpointEl.style.cursor = 'pointer';
-            midpointEl.title = 'Zwischenpunkt einfügen';
+            midpointEl.title = 'Insert intermediate point';
 
             (function (insertIndex) {
                 midpointEl.addEventListener('click', function (evt) {
