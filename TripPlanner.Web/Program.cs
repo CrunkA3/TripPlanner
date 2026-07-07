@@ -147,6 +147,16 @@ if (applyMigrationsOnStartup)
     {
         await dbContext.Database.MigrateAsync(migrationTimeout.Token);
     }
+    catch (OperationCanceledException ex) when (migrationTimeout.IsCancellationRequested)
+    {
+        app.Logger.LogCritical(
+            ex,
+            "Database migration timed out after {TimeoutSeconds}s during startup. " +
+            "Increase 'Database:StartupMigrationTimeoutSeconds' or set " +
+            "'Database:ApplyMigrationsOnStartup' to false to skip migrations on startup.",
+            startupMigrationTimeoutSeconds);
+        throw;
+    }
     catch (Exception ex)
     {
         app.Logger.LogCritical(ex, "Failed to apply database migrations during startup.");
