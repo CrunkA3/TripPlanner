@@ -1,10 +1,14 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
+using TripPlanner.Web.Data;
 
 #nullable disable
 
 namespace TripPlanner.Web.Migrations
 {
     /// <inheritdoc />
+    [DbContext(typeof(ApplicationDbContext))]
+    [Migration("20260707171000_AddGpxWaypoints")]
     public partial class AddGpxWaypoints : Migration
     {
         /// <inheritdoc />
