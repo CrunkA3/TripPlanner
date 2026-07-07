@@ -130,13 +130,58 @@ var app = builder.Build();
 
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+const int defaultStartupMigrationTimeoutSeconds = 120;
+
+var applyMigrationsOnStartup = app.Configuration.GetValue("Database:ApplyMigrationsOnStartup", true);
+var startupMigrationTimeoutSeconds = app.Configuration.GetValue("Database:StartupMigrationTimeoutSeconds", defaultStartupMigrationTimeoutSeconds);
+
+// Validate timeout value and fall back to safe default if misconfigured
+if (startupMigrationTimeoutSeconds <= 0)
 {
+    app.Logger.LogWarning(
+        "Invalid 'Database:StartupMigrationTimeoutSeconds' value ({ConfiguredTimeout}). " +
+        "Must be greater than 0. Using default timeout of {DefaultTimeout}s.",
+        startupMigrationTimeoutSeconds,
+        defaultStartupMigrationTimeoutSeconds);
+    startupMigrationTimeoutSeconds = defaultStartupMigrationTimeoutSeconds;
+}
+
+if (applyMigrationsOnStartup)
+{
+    app.Logger.LogInformation(
+        "Applying database migrations on startup with timeout {TimeoutSeconds}s.",
+        startupMigrationTimeoutSeconds);
+
+    using var migrationTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(startupMigrationTimeoutSeconds));
     using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    await dbContext.Database.MigrateAsync();
+
+    try
+    {
+        await dbContext.Database.MigrateAsync(migrationTimeout.Token);
+    }
+    catch (OperationCanceledException ex) when (migrationTimeout.IsCancellationRequested)
+    {
+        app.Logger.LogCritical(
+            ex,
+            "Database migration timed out after {TimeoutSeconds}s during startup. " +
+            "Increase 'Database:StartupMigrationTimeoutSeconds' or set " +
+            "'Database:ApplyMigrationsOnStartup' to false to skip migrations on startup.",
+            startupMigrationTimeoutSeconds);
+        throw;
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogCritical(ex, "Failed to apply database migrations during startup.");
+        throw;
+    }
 }
 else
+{
+    app.Logger.LogInformation("Skipping database migrations on startup (Database:ApplyMigrationsOnStartup=false).");
+}
+
+if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
