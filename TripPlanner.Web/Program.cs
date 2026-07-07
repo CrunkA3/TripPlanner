@@ -130,8 +130,21 @@ var app = builder.Build();
 
 
 // Configure the HTTP request pipeline.
+const int defaultStartupMigrationTimeoutSeconds = 120;
+
 var applyMigrationsOnStartup = app.Configuration.GetValue("Database:ApplyMigrationsOnStartup", true);
-var startupMigrationTimeoutSeconds = app.Configuration.GetValue("Database:StartupMigrationTimeoutSeconds", 120);
+var startupMigrationTimeoutSeconds = app.Configuration.GetValue("Database:StartupMigrationTimeoutSeconds", defaultStartupMigrationTimeoutSeconds);
+
+// Validate timeout value and fall back to safe default if misconfigured
+if (startupMigrationTimeoutSeconds <= 0)
+{
+    app.Logger.LogWarning(
+        "Invalid 'Database:StartupMigrationTimeoutSeconds' value ({ConfiguredTimeout}). " +
+        "Must be greater than 0. Using default timeout of {DefaultTimeout}s.",
+        startupMigrationTimeoutSeconds,
+        defaultStartupMigrationTimeoutSeconds);
+    startupMigrationTimeoutSeconds = defaultStartupMigrationTimeoutSeconds;
+}
 
 if (applyMigrationsOnStartup)
 {
