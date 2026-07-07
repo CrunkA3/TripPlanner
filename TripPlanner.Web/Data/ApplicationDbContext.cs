@@ -17,6 +17,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Accommodation> Accommodations { get; set; }
     public DbSet<GpxTrack> GpxTracks { get; set; }
     public DbSet<GpxPoint> GpxPoints { get; set; }
+    public DbSet<GpxWaypoint> GpxWaypoints { get; set; }
     public DbSet<UserWishlist> UserWishlists { get; set; }
     public DbSet<SharedTrip> SharedTrips { get; set; }
     public DbSet<UrlImportJob> UrlImportJobs { get; set; }
@@ -111,6 +112,12 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .HasOne<GpxTrack>()
             .WithMany(g => g.Points)
             .HasForeignKey(p => p.GpxTrackId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<GpxWaypoint>()
+            .HasOne<GpxTrack>()
+            .WithMany(g => g.Waypoints)
+            .HasForeignKey(w => w.GpxTrackId)
             .OnDelete(DeleteBehavior.Cascade);
 
         // Configure Tags as JSON

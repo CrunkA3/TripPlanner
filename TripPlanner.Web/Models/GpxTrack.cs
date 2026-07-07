@@ -6,6 +6,7 @@ public class GpxTrack
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
     public List<GpxPoint> Points { get; set; } = new();
+    public List<GpxWaypoint> Waypoints { get; set; } = new();
     public double TotalDistance { get; set; }
     public double ElevationGain { get; set; }
     public double ElevationLoss { get; set; }
@@ -20,5 +21,15 @@ public class GpxPoint
     public double Longitude { get; set; }
     public double? Elevation { get; set; }
     public DateTimeOffset? Time { get; set; }
+    public int Order { get; set; }
+}
+
+public class GpxWaypoint
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string GpxTrackId { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public double Latitude { get; set; }
+    public double Longitude { get; set; }
     public int Order { get; set; }
 }
