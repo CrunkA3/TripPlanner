@@ -264,18 +264,18 @@ window.gpxRouteEditor = {
             midpointEl.style.cursor = 'pointer';
             midpointEl.title = 'Insert intermediate point';
 
-            (function (insertIndex) {
+            (function (insertIndex, lat, lng) {
                 midpointEl.addEventListener('click', function (evt) {
                     evt.stopPropagation();
                     instance.points.splice(insertIndex, 0, {
-                        latitude: midpointLat,
-                        longitude: midpointLng,
+                        latitude: lat,
+                        longitude: lng,
                         order: insertIndex + 1
                     });
                     self._refreshRoute(editorId);
                     self._notifyChange(editorId);
                 });
-            })(i + 1);
+            })(i + 1, midpointLat, midpointLng);
 
             var midpointMarker = new maplibregl.Marker({ element: midpointEl })
                 .setLngLat([midpointLng, midpointLat])
