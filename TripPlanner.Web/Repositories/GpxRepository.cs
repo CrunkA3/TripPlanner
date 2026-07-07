@@ -157,7 +157,7 @@ public class GpxRepository : IGpxRepository
         existing.TotalDistance = track.TotalDistance;
         existing.ElevationGain = track.ElevationGain;
         existing.ElevationLoss = track.ElevationLoss;
-        existing.CreatedAt = track.CreatedAt;
+        existing.CreatedAt ??= track.CreatedAt;
 
         context.GpxPoints.RemoveRange(existing.Points);
         context.GpxWaypoints.RemoveRange(existing.Waypoints);
