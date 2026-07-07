@@ -7,18 +7,18 @@ TripPlanner is a personal travel and trip planning web application built with .N
 - **Language**: C# (.NET 10 / `net10.0`)
 - **Framework**: ASP.NET Core Blazor Server (`Microsoft.NET.Sdk.Web`)
 - **Orchestration**: .NET Aspire 13.0 (`TripPlanner.AppHost`)
-- **Database**: SQL Server (EF Core 10.0.3 with `UseSqlServer`); SQLite is **not** used despite references in the README
+- **Database**: SQL Server (EF Core 10.0.8 with `UseSqlServer`); SQLite is **not** used despite references in the README
 - **Auth**: ASP.NET Core Identity with cookie-based auth; `McpApiKeyAuthHandler` for MCP API key auth
-- **UI**: Microsoft FluentUI Blazor Components 4.14.0
+- **UI**: Microsoft FluentUI Blazor Components 4.14.2
 - **AI**: Pluggable AI provider — Ollama (local LLM) or OpenAI-compatible API, selected via `AI:Provider` config key
-- **MCP**: Model Context Protocol server (`ModelContextProtocol.AspNetCore` 1.0.0) served at `/mcp`
+- **MCP**: Model Context Protocol server (`ModelContextProtocol.AspNetCore` 1.3.0) served at `/mcp`
 - **Testing**: xunit.v3 with Aspire integration testing (`Aspire.Hosting.Testing`)
 
 ## Solution Layout
 ```
 TripPlanner.slnx                      # Solution file (XML format)
 TripPlanner.AppHost/                  # .NET Aspire orchestration host (entry point for running all services)
-  AppHost.cs                          # Registers apiservice and webfrontend (Ollama registration commented out)
+  AppHost.cs                          # Registers apiservice and webfrontend (Ollama registration currently commented out)
   TripPlanner.AppHost.csproj          # Aspire SDK 13.0; references CommunityToolkit.Aspire.Hosting.Ollama 13.1.1
 TripPlanner.ApiService/               # Minimal ASP.NET Core Web API (placeholder/weather sample)
   Program.cs
@@ -26,11 +26,13 @@ TripPlanner.ServiceDefaults/          # Shared Aspire service defaults (telemetr
   Extensions.cs
 TripPlanner.Web/                      # Main Blazor Server web app
   Program.cs                          # App startup: DI, EF Core, Identity, HTTP clients, repositories, services, MCP
-  TripPlanner.Web.csproj              # SQL Server EF Core, FluentUI, Markdig, ReverseMarkdown, ImageSharp, MCP
+  TripPlanner.Web.csproj              # SQL Server EF Core, FluentUI, Markdig, ReverseMarkdown, SkiaSharp, MCP
   appsettings.json                    # Connection string, AI provider, Ollama/OpenAI config
   appsettings.Development.json
   API/                                # Minimal API endpoints
     PlaceImageApi.cs                  # GET /api/placeImages/{imageId}?width= (resize, ETag, Cache-Control)
+    GpxDownloadApi.cs                 # GET /api/gpx/{gpxTrackId}/download
+    TripImageExportApi.cs             # GET /api/trips/{tripId}/image
   Auth/                               # Custom authentication handlers
     McpApiKeyAuthHandler.cs           # Bearer API-key auth scheme for MCP endpoint
   Data/ApplicationDbContext.cs        # EF Core DbContext (Identity + all domain models)
@@ -46,7 +48,8 @@ TripPlanner.Web/                      # Main Blazor Server web app
                                       #   ChatConversation, ChatJob, ChatJobStatus
   Repositories/                       # Repository interfaces and EF Core implementations
                                       #   IPlaceRepository / PlaceRepository
-                                      #   ITripRepository / EfTripRepository
+                                      #   ITripRepository / TripRepository
+                                      #   IPlaceCollectionRepository / PlaceCollectionRepository
                                       #   IGpxRepository / GpxRepository
                                       #   IWishlistRepository / WishlistRepository
                                       #   IUrlImportJobRepository / UrlImportJobRepository
@@ -93,7 +96,7 @@ scripts/                              # Node.js helper scripts
 TripPlanner.Tests/                    # Integration tests (Aspire-based, xunit.v3)
   WebTests.cs                         # Single test: GetWebResourceRootReturnsOkStatusCode
 Dockerfile                            # Multi-stage build targeting TripPlanner.Web
-docker-compose.yml                    # SQL Server + Web containers
+docker-compose.yml                    # SQL Server + Ollama + Web containers
 ```
 
 ## Build Instructions
@@ -142,11 +145,11 @@ dotnet test
 **Note**: Tests may fail in sandboxed/CI environments without a running SQL Server.
 
 ### Docker
-Build and run with Docker Compose (starts SQL Server + web app):
+Build and run with Docker Compose (starts SQL Server + Ollama + web app):
 ```bash
 docker-compose up --build
 ```
-Web is exposed on ports `8980` (HTTP) and `8981` (HTTPS).
+Web is exposed on ports `8980` (HTTP) and `8981` (HTTPS), and Docker Compose also provisions Ollama (`11434`) plus a one-time model init container.
 
 ## Key Configuration Files
 - `TripPlanner.Web/appsettings.json` — connection string, `AI:Provider`, `Ollama:*`, `OpenAI:*`
@@ -156,21 +159,21 @@ Web is exposed on ports `8980` (HTTP) and `8981` (HTTPS).
 - `TripPlanner.Tests/TripPlanner.Tests.csproj` — xunit.v3, Aspire.Hosting.Testing
 
 ## Key NuGet Packages (TripPlanner.Web)
-- `Microsoft.EntityFrameworkCore.SqlServer` 10.0.3 — SQL Server EF Core provider
-- `Microsoft.AspNetCore.Identity.EntityFrameworkCore` 10.0.3 — ASP.NET Core Identity
-- `Microsoft.FluentUI.AspNetCore.Components` 4.14.0 + `.Icons` — UI component library
-- `ModelContextProtocol.AspNetCore` 1.0.0 — MCP server
-- `Markdig` 1.1.1 — Markdown rendering (custom `MarkdownSection` component)
-- `ReverseMarkdown` 5.2.0 — HTML-to-Markdown conversion (used in AI analysis)
-- `SixLabors.ImageSharp` 3.1.12 — server-side image resizing for the Place Image API
+- `Microsoft.EntityFrameworkCore.SqlServer` 10.0.8 — SQL Server EF Core provider
+- `Microsoft.AspNetCore.Identity.EntityFrameworkCore` 10.0.8 — ASP.NET Core Identity
+- `Microsoft.FluentUI.AspNetCore.Components` 4.14.2 + `.Icons` — UI component library
+- `ModelContextProtocol.AspNetCore` 1.3.0 — MCP server
+- `Markdig` 1.2.0 — Markdown rendering (custom `MarkdownSection` component)
+- `ReverseMarkdown` 5.3.0 — HTML-to-Markdown conversion (used in AI analysis)
+- `SkiaSharp` 2.88.9 — server-side image rendering/export support
 
 ## AI Configuration
 The AI provider is selected by `AI:Provider` in `appsettings.json` (default `"OpenAI"`):
 - **`"Ollama"`** — uses `OllamaChatService` and `OllamaPlaceAnalysisService` with the `"Ollama"` named HTTP client
-  - Config: `Ollama:BaseUrl`, `Ollama:Model`, `Ollama:MaxHistoryMessages`
+  - Config: `Ollama:BaseUrl`, `Ollama:Model`, `Ollama:EmbeddingsModel`, `Ollama:MaxHistoryMessages`
   - Aspire: `CommunityToolkit.Aspire.Hosting.Ollama` (commented out by default in AppHost)
 - **`"OpenAI"`** — uses `OpenAIChatService` and `OpenAIPlaceAnalysisService` with the `"OpenAI"` named HTTP client
-  - Config: `OpenAI:BaseUrl` (any OpenAI-compatible endpoint), `OpenAI:ApiKey`, `OpenAI:Model`
+  - Config: `OpenAI:BaseUrl` (any OpenAI-compatible endpoint), `OpenAI:ApiKey`, `OpenAI:Model`, `OpenAI:EmbeddingsModel`
 
 Both services implement `IChatService` and `IPlaceAnalysisService` respectively and are registered as scoped DI.
 
@@ -190,10 +193,11 @@ Registered in `Program.cs`:
 - **Database**: SQL Server only (despite README mentioning SQLite — the actual `Program.cs` uses `UseSqlServer` and the `.csproj` references `Microsoft.EntityFrameworkCore.SqlServer`)
 - **DbContext DbSets**: `Wishlists`, `Places`, `PlaceImages`, `Trips`, `TripDays`, `TripPlaces`, `Accommodations`, `GpxTracks`, `GpxPoints`, `UserWishlists`, `SharedTrips`, `UrlImportJobs`, `ChatConversations`, `ChatMessages`, `ChatJobs`
 - **Identity**: `RequireConfirmedAccount = true`; uses `IdentityNoOpEmailSender` (no real email in dev); `McpApiKeyAuthHandler` provides a separate Bearer API-key scheme for the MCP endpoint
-- **Repositories**: All scoped DI, registered in `Program.cs`: `IPlaceRepository → PlaceRepository`, `ITripRepository → EfTripRepository`, `IGpxRepository → GpxRepository`, `IWishlistRepository → WishlistRepository`, `IUrlImportJobRepository → UrlImportJobRepository`, `IChatConversationRepository → ChatConversationRepository`, `IChatJobRepository → ChatJobRepository`
+- **Repositories**: All scoped DI, registered in `Program.cs`: `IPlaceRepository → PlaceRepository`, `ITripRepository → TripRepository`, `IGpxRepository → GpxRepository`, `IWishlistRepository → WishlistRepository`, `IUrlImportJobRepository → UrlImportJobRepository`, `IChatConversationRepository → ChatConversationRepository`, `IChatJobRepository → ChatJobRepository`, `IPlaceCollectionRepository → PlaceCollectionRepository`
 - **Background Services**: `UrlImportBackgroundService` (polling-based URL-to-place import with AI analysis; processes pending jobs from the DB) and `ChatBackgroundService` (polling-based AI chat job processing; processes pending jobs from the DB) — both registered as `IHostedService`
 - **MCP Server**: Served at `/mcp`, secured with `McpApiKeyAuthHandler` Bearer scheme; tools: `TripMcpTools`, `WishlistMcpTools`, `PlaceMcpTools`
 - **Place Image API**: REST endpoint at `GET /api/placeImages/{imageId}?width=` — authenticated, supports proportional resize (400/800/1200 px), ETag + Cache-Control headers, served via `PlaceImageApi.cs`
+- **Additional APIs**: `GET /api/gpx/{gpxTrackId}/download` (`GpxDownloadApi.cs`) and `GET /api/trips/{tripId}/image` (`TripImageExportApi.cs`)
 - **SSRF Protection**: `UrlSecurityHelper.IsPrivateOrLocalUri()` blocks loopback, RFC-1918, link-local, and ULA addresses; the `"UrlFetchNoRedirect"` HTTP client follows redirects manually with per-hop validation (max 5 hops) via `PlaceAnalysisServiceBase.AnalyzeUrlAsync`
 - **Blazor rendering**: Interactive Server render mode (`AddInteractiveServerComponents`)
 - **Localization**: `UseRequestLocalization` accepts all cultures from `Accept-Language`; `BrowserTimeZoneService` (scoped) stores browser timezone + language tag from MainLayout JS interop
