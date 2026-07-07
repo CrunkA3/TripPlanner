@@ -43,6 +43,29 @@ public class GpxService
             });
         }
 
+        var waypointOrder = 0;
+        foreach (var wpt in doc.Descendants(ns + "wpt"))
+        {
+            var latAttr = wpt.Attribute("lat")?.Value;
+            var lonAttr = wpt.Attribute("lon")?.Value;
+            if (latAttr is null || lonAttr is null)
+                continue;
+
+            if (!double.TryParse(latAttr, NumberStyles.Float, CultureInfo.InvariantCulture, out var lat))
+                continue;
+            if (!double.TryParse(lonAttr, NumberStyles.Float, CultureInfo.InvariantCulture, out var lon))
+                continue;
+
+            waypointOrder++;
+            track.Waypoints.Add(new GpxWaypoint
+            {
+                Order = waypointOrder,
+                Latitude = lat,
+                Longitude = lon,
+                Name = wpt.Element(ns + "name")?.Value ?? string.Empty
+            });
+        }
+
         CalculateTrackStatistics(track);
         return track;
     }
@@ -100,6 +123,11 @@ public class GpxService
     {
         var ns = XNamespace.Get("http://www.topografix.com/GPX/1/1");
         var xsi = XNamespace.Get("http://www.w3.org/2001/XMLSchema-instance");
+        var wpts = track.Waypoints.OrderBy(w => w.Order).Select(w =>
+            new XElement(ns + "wpt",
+                new XAttribute("lat", w.Latitude.ToString("F6", CultureInfo.InvariantCulture)),
+                new XAttribute("lon", w.Longitude.ToString("F6", CultureInfo.InvariantCulture)),
+                string.IsNullOrWhiteSpace(w.Name) ? null : new XElement(ns + "name", w.Name)));
 
         var trkpts = track.Points.OrderBy(p => p.Order).Select(p =>
         {
@@ -124,6 +152,7 @@ public class GpxService
             new XAttribute(XNamespace.Xmlns + "xsi", xsi.NamespaceName),
             new XAttribute(xsi + "schemaLocation",
                 "http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd"),
+            wpts,
             trk);
 
         var doc = new XDocument(new XDeclaration("1.0", "UTF-8", null), gpx);

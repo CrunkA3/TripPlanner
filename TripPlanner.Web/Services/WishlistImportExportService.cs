@@ -48,6 +48,21 @@ public sealed class GpxTrackExportDto
     /// </summary>
     [YamlMember(Alias = "polyline")]
     public List<List<double>> Polyline { get; set; } = [];
+
+    [YamlMember(Alias = "waypoints")]
+    public List<GpxWaypointExportDto> Waypoints { get; set; } = [];
+}
+
+public sealed class GpxWaypointExportDto
+{
+    [YamlMember(Alias = "name")]
+    public string Name { get; set; } = string.Empty;
+
+    [YamlMember(Alias = "latitude")]
+    public double Latitude { get; set; }
+
+    [YamlMember(Alias = "longitude")]
+    public double Longitude { get; set; }
 }
 
 /// <summary>DTO for a single place, used in YAML export/import.</summary>
@@ -307,6 +322,19 @@ public partial class WishlistImportExportService(
                         });
                     }
 
+                    var waypointOrder = 1;
+                    foreach (var waypoint in placeDto.GpxTrack.Waypoints ?? [])
+                    {
+                        track.Waypoints.Add(new GpxWaypoint
+                        {
+                            GpxTrackId = track.Id,
+                            Name = waypoint.Name?.Trim() ?? string.Empty,
+                            Latitude = waypoint.Latitude,
+                            Longitude = waypoint.Longitude,
+                            Order = waypointOrder++
+                        });
+                    }
+
                     var savedTrack = await gpxRepository.AddAsync(track);
                     place.GpxTrackId = savedTrack.Id;
                 }
@@ -346,7 +374,15 @@ public partial class WishlistImportExportService(
         ElevationLossM = track.ElevationLoss,
         Polyline = [.. track.Points
             .OrderBy(p => p.Order)
-            .Select(p => new List<double> { p.Latitude, p.Longitude })]
+            .Select(p => new List<double> { p.Latitude, p.Longitude })],
+        Waypoints = [.. track.Waypoints
+            .OrderBy(w => w.Order)
+            .Select(w => new GpxWaypointExportDto
+            {
+                Name = w.Name,
+                Latitude = w.Latitude,
+                Longitude = w.Longitude
+            })]
     };
 
     private static PlaceCategory ParseCategory(string? value)

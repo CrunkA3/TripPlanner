@@ -1,6 +1,8 @@
 ﻿@implements IDialogContentComponent<Place>
+@implements IAsyncDisposable
 
 @using System.Text
+@using Microsoft.JSInterop
 @using TripPlanner.Web.Models
 @using TripPlanner.Web.Repositories
 @using TripPlanner.Web.Services
@@ -172,7 +174,7 @@
 
             <FluentTab Label="GPX" Icon="@(new Icons.Regular.Size16.Location())">
                 <FluentStack Orientation="Orientation.Vertical" Style="padding: 8px 0;">
-                    @if (!string.IsNullOrEmpty(Content.GpxTrackId))
+                    @if (!_isRouteEditorOpen && !string.IsNullOrEmpty(Content.GpxTrackId))
                     {
                         var gpxTrack = GpxTracks.FirstOrDefault(g => g.Id == Content.GpxTrackId);
                         @if (gpxTrack != null)
@@ -183,18 +185,28 @@
                                     <FluentStack Orientation="Orientation.Vertical" Style="flex: 1;">
                                         <FluentLabel Weight="FontWeight.Bold">@gpxTrack.Name</FluentLabel>
                                         <FluentLabel Style="font-size: 0.875em;">
-                                            Distance: @gpxTrack.TotalDistance.ToString("F2") km | Points: @gpxTrack.Points.Count
+                                            Distance: @gpxTrack.TotalDistance.ToString("F2") km | Points: @gpxTrack.Points.Count | Waypoints: @gpxTrack.Waypoints.Count
                                         </FluentLabel>
                                     </FluentStack>
+                                    <FluentButton Appearance="Appearance.Outline"
+                                                  IconStart="@(new Icons.Regular.Size16.Edit())"
+                                                  OnClick="@OpenRouteEditor">
+                                        Edit route
+                                    </FluentButton>
                                     <FluentButton Appearance="Appearance.Lightweight" IconStart="@(new Icons.Regular.Size16.Delete())" OnClick="@RemoveGpxTrack">
                                     </FluentButton>
                                 </FluentStack>
                             </FluentCard>
                         }
                     }
-                    else
+                    else if (!_isRouteEditorOpen)
                     {
                         <FluentLabel Style="font-size: 0.875em; color: var(--neutral-foreground-hint);">No GPX track attached. Upload one below.</FluentLabel>
+                        <FluentButton Appearance="Appearance.Outline"
+                                      IconStart="@(new Icons.Regular.Size16.Edit())"
+                                      OnClick="@OpenRouteEditor">
+                            Create route on map
+                        </FluentButton>
                         @if (_foundGpxUrls.Count > 0)
                         {
                             <FluentLabel Weight="FontWeight.Bold" Style="font-size: 0.875em;">Found on page:</FluentLabel>
@@ -225,6 +237,73 @@
                             <FluentDivider />
                         }
                         <GpxFileUpload OnFileUploaded="@HandleGpxUploaded" />
+                    }
+
+                    @if (_isRouteEditorOpen)
+                    {
+                        <FluentCard>
+                            <FluentStack Orientation="Orientation.Vertical" Style="gap: 10px;">
+                                <FluentLabel Weight="FontWeight.Bold">Route editor</FluentLabel>
+                                <FluentLabel Style="font-size: 0.875em; color: var(--neutral-foreground-hint);">
+                                    Click/touch map to add points, drag points to move them, and click blue midpoint handles to insert in-between points.
+                                </FluentLabel>
+                                <FluentStack Orientation="Orientation.Horizontal" Style="gap: 8px; flex-wrap: wrap;">
+                                    <FluentButton Appearance="@(_isAddWaypointMode ? Appearance.Accent : Appearance.Outline)"
+                                                  IconStart="@(new Icons.Regular.Size16.Pin())"
+                                                  OnClick="@ToggleAddWaypointMode">
+                                        Waypoint mode
+                                    </FluentButton>
+                                    <FluentButton Appearance="Appearance.Outline"
+                                                  IconStart="@(new Icons.Regular.Size16.Pin())"
+                                                  OnClick="@AddWaypointAtMapCenter">
+                                        Add waypoint at center
+                                    </FluentButton>
+                                    <FluentButton Appearance="Appearance.Neutral"
+                                                  IconStart="@(new Icons.Regular.Size16.Delete())"
+                                                  OnClick="@ClearEditedRoute">
+                                        Clear route
+                                    </FluentButton>
+                                </FluentStack>
+                                <div id="@_routeEditorMapId" style="width: 100%; height: 320px; border-radius: 8px; overflow: hidden; border: 1px solid var(--neutral-stroke-rest);"></div>
+                                <FluentLabel Style="font-size: 0.875em;">
+                                    Route points: @_editorRoutePoints.Count | Waypoints: @_editorWaypoints.Count
+                                </FluentLabel>
+                                @if (!string.IsNullOrEmpty(_routeEditorError))
+                                {
+                                    <FluentLabel Color="Color.Error" Style="font-size: 0.875em;">@_routeEditorError</FluentLabel>
+                                }
+
+                                @if (_editorWaypoints.Count > 0)
+                                {
+                                    <FluentStack Orientation="Orientation.Vertical" Style="gap: 6px;">
+                                        @foreach (var waypoint in _editorWaypoints.OrderBy(w => w.Order))
+                                        {
+                                            <FluentStack Orientation="Orientation.Horizontal" Style="gap: 8px; align-items: flex-end;">
+                                                <FluentTextField Value="@waypoint.Name"
+                                                                 ValueChanged="@((value) => OnWaypointNameChanged(waypoint.Id, value))"
+                                                                 Label="@($"Waypoint {waypoint.Order}")"
+                                                                 Style="flex: 1;" />
+                                                <FluentLabel Style="font-size: 0.8em; min-width: 180px;">
+                                                    @waypoint.Latitude.ToString("F5"), @waypoint.Longitude.ToString("F5")
+                                                </FluentLabel>
+                                                <FluentButton Appearance="Appearance.Lightweight"
+                                                              IconStart="@(new Icons.Regular.Size16.Delete())"
+                                                              OnClick="@(() => RemoveWaypointFromEditor(waypoint.Id))" />
+                                            </FluentStack>
+                                        }
+                                    </FluentStack>
+                                }
+
+                                <FluentStack Orientation="Orientation.Horizontal" Style="gap: 8px;">
+                                    <FluentButton Appearance="Appearance.Accent" OnClick="@SaveEditedRoute">
+                                        Save route
+                                    </FluentButton>
+                                    <FluentButton Appearance="Appearance.Neutral" OnClick="@CloseRouteEditor">
+                                        Cancel
+                                    </FluentButton>
+                                </FluentStack>
+                            </FluentStack>
+                        </FluentCard>
                     }
                 </FluentStack>
             </FluentTab>
@@ -277,6 +356,16 @@
     private bool _isImportingGpx = false;
     private string? _importingGpxUrl;
     private string? _gpxImportError;
+    private string? _routeEditorError;
+
+    private readonly string _routeEditorId = $"route-editor-{Guid.NewGuid():N}";
+    private readonly string _routeEditorMapId = $"route-editor-map-{Guid.NewGuid():N}";
+    private bool _isRouteEditorOpen;
+    private bool _routeEditorInitialized;
+    private bool _isAddWaypointMode;
+    private DotNetObjectReference<PlaceDialog>? _routeEditorDotNetRef;
+    private List<GpxEditorPoint> _editorRoutePoints = [];
+    private List<GpxEditorWaypoint> _editorWaypoints = [];
 
     private ApplicationUser? CurrentUser { get; set; }
 
@@ -311,6 +400,14 @@
     protected override void OnParametersSet()
     {
         _newPlaceCategoryString = Content?.Category.ToString() ?? string.Empty;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_isRouteEditorOpen && !_routeEditorInitialized)
+        {
+            await InitializeRouteEditorAsync();
+        }
     }
 
     private async Task LoadGpxTracks()
@@ -579,6 +676,232 @@
         }
     }
 
+    private Task OpenRouteEditor()
+    {
+        _routeEditorError = null;
+        _isRouteEditorOpen = true;
+        _routeEditorInitialized = false;
+        _isAddWaypointMode = false;
+
+        var existingTrack = !string.IsNullOrEmpty(Content.GpxTrackId)
+            ? GpxTracks.FirstOrDefault(t => t.Id == Content.GpxTrackId)
+            : null;
+
+        _editorRoutePoints = existingTrack?.Points
+            .OrderBy(p => p.Order)
+            .Select(p => new GpxEditorPoint
+            {
+                Latitude = p.Latitude,
+                Longitude = p.Longitude,
+                Order = p.Order
+            })
+            .ToList() ?? [];
+
+        _editorWaypoints = existingTrack?.Waypoints
+            .OrderBy(w => w.Order)
+            .Select(w => new GpxEditorWaypoint
+            {
+                Id = w.Id,
+                Name = w.Name,
+                Latitude = w.Latitude,
+                Longitude = w.Longitude,
+                Order = w.Order
+            })
+            .ToList() ?? [];
+
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private async Task InitializeRouteEditorAsync()
+    {
+        var centerLat = Content.Latitude != 0 ? Content.Latitude : 48.8566;
+        var centerLng = Content.Longitude != 0 ? Content.Longitude : 2.3522;
+        if (_editorRoutePoints.Count > 0)
+        {
+            centerLat = _editorRoutePoints[0].Latitude;
+            centerLng = _editorRoutePoints[0].Longitude;
+        }
+
+        _routeEditorDotNetRef ??= DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("gpxRouteEditor.create", _routeEditorId, _routeEditorMapId, centerLat, centerLng, 11, _routeEditorDotNetRef, "OnRouteEditorChanged");
+        await JS.InvokeVoidAsync("gpxRouteEditor.setData", _routeEditorId, _editorRoutePoints, _editorWaypoints);
+        await JS.InvokeVoidAsync("gpxRouteEditor.setWaypointCreateMode", _routeEditorId, _isAddWaypointMode);
+        _routeEditorInitialized = true;
+    }
+
+    private async Task ToggleAddWaypointMode()
+    {
+        _isAddWaypointMode = !_isAddWaypointMode;
+        if (_routeEditorInitialized)
+            await JS.InvokeVoidAsync("gpxRouteEditor.setWaypointCreateMode", _routeEditorId, _isAddWaypointMode);
+    }
+
+    private async Task AddWaypointAtMapCenter()
+    {
+        if (!_routeEditorInitialized) return;
+        await JS.InvokeVoidAsync("gpxRouteEditor.addWaypointAtCenter", _routeEditorId);
+    }
+
+    private async Task ClearEditedRoute()
+    {
+        if (!_routeEditorInitialized) return;
+        await JS.InvokeVoidAsync("gpxRouteEditor.clearRoute", _routeEditorId);
+    }
+
+    private async Task OnWaypointNameChanged(string waypointId, string? value)
+    {
+        var waypoint = _editorWaypoints.FirstOrDefault(w => w.Id == waypointId);
+        if (waypoint is null) return;
+        waypoint.Name = value ?? string.Empty;
+        if (_routeEditorInitialized)
+            await JS.InvokeVoidAsync("gpxRouteEditor.renameWaypoint", _routeEditorId, waypointId, waypoint.Name);
+    }
+
+    private async Task RemoveWaypointFromEditor(string waypointId)
+    {
+        _editorWaypoints = _editorWaypoints.Where(w => w.Id != waypointId).ToList();
+        ReorderEditedWaypoints();
+        if (_routeEditorInitialized)
+            await JS.InvokeVoidAsync("gpxRouteEditor.removeWaypoint", _routeEditorId, waypointId);
+    }
+
+    private async Task SaveEditedRoute()
+    {
+        _routeEditorError = null;
+        if (_routeEditorInitialized)
+        {
+            var data = await JS.InvokeAsync<GpxEditorState>("gpxRouteEditor.getData", _routeEditorId);
+            UpdateEditorState(data);
+        }
+
+        if (_editorRoutePoints.Count < 2)
+        {
+            _routeEditorError = "Please set at least two route points.";
+            return;
+        }
+
+        var track = new GpxTrack
+        {
+            Id = Content.GpxTrackId ?? Guid.NewGuid().ToString(),
+            Name = string.IsNullOrWhiteSpace(Content.Name) ? "Route" : $"{Content.Name} Route",
+            Description = $"Route for {Content.Name}",
+            CreatedAt = DateTimeOffset.UtcNow,
+            Points = _editorRoutePoints
+                .OrderBy(p => p.Order)
+                .Select(p => new GpxPoint
+                {
+                    GpxTrackId = Content.GpxTrackId ?? string.Empty,
+                    Latitude = p.Latitude,
+                    Longitude = p.Longitude,
+                    Order = p.Order
+                })
+                .ToList(),
+            Waypoints = _editorWaypoints
+                .OrderBy(w => w.Order)
+                .Select(w => new GpxWaypoint
+                {
+                    Id = string.IsNullOrWhiteSpace(w.Id) ? Guid.NewGuid().ToString() : w.Id,
+                    GpxTrackId = Content.GpxTrackId ?? string.Empty,
+                    Name = w.Name,
+                    Latitude = w.Latitude,
+                    Longitude = w.Longitude,
+                    Order = w.Order
+                })
+                .ToList()
+        };
+
+        // Ensure FK values point to the final track ID
+        foreach (var point in track.Points)
+            point.GpxTrackId = track.Id;
+        foreach (var waypoint in track.Waypoints)
+            waypoint.GpxTrackId = track.Id;
+
+        // Keep statistics aligned with current route points
+        var totalDistance = 0d;
+        for (var i = 1; i < track.Points.Count; i++)
+        {
+            totalDistance += GpxService.CalculateDistance(
+                track.Points[i - 1].Latitude, track.Points[i - 1].Longitude,
+                track.Points[i].Latitude, track.Points[i].Longitude);
+        }
+        track.TotalDistance = totalDistance;
+
+        if (string.IsNullOrEmpty(Content.GpxTrackId))
+        {
+            await GpxRepository.AddAsync(track);
+            Content.GpxTrackId = track.Id;
+        }
+        else
+        {
+            var updated = await GpxRepository.UpdateAsync(track);
+            if (updated is null)
+            {
+                await GpxRepository.AddAsync(track);
+                Content.GpxTrackId = track.Id;
+            }
+        }
+
+        Content.Latitude = track.Points[0].Latitude;
+        Content.Longitude = track.Points[0].Longitude;
+
+        await LoadGpxTracks();
+        await CloseRouteEditor();
+    }
+
+    private async Task CloseRouteEditor()
+    {
+        _routeEditorError = null;
+        _isAddWaypointMode = false;
+        _isRouteEditorOpen = false;
+        if (_routeEditorInitialized)
+        {
+            await JS.InvokeVoidAsync("gpxRouteEditor.destroy", _routeEditorId);
+            _routeEditorInitialized = false;
+        }
+    }
+
+    [JSInvokable]
+    public Task OnRouteEditorChanged(GpxEditorState state)
+    {
+        UpdateEditorState(state);
+        return Task.CompletedTask;
+    }
+
+    private void UpdateEditorState(GpxEditorState? state)
+    {
+        if (state is null) return;
+        _editorRoutePoints = (state.Points ?? [])
+            .OrderBy(p => p.Order)
+            .Select((p, idx) => new GpxEditorPoint
+            {
+                Latitude = p.Latitude,
+                Longitude = p.Longitude,
+                Order = idx + 1
+            })
+            .ToList();
+
+        _editorWaypoints = (state.Waypoints ?? [])
+            .OrderBy(w => w.Order)
+            .Select((w, idx) => new GpxEditorWaypoint
+            {
+                Id = string.IsNullOrWhiteSpace(w.Id) ? Guid.NewGuid().ToString() : w.Id,
+                Name = w.Name ?? string.Empty,
+                Latitude = w.Latitude,
+                Longitude = w.Longitude,
+                Order = idx + 1
+            })
+            .ToList();
+        ReorderEditedWaypoints();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void ReorderEditedWaypoints()
+    {
+        for (var i = 0; i < _editorWaypoints.Count; i++)
+            _editorWaypoints[i].Order = i + 1;
+    }
+
     private async Task ImportGpxFromUrl(string gpxUrl)
     {
         if (Content == null || _isImportingGpx) return;
@@ -765,7 +1088,44 @@
         _suggestion = null;
     }
 
-    
+    public async ValueTask DisposeAsync()
+    {
+        if (_routeEditorInitialized)
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("gpxRouteEditor.destroy", _routeEditorId);
+            }
+            catch
+            {
+                // Ignore JS disposal issues during component teardown
+            }
+        }
+        _routeEditorDotNetRef?.Dispose();
+    }
+
+    public sealed class GpxEditorState
+    {
+        public List<GpxEditorPoint>? Points { get; set; }
+        public List<GpxEditorWaypoint>? Waypoints { get; set; }
+    }
+
+    public sealed class GpxEditorPoint
+    {
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
+        public int Order { get; set; }
+    }
+
+    public sealed class GpxEditorWaypoint
+    {
+        public string Id { get; set; } = Guid.NewGuid().ToString();
+        public string Name { get; set; } = string.Empty;
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
+        public int Order { get; set; }
+    }
+
     private async Task CancelAsync()
     {
         await Dialog.CancelAsync();

@@ -479,6 +479,35 @@ namespace TripPlanner.Web.Migrations
                     b.ToTable("GpxTracks");
                 });
 
+            modelBuilder.Entity("TripPlanner.Web.Models.GpxWaypoint", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("GpxTrackId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<double>("Latitude")
+                        .HasColumnType("float");
+
+                    b.Property<double>("Longitude")
+                        .HasColumnType("float");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GpxTrackId");
+
+                    b.ToTable("GpxWaypoints");
+                });
+
             modelBuilder.Entity("TripPlanner.Web.Models.Place", b =>
                 {
                     b.Property<string>("Id")
@@ -994,6 +1023,15 @@ namespace TripPlanner.Web.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("TripPlanner.Web.Models.GpxWaypoint", b =>
+                {
+                    b.HasOne("TripPlanner.Web.Models.GpxTrack", null)
+                        .WithMany("Waypoints")
+                        .HasForeignKey("GpxTrackId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("TripPlanner.Web.Models.Place", b =>
                 {
                     b.HasOne("TripPlanner.Web.Models.GpxTrack", "GpxTrack")
@@ -1177,6 +1215,8 @@ namespace TripPlanner.Web.Migrations
             modelBuilder.Entity("TripPlanner.Web.Models.GpxTrack", b =>
                 {
                     b.Navigation("Points");
+
+                    b.Navigation("Waypoints");
                 });
 
             modelBuilder.Entity("TripPlanner.Web.Models.Place", b =>
