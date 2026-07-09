@@ -150,7 +150,8 @@ TripPlanner.Web/
 ├── Repositories/             # Datenzugriffsschicht
 │   ├── IWishlistRepository.cs / WishlistRepository.cs
 │   ├── IPlaceRepository.cs   / PlaceRepository.cs
-│   ├── ITripRepository.cs    / EfTripRepository.cs
+│   ├── ITripRepository.cs    / TripRepository.cs
+│   ├── IPlaceCollectionRepository.cs / PlaceCollectionRepository.cs
 │   ├── IGpxRepository.cs     / GpxRepository.cs
 │   ├── IChatConversationRepository.cs / ChatConversationRepository.cs
 │   ├── IChatJobRepository.cs / ChatJobRepository.cs
@@ -190,12 +191,12 @@ TripPlanner.Web/
 
 ### Technologien
 - **Framework**: .NET 10, ASP.NET Core Blazor Server
-- **Datenbank**: Entity Framework Core 10.0.3 mit **SQL Server**
+- **Datenbank**: Entity Framework Core 10.0.8 mit **SQL Server**
 - **Authentifizierung**: ASP.NET Core Identity (Cookie-basiert) + Passkeys (WebAuthn) + MCP API-Key
-- **UI-Bibliothek**: Microsoft Fluent UI Blazor Components 4.14.0
+- **UI-Bibliothek**: Microsoft Fluent UI Blazor Components 4.14.2
 - **Karte**: MapLibre GL JS (Integration in MapPage)
 - **KI/LLM**: Ollama (lokal, Standard: `llama3.2`) **oder** OpenAI-kompatible API – konfigurierbar über `AI:Provider`
-- **MCP**: ModelContextProtocol.AspNetCore 1.0.0
+- **MCP**: ModelContextProtocol.AspNetCore 1.3.0
 - **Geocoding**: OpenStreetMap Nominatim API
 - **Wetter**: Open-Meteo API (kostenlos, keine Registrierung erforderlich)
 - **Orchestrierung**: .NET Aspire 13.0 (`TripPlanner.AppHost`)
