@@ -197,7 +197,7 @@ Registered in `Program.cs`:
 - **Background Services**: `UrlImportBackgroundService` (polling-based URL-to-place import with AI analysis; processes pending jobs from the DB) and `ChatBackgroundService` (polling-based AI chat job processing; processes pending jobs from the DB) — both registered as `IHostedService`
 - **MCP Server**: Served at `/mcp`, secured with `McpApiKeyAuthHandler` Bearer scheme; tools: `TripMcpTools`, `WishlistMcpTools`, `PlaceMcpTools`
 - **Place Image API**: REST endpoint at `GET /api/placeImages/{imageId}?width=` — authenticated, supports proportional resize (400/800/1200 px), ETag + Cache-Control headers, served via `PlaceImageApi.cs`
-- **Additional APIs**: `GET /api/gpx/{gpxTrackId}/download` (`GpxDownloadApi.cs`) and `GET /api/trips/{tripId}/image` (`TripImageExportApi.cs`)
+- **Additional APIs**: `GET /api/gpx/{trackId}?token=` (`GpxDownloadApi.cs`) and `GET /api/trips/{tripId}/export-image` (`TripImageExportApi.cs`)
 - **SSRF Protection**: `UrlSecurityHelper.IsPrivateOrLocalUri()` blocks loopback, RFC-1918, link-local, and ULA addresses; the `"UrlFetchNoRedirect"` HTTP client follows redirects manually with per-hop validation (max 5 hops) via `PlaceAnalysisServiceBase.AnalyzeUrlAsync`
 - **Blazor rendering**: Interactive Server render mode (`AddInteractiveServerComponents`)
 - **Localization**: `UseRequestLocalization` accepts all cultures from `Accept-Language`; `BrowserTimeZoneService` (scoped) stores browser timezone + language tag from MainLayout JS interop
