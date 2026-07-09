@@ -31,8 +31,8 @@ TripPlanner.Web/                      # Main Blazor Server web app
   appsettings.Development.json
   API/                                # Minimal API endpoints
     PlaceImageApi.cs                  # GET /api/placeImages/{imageId}?width= (resize, ETag, Cache-Control)
-    GpxDownloadApi.cs                 # GET /api/gpx/{gpxTrackId}/download
-    TripImageExportApi.cs             # GET /api/trips/{tripId}/image
+    GpxDownloadApi.cs                 # GET /api/gpx/{trackId}?token=
+    TripImageExportApi.cs             # GET /api/trips/{tripId}/export-image
   Auth/                               # Custom authentication handlers
     McpApiKeyAuthHandler.cs           # Bearer API-key auth scheme for MCP endpoint
   Data/ApplicationDbContext.cs        # EF Core DbContext (Identity + all domain models)
