@@ -44,7 +44,7 @@ public class OpenChargeMapService(
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to load charging stations around {Latitude}, {Longitude}", latitude, longitude);
+            logger.LogWarning(ex, "Failed to load charging stations from OpenChargeMap.");
             return [];
         }
     }
