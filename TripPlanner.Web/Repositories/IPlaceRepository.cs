@@ -38,6 +38,7 @@ public interface IPlaceRepository
             PlaceCategory.Shopping => "#FF6F00",
             PlaceCategory.Entertainment => "#E91E63",
             PlaceCategory.Race => "#F44336",
+            PlaceCategory.ChargingStation => "#00BFA5",
             _ => "#757575"
         };
     }
@@ -53,6 +54,7 @@ public interface IPlaceRepository
         PlaceCategory.Shopping => "place-cat-shopping",
         PlaceCategory.Entertainment => "place-cat-entertainment",
         PlaceCategory.Race => "place-cat-race",
+        PlaceCategory.ChargingStation => "place-cat-chargingstation",
         _ => "place-cat-other",
     };
 
@@ -68,6 +70,7 @@ public interface IPlaceRepository
         PlaceCategory.Shopping => new Icons.Regular.Size32.ShoppingBag(),
         PlaceCategory.Entertainment => new Icons.Regular.Size32.StarEmphasis(),
         PlaceCategory.Race => new Icons.Regular.Size32.Flag(),
+        PlaceCategory.ChargingStation => new Icons.Regular.Size32.PlugConnected(),
         _ => new Icons.Regular.Size32.LocationArrow(),
     };
 }

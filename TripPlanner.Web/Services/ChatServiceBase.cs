@@ -22,6 +22,7 @@ public abstract partial class ChatServiceBase(
     IChatConversationRepository conversationRepository,
     WeatherService weatherService,
     TransitService transitService,
+    OpenChargeMapService openChargeMapService,
     BrowserTimeZoneService browserTimeZoneService) : IChatService
 {
     // ── Inner message/tool-call types ────────────────────────────────────────────
@@ -238,6 +239,7 @@ public abstract partial class ChatServiceBase(
             sb.AppendLine("Use the get_weather tool to look up current or forecasted weather for any location.");
         }
         sb.AppendLine("Use the search_transit_connections tool to find public-transit (ÖPNV/train/bus) connections between any two stations or cities.");
+        sb.AppendLine("Use the search_charging_stations tool to find nearby EV charging stations.");
         sb.AppendLine($"Always respond in the user's language: {browserTimeZoneService.LanguageTag}.");
         sb.AppendLine("Keep names and titles short");
         sb.AppendLine("Use the Places from Wishlists and Trips");
@@ -300,6 +302,14 @@ public abstract partial class ChatServiceBase(
                     ? await SearchTransitConnectionsAsync(transitFrom, transitTo, Str(args, "departure"),
                         TryGetInt(args, "results", out var transitResults) ? transitResults : 3, ct)
                     : "Missing required parameters: from, to",
+                "search_charging_stations" => TryGetDouble(args, "latitude", out var cLat) && TryGetDouble(args, "longitude", out var cLon)
+                    ? await SearchChargingStationsAsync(
+                        cLat,
+                        cLon,
+                        TryGetDouble(args, "distance_km", out var cDistanceKm) ? cDistanceKm : 5,
+                        TryGetInt(args, "results", out var cResults) ? cResults : 5,
+                        ct)
+                    : "Missing required parameters: latitude, longitude",
                 _ => $"Unknown tool: {name}"
             };
         }
@@ -757,6 +767,47 @@ public abstract partial class ChatServiceBase(
         return sb.ToString();
     }
 
+    private async Task<string> SearchChargingStationsAsync(
+        double latitude,
+        double longitude,
+        double distanceKm,
+        int results,
+        CancellationToken ct)
+    {
+        var stations = await openChargeMapService.SearchStationsAsync(
+            latitude, longitude, distanceKm, results, ct);
+
+        if (stations.Count == 0)
+        {
+            return $"No charging stations found near ({latitude.ToString("F4", CultureInfo.InvariantCulture)}, " +
+                   $"{longitude.ToString("F4", CultureInfo.InvariantCulture)}) within {Math.Clamp(distanceKm, 1, 50).ToString("F1", CultureInfo.InvariantCulture)} km.";
+        }
+
+        var sb = new StringBuilder();
+        sb.AppendLine(
+            $"Charging stations near ({latitude.ToString("F4", CultureInfo.InvariantCulture)}, {longitude.ToString("F4", CultureInfo.InvariantCulture)}):");
+        foreach (var station in stations)
+        {
+            var distance = station.DistanceKm.HasValue
+                ? $"{station.DistanceKm.Value.ToString("F1", CultureInfo.InvariantCulture)} km"
+                : "distance unknown";
+            var points = station.NumberOfPoints.HasValue ? $"{station.NumberOfPoints.Value} points" : "points unknown";
+            var maxPower = station.MaxPowerKw.HasValue
+                ? $"{station.MaxPowerKw.Value.ToString("F0", CultureInfo.InvariantCulture)} kW"
+                : "power unknown";
+            var connectionTypes = station.ConnectionTypes.Count > 0
+                ? string.Join(", ", station.ConnectionTypes.Take(3))
+                : "connector type unknown";
+
+            sb.AppendLine($"  {station.Name} ({distance})");
+            if (!string.IsNullOrWhiteSpace(station.Address))
+                sb.AppendLine($"    Address: {station.Address}");
+            sb.AppendLine($"    Details: {points}, up to {maxPower}, connectors: {connectionTypes}");
+        }
+
+        return sb.ToString();
+    }
+
     // ── Tool definitions ─────────────────────────────────────────────────────────
 
     protected static readonly object[] ToolDefinitions = BuildToolDefinitions();
@@ -807,7 +858,7 @@ public abstract partial class ChatServiceBase(
 
         MakeTool("list_places", "List all places accessible to the current user, optionally filtered by category.",
             Props(("category", "string",
-                "Optional category filter: Viewpoint, Museum, Restaurant, Nature, Activity, Accommodation, Shopping, Entertainment, Race, Other."))),
+                "Optional category filter: Viewpoint, Museum, Restaurant, Nature, Activity, Accommodation, Shopping, Entertainment, Race, Other, ChargingStation."))),
         MakeTool("get_place", "Get details of a specific place from a Wishlist or Trip by ID.",
             Props(("place_id", "string", "The place ID.")),
             ["place_id"]),
@@ -815,7 +866,7 @@ public abstract partial class ChatServiceBase(
             Props(
                 ("name", "string", "The name of the place."),
                 ("category", "string",
-                    "Category: Viewpoint, Museum, Restaurant, Nature, Activity, Accommodation, Shopping, Entertainment, Race, Other."),
+                    "Category: Viewpoint, Museum, Restaurant, Nature, Activity, Accommodation, Shopping, Entertainment, Race, Other, ChargingStation."),
                 ("latitude", "number", "Latitude coordinate."),
                 ("longitude", "number", "Longitude coordinate."),
                 ("wishlist_id", "string", "The wishlist ID to add this place to."),
@@ -829,7 +880,7 @@ public abstract partial class ChatServiceBase(
             Props(
                 ("name", "string", "The name of the place."),
                 ("category", "string",
-                    "Category: Viewpoint, Museum, Restaurant, Nature, Activity, Accommodation, Shopping, Entertainment, Race, Other."),
+                    "Category: Viewpoint, Museum, Restaurant, Nature, Activity, Accommodation, Shopping, Entertainment, Race, Other, ChargingStation."),
                 ("latitude", "number", "Latitude coordinate."),
                 ("longitude", "number", "Longitude coordinate."),
                 ("trip_id", "string", "The trip ID to add this place to."),
@@ -868,6 +919,14 @@ public abstract partial class ChatServiceBase(
                 ("departure", "string", "Optional departure date/time in ISO 8601 format (e.g. '2024-06-15T09:00'). Defaults to now."),
                 ("results", "integer", "Optional number of connections to return (1–6, default 3).")),
             ["from", "to"]),
+        MakeTool("search_charging_stations",
+            "Search for nearby EV charging stations around a coordinate using OpenChargeMap. Returns station name, address, distance, available points, and connector/power details.",
+            Props(
+                ("latitude", "number", "Latitude of the search center."),
+                ("longitude", "number", "Longitude of the search center."),
+                ("distance_km", "number", "Optional search radius in kilometers (1–50, default 5)."),
+                ("results", "integer", "Optional maximum stations to return (1–20, default 5).")),
+            ["latitude", "longitude"]),
     ];
 
     private static Dictionary<string, object> Props(params (string Name, string Type, string Desc)[] props) =>

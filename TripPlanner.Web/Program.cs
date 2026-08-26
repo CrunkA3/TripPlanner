@@ -89,6 +89,14 @@ builder.Services.AddHttpClient("DbTransit", client =>
     client.DefaultRequestHeaders.UserAgent.ParseAdd("TripPlanner/1.0 (https://github.com/CrunkA3/TripPlanner)");
 });
 
+// Register HttpClient for OpenChargeMap EV charging-station search API
+builder.Services.AddHttpClient("OpenChargeMap", client =>
+{
+    client.BaseAddress = new Uri("https://api.openchargemap.io/");
+    client.Timeout = TimeSpan.FromSeconds(15);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("TripPlanner/1.0 (https://github.com/CrunkA3/TripPlanner)");
+});
+
 // Register TripPlanner repositories (EF Core)
 builder.Services.AddScoped<IPlaceRepository, PlaceRepository>();
 builder.Services.AddScoped<ITripRepository, TripRepository>();
@@ -105,6 +113,7 @@ builder.Services.AddScoped<RoutingService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<WeatherService>();
 builder.Services.AddScoped<TransitService>();
+builder.Services.AddScoped<OpenChargeMapService>();
 builder.Services.AddScoped<BrowserTimeZoneService>();
 builder.Services.AddScoped<IGeocodingService, NominatimGeocodingService>();
 builder.Services.AddScoped<WishlistImportExportService>();

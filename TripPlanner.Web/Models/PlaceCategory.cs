@@ -11,5 +11,6 @@ public enum PlaceCategory
     Shopping,
     Entertainment,
     Race,
-    Other
+    Other,
+    ChargingStation
 }

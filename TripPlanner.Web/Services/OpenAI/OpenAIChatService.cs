@@ -18,8 +18,9 @@ public partial class OpenAIChatService(
     IChatConversationRepository conversationRepository,
     WeatherService weatherService,
     TransitService transitService,
+    OpenChargeMapService openChargeMapService,
     BrowserTimeZoneService browserTimeZoneService)
-    : ChatServiceBase(configuration, logger, tripRepository, wishlistRepository, placeRepository, conversationRepository, weatherService, transitService, browserTimeZoneService)
+    : ChatServiceBase(configuration, logger, tripRepository, wishlistRepository, placeRepository, conversationRepository, weatherService, transitService, openChargeMapService, browserTimeZoneService)
 {
     // ── Inference ────────────────────────────────────────────────────────────────
 

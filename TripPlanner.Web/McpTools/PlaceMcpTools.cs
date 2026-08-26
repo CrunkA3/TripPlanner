@@ -15,7 +15,7 @@ public class PlaceMcpTools(IPlaceRepository placeRepository, IWishlistRepository
 
     [McpServerTool, Description("List all places accessible to the current user. Optionally filter by category.")]
     public async Task<string> ListPlaces(
-        [Description("Optional category filter: Viewpoint, Museum, Restaurant, Nature, Activity, Accommodation, Shopping, Entertainment, Race, Other.")] string? category = null)
+        [Description("Optional category filter: Viewpoint, Museum, Restaurant, Nature, Activity, Accommodation, Shopping, Entertainment, Race, Other, ChargingStation.")] string? category = null)
     {
         if (UserId is null) return "Unauthorized.";
 
@@ -74,7 +74,7 @@ public class PlaceMcpTools(IPlaceRepository placeRepository, IWishlistRepository
     [McpServerTool, Description("Create a new place in a wishlist.")]
     public async Task<string> CreatePlace(
         [Description("The name of the place.")] string name,
-        [Description("The category: Viewpoint, Museum, Restaurant, Nature, Activity, Accommodation, Shopping, Entertainment, Race, Other.")] string category,
+        [Description("The category: Viewpoint, Museum, Restaurant, Nature, Activity, Accommodation, Shopping, Entertainment, Race, Other, ChargingStation.")] string category,
         [Description("Latitude coordinate.")] double latitude,
         [Description("Longitude coordinate.")] double longitude,
         [Description("The wishlist ID to add this place to.")] string wishlistId,
